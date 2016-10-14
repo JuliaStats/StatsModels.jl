@@ -1,4 +1,6 @@
 module TestStatsModels
+
+using StatsModels
 using DataFrames
 using Base.Test
 using Compat

@@ -2,6 +2,7 @@ module TestContrasts
 
 using Base.Test
 using DataFrames
+using StatsModels
 
 
 d = DataFrame(x = CategoricalVector([:a, :b, :c, :a, :a, :b]))
