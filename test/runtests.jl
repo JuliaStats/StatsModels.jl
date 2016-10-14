@@ -1,7 +1,5 @@
 using StatsModels
 
-Pkg.checkout("DataFrames", "dfk/statsmodel-purge")
-
 fatalerrors = length(ARGS) > 0 && ARGS[1] == "-f"
 quiet = length(ARGS) > 0 && ARGS[1] == "-q"
 anyerrors = false
