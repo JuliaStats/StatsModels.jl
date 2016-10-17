@@ -27,6 +27,8 @@ map(include,
     [
         "contrasts.jl",
         "formula.jl",
+        "modelframe.jl",
+        "modelmatrix.jl",
         "statsmodel.jl"
     ])
 
