@@ -27,14 +27,139 @@ macro formula(ex)
     return Expr(:call, :Formula, lhs, rhs)
 end
 
-Base.:(==)(f1::Formula, f2::Formula) = all(getfield(f1, f)==getfield(f2, f) for f in fieldnames(f1))
+function Base.show(io::IO, f::Formula)
+    print(io,
+          string("Formula: ",
+                 f.lhs == nothing ? "" : f.lhs, " ~ ", f.rhs))
+end
 
-"""
-Representation of parsed `Formula`
 
-This is an internal type whose implementation is likely to change in the near
-future.
-"""
+
+
+## Define Terms type that manages formula parsing and extension.
+
+abstract AbstractTerm
+
+type Term{H} <: AbstractTerm
+    children::Vector{Union{Term,Symbol}}
+
+    Term() = new(Term[])
+    Term(children::Vector) = add_children!(new(Term[]), children)
+    Term(child::Symbol) = new([child])
+end
+
+typealias InterceptTerm Union{Term{0}, Term{-1}, Term{1}}
+
+## equality of Terms
+import Base.==
+=={G,H}(::Term{G}, ::Term{H}) = false
+=={H}(a::Term{H}, b::Term{H}) = a.children == b.children
+
+## display of terms
+function Base.show{H}(io::IO, t::Term{H})
+    print(io, string(H))
+    if length(t.children) > 0
+        print(io, "(")
+        print(io, join(map(string, t.children), ", "))
+        print(io, ")")
+    end
+end
+Base.show(io::IO, t::Term{:eval}) = print(io, string(t.children[1]))
+## show ranef term:
+Base.show(io::IO, t::Term{:|}) = print(io, "(", t.children[1], " | ", t.children[2], ")")
+
+## Converting to Term:
+
+## Symbols are converted to :eval terms (leaf nodes)
+Base.convert(::Type{Term}, s::Symbol) = Term{:eval}(s)
+
+## Integers to intercept terms
+function Term(i::Integer)
+    i == 0 || i == -1 || i == 1 || error("Can't construct term from Integer $i")
+    Term{i}()
+end
+
+## no-op constructor
+Term{H}(t::Term{H}) = t
+
+## convert from one head type to another
+(::Type{Term{H}}){H,J}(t::Term{J}) = add_children!(Term{H}(), t, [])
+
+## Expressions are recursively converted to Terms, depth-first, and then added
+## as children.  Specific `add_children!` methods handle special cases like
+## associative and distributive operators.
+function Base.convert(::Type{Term}, ex::Expr)
+    ex.head == :call || error("non-call expression detected: '$(ex.head)'")
+    add_children!(Term{ex.args[1]}(), [Term(a) for a in ex.args[2:end]])
+end
+
+
+## Adding children to a Term
+
+## General strategy: add one at a time to allow for dispatching on special
+## cases, but also keep track of the rest of the children being added because at
+## least the distributive rule requires that context.
+add_children!(t::Term, new_children::Vector) =
+    isempty(new_children) ?
+    t :
+    add_children!(t::Term, new_children[1], new_children[2:end])
+
+function add_children!(t::Term, c::Term, others::Vector)
+    push!(t.children, c)
+    add_children!(t, others)
+end
+
+## special cases:
+## Associative rule
+add_children!(t::Term{:+}, new_child::Term{:+}, others::Vector) =
+    add_children!(t, cat(1, new_child.children, others))
+add_children!(t::Term{:&}, new_child::Term{:&}, others::Vector) =
+    add_children!(t, cat(1, new_child.children, others))
+
+## Distributive property
+## &(a..., +(b...), c...) -> +(&(a..., b_i, c...)_i...)
+add_children!(t::Term{:&}, new_child::Term{:+}, others::Vector) =
+    Term{:+}([add_children!(deepcopy(t), c, others) for c in new_child.children])
+
+## Expansion of a*b -> a + b + a&b
+expand_star(a::Term,b::Term) = Term{:+}([a, b, Term{:&}([a,b])])
+add_children!(t::Term, new_child::Term{:*}, others::Vector) =
+    add_children!(Term{:+}(reduce(expand_star, new_child.children)), others)
+
+## Handle - for intercept term -1, and throw error otherwise
+add_children!(t::Term{:-}, children::Vector) =
+    isa(children[2], Term{1}) ?
+    Term{:+}([children[1], Term{-1}()]) :
+    error("invalid subtraction of $(children[2]); subtraction only supported for -1")
+
+## sorting term by the degree of its children: order is 1 for everything except
+## interaction Term{:&} where order is number of children
+degree(t::Term{:&}) = length(t.children)
+degree(::Term) = 1
+degree(::InterceptTerm) = 0
+
+function Base.sort!(t::Term)
+    sort!(t.children, by=degree)
+    return t
+end
+
+## extract evaluation terms: children of Term{:+} and Term{:&}, nothing for
+## ranef Term{:|} and intercept terms, and Term itself for everything else.
+evt(t::Term) = Term[t]
+evt(t::Term{:eval}) = t.children
+evt(t::Term{:&}) = mapreduce(evt, vcat, t.children)
+evt(t::Term{:+}) = mapreduce(evt, vcat, t.children)
+evt(t::Term{:|}) = Term[]
+evt(t::InterceptTerm) = Term[]
+
+## whether a Term is for fixed effects or not
+isfe(t::Term{:|}) = false
+isfe(t::Term) = true
+
+
+################################################################################
+## Constructing a DataFrames.Terms object
+
 type Terms
     terms::Vector
     eterms::Vector        # evaluation terms
@@ -50,156 +175,42 @@ end
 
 Base.:(==)(t1::Terms, t2::Terms) = all(getfield(t1, f)==getfield(t2, f) for f in fieldnames(t1))
 
-function Base.show(io::IO, f::Formula)
-    print(io, "Formula: ", f.lhs === nothing ? "" : f.lhs, " ~ ", f.rhs)
-end
-
-# special operators in formulas
-const specials = Set([:+, :-, :*, :/, :&, :|, :^])
-
-function dospecials(ex::Expr)
-    if ex.head != :call error("Non-call expression encountered") end
-    a1 = ex.args[1]
-    if !(a1 in specials) return ex end
-    excp = copy(ex)
-    excp.args = vcat(a1,map(dospecials, ex.args[2:end]))
-    if a1 == :-
-        a2, a3 = excp.args[2:3]
-        a3 == 1 || error("invalid expression $ex; subtraction only supported for -1")
-        return :($a2 + -1)
-    elseif a1 == :*
-        aa = excp.args
-        a2 = aa[2]
-        a3 = aa[3]
-        if length(aa) > 3
-            excp.args = vcat(a1, aa[3:end])
-            a3 = dospecials(excp)
-        end
-        ## this order of expansion gives the R-style ordering of interaction
-        ## terms (after sorting in increasing interaction order) for higher-
-        ## order interaction terms (e.g. x1 * x2 * x3 should expand to x1 +
-        ## x2 + x3 + x1&x2 + x1&x3 + x2&x3 + x1&x2&x3)
-        :($a2 + $a2 & $a3 + $a3)
-    else
-        excp
-    end
-end
-dospecials(a::Any) = a
-
-## Distribution of & over +
-const distributive = @compat Dict(:& => :+)
-
-distribute(ex::Expr) = distribute!(copy(ex))
-distribute(a::Any) = a
-## apply distributive property in-place
-function distribute!(ex::Expr)
-    if ex.head != :call error("Non-call expression encountered") end
-    [distribute!(a) for a in ex.args[2:end]]
-    ## check that top-level can be distributed
-    a1 = ex.args[1]
-    if a1 in keys(distributive)
-
-        ## which op is being DISTRIBUTED (e.g. &, *)?
-        distributed_op = a1
-        ## which op is doing the distributing (e.g. +)?
-        distributing_op = distributive[a1]
-
-        ## detect distributing sub-expression (first arg is, e.g. :+)
-        is_distributing_subex(e) =
-            typeof(e)==Expr && e.head == :call && e.args[1] == distributing_op
-
-        ## find first distributing subex
-        first_distributing_subex = findfirst(is_distributing_subex, ex.args)
-        if first_distributing_subex != 0
-            ## remove distributing subexpression from args
-            subex = splice!(ex.args, first_distributing_subex)
-
-            newargs = Any[distributing_op]
-            ## generate one new sub-expression, which calls the distributed operation
-            ## (e.g. &) on each of the distributing sub-expression's arguments, plus
-            ## the non-distributed arguments of the original expression.
-            for a in subex.args[2:end]
-                new_subex = copy(ex)
-                push!(new_subex.args, a)
-                ## need to recurse here, in case there are any other
-                ## distributing operations in the sub expression
-                distribute!(new_subex)
-                push!(newargs, new_subex)
-            end
-            ex.args = newargs
-        end
-    end
-    ex
-end
-distribute!(a::Any) = a
-
-const associative = Set([:+,:*,:&])       # associative special operators
-
-## If the expression is a call to the function s return its arguments
-## Otherwise return the expression
-function ex_or_args(ex::Expr,s::Symbol)
-    if ex.head != :call error("Non-call expression encountered") end
-    if ex.args[1] == s
-        ## recurse in case there are more :calls of s below
-        return vcat(map(x -> ex_or_args(x, s), ex.args[2:end])...)
-    else
-        ## not a :call to s, return condensed version of ex
-        return condense(ex)
-    end
-end
-ex_or_args(a,s::Symbol) = a
-
-## Condense calls like :(+(a,+(b,c))) to :(+(a,b,c))
-function condense(ex::Expr)
-    if ex.head != :call error("Non-call expression encountered") end
-    a1 = ex.args[1]
-    if !(a1 in associative) return ex end
-    excp = copy(ex)
-    excp.args = vcat(a1, map(x->ex_or_args(x,a1), ex.args[2:end])...)
-    excp
-end
-condense(a::Any) = a
-
-## always return an ARRAY of terms
-getterms(ex::Expr) = (ex.head == :call && ex.args[1] == :+) ? ex.args[2:end] : Expr[ex]
-getterms(a::Any) = Any[a]
-
-ord(ex::Expr) = (ex.head == :call && ex.args[1] == :&) ? length(ex.args)-1 : 1
-ord(a::Any) = 1
-
-const nonevaluation = Set([:&,:|])        # operators constructed from other evaluations
-## evaluation terms - the (filtered) arguments for :& and :|, otherwise the term itself
-function evt(ex::Expr)
-    if ex.head != :call error("Non-call expression encountered") end
-    if !(ex.args[1] in nonevaluation) return ex end
-    filter(x->!isa(x,Number), vcat(map(getterms, ex.args[2:end])...))
-end
-evt(a) = Any[a]
-
 function Terms(f::Formula)
-    rhs = condense(distribute(dospecials(f.rhs)))
-    tt = unique(getterms(rhs))
-    filter!(t -> t != 1, tt)                          # drop any explicit 1's
-    noint = BitArray(map(t -> t == 0 || t == -1, tt)) # should also handle :(-(expr,1))
-    tt = tt[!noint]
-    oo = Int[ord(t) for t in tt]     # orders of interaction terms
-    if !issorted(oo)                 # sort terms by increasing order
-        pp = sortperm(oo)
-        tt = tt[pp]
-        oo = oo[pp]
-    end
-    etrms = map(evt, tt)
+    ## start by raising everything on the right-hand side by converting
+    rhs = sort!(Term{:+}(Term(f.rhs)))
+    terms = rhs.children
+
+    ## detect intercept
+    is_intercept = [isa(t, InterceptTerm) for t in terms]
+    hasintercept = mapreduce(t -> isa(t, Term{1}),
+                             &,
+                             true, # default is to have intercept
+                             terms[is_intercept])
+
+    terms = terms[!is_intercept]
+    degrees = map(degree, terms)
+    
+    evalterms = map(evt, terms)
+
     haslhs = f.lhs != nothing
     if haslhs
-        unshift!(etrms, Any[f.lhs])
-        unshift!(oo, 1)
+        lhs = Term(f.lhs)
+        unshift!(evalterms, evt(lhs))
+        unshift!(degrees, degree(lhs))
     end
-    ev = unique(vcat(etrms...))
-    sets = [Set(x) for x in etrms]
-    facs = Bool[t in s for t in ev, s in sets]
-    non_redundants = fill(false, size(facs)) # initialize to false
-    Terms(tt, ev, facs, non_redundants, oo, haslhs, !any(noint))
+
+    evalterm_sets = [Set(x) for x in evalterms]
+    evalterms = unique(vcat(evalterms...))
+    
+    factors = Int8[t in s for t in evalterms, s in evalterm_sets]
+    non_redundants = fill(false, size(factors)) # initialize to false
+
+    Terms(terms, evalterms, factors, non_redundants, degrees, haslhs, hasintercept)
+
 end
+
+
+
 
 
 """
