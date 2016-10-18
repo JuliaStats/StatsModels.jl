@@ -4,7 +4,8 @@ fatalerrors = length(ARGS) > 0 && ARGS[1] == "-f"
 quiet = length(ARGS) > 0 && ARGS[1] == "-q"
 anyerrors = false
 
-my_tests = ["formula.jl",
+my_tests = ["term.jl",
+            "formula.jl",
             "modelmatrix.jl",
             "statsmodel.jl",
             "contrasts.jl"]
