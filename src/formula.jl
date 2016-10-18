@@ -124,7 +124,7 @@ add_children!(t::Term{:&}, new_child::Term{:+}, others::Vector) =
 ## Expansion of a*b -> a + b + a&b
 expand_star(a::Term,b::Term) = Term{:+}([a, b, Term{:&}([a,b])])
 add_children!(t::Term, new_child::Term{:*}, others::Vector) =
-    add_children!(Term{:+}(reduce(expand_star, new_child.children)), others)
+    add_children!(t, cat(1, reduce(expand_star, new_child.children), others))
 
 ## Handle - for intercept term -1, and throw error otherwise
 add_children!(t::Term{:-}, children::Vector) =
