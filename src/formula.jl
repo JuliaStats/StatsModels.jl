@@ -48,9 +48,9 @@ end
 typealias InterceptTerm Union{Term{0}, Term{-1}, Term{1}}
 
 ## equality of Terms
-import Base.==
-=={G,H}(::Term{G}, ::Term{H}) = false
-=={H}(a::Term{H}, b::Term{H}) = a.children == b.children
+Base.:(==){G,H}(::Term{G}, ::Term{H}) = false
+Base.:(==){H}(a::Term{H}, b::Term{H}) = a.children == b.children
+Base.hash{H}(t::Term{H}, h::UInt) = hash(t.children, hash(H, h))
 
 ## display of terms
 function Base.show{H}(io::IO, t::Term{H})
@@ -175,7 +175,7 @@ Base.:(==)(t1::Terms, t2::Terms) = all(getfield(t1, f)==getfield(t2, f) for f in
 function Terms(f::Formula)
     ## start by raising everything on the right-hand side by converting
     rhs = sort!(Term{:+}(Term(f.rhs)))
-    terms = rhs.children
+    terms = filter(isfe, unique(rhs.children))
 
     ## detect intercept
     is_intercept = [isa(t, InterceptTerm) for t in terms]
