@@ -6,15 +6,6 @@ type ModelFrame
     contrasts::Dict{Symbol, ContrastsMatrix}
 end
 
-## Default NULL handler.  Others can be added as keyword arguments
-function null_omit(df::DataFrame)
-    cc = complete_cases(df)
-    df[cc,:], cc
-end
-
-_droplevels!(x::Any) = x
-_droplevels!(x::Union{CategoricalArray, NullableCategoricalArray}) = droplevels!(x)
-
 is_categorical(::Union{CategoricalArray, NullableCategoricalArray}) = true
 is_categorical(::Any) = false
 
@@ -78,6 +69,15 @@ function evalcontrasts(df::AbstractDataFrame, contrasts::Dict = Dict())
     end
     return evaledContrasts
 end
+
+## Default NULL handler.  Others can be added as keyword arguments
+function null_omit(df::DataFrame)
+    cc = complete_cases(df)
+    df[cc,:], cc
+end
+
+_droplevels!(x::Any) = x
+_droplevels!(x::Union{CategoricalArray, NullableCategoricalArray}) = droplevels!(x)
 
 function ModelFrame(trms::Terms, d::AbstractDataFrame;
                     contrasts::Dict = Dict())
