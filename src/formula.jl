@@ -140,6 +140,9 @@ function Base.sort!(t::Term)
     return t
 end
 
+################################################################################
+## This duplicates the functionality of the DataFrames.Terms type:
+
 ## extract evaluation terms: children of Term{:+} and Term{:&}, nothing for
 ## ranef Term{:|} and intercept terms, and Term itself for everything else.
 evt(t::Term) = Term[t]
@@ -152,10 +155,6 @@ evt(t::InterceptTerm) = Term[]
 ## whether a Term is for fixed effects or not
 isfe(t::Term{:|}) = false
 isfe(t::Term) = true
-
-
-################################################################################
-## Constructing a DataFrames.Terms object
 
 type Terms
     terms::Vector
