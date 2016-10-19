@@ -24,13 +24,8 @@ macro ~(lhs, rhs)
     return ex
 end
 
-function Base.show(io::IO, f::Formula)
-    print(io,
-          string("Formula: ",
-                 f.lhs == nothing ? "" : f.lhs, " ~ ", f.rhs))
-end
-
-
+Base.show(io::IO, f::Formula) =
+    print(io, string("Formula: ", f.lhs === nothing ? "" : f.lhs, " ~ ", f.rhs))
 
 
 ## Define Terms type that manages formula parsing and extension.
@@ -72,7 +67,7 @@ Base.convert(::Type{Term}, s::Symbol) = Term{:eval}(s)
 
 ## Integers to intercept terms
 function Term(i::Integer)
-    i == 0 || i == -1 || i == 1 || error("Can't construct term from Integer $i")
+    i in -1:1 || throw(ArgumentError("Can't construct term from Integer $i"))
     Term{i}()
 end
 
@@ -188,7 +183,7 @@ function Terms(f::Formula)
     
     evalterms = map(evt, terms)
 
-    haslhs = f.lhs != nothing
+    haslhs = f.lhs !== nothing
     if haslhs
         lhs = Term(f.lhs)
         unshift!(evalterms, evt(lhs))
@@ -196,10 +191,10 @@ function Terms(f::Formula)
     end
 
     evalterm_sets = [Set(x) for x in evalterms]
-    evalterms = unique(vcat(evalterms...))
+    evalterms = unique(reduce(vcat, [], evalterms))
     
     factors = Int8[t in s for t in evalterms, s in evalterm_sets]
-    non_redundants = fill(false, size(factors)) # initialize to false
+    non_redundants = falses(size(factors)) # initialize to false
 
     Terms(terms, evalterms, factors, non_redundants, degrees, haslhs, hasintercept)
 
