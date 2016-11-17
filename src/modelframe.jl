@@ -97,7 +97,11 @@ ModelFrame(df::AbstractDataFrame, term::Terms, msng::BitArray) = ModelFrame(df, 
 ModelFrame(f::Formula, d::AbstractDataFrame; kwargs...) = ModelFrame(Terms(f), d; kwargs...)
 ModelFrame(ex::Expr, d::AbstractDataFrame; kwargs...) = ModelFrame(Formula(ex), d; kwargs...)
 
-## modify contrasts in place
+"""
+    setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
+
+Modify the contrast coding strategy of a ModelFrame in place.
+"""
 function setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
     new_contrasts = Dict([ Pair(col, ContrastsMatrix(contr, mf.df[col]))
                       for (col, contr) in filter((k,v)->haskey(mf.df, k), new_contrasts) ])

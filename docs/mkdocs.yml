@@ -1,0 +1,22 @@
+site_name: StatsModels.jl
+site_description: Utility package for fitting and evaluating statistical models in Julia
+repo_url: https://www.github.com/JuliaStats/StatsModels.jl
+
+extra_css:
+  - assets/Documenter.css
+
+markdown_extensions:
+  - extra
+  - tables
+  - fenced_code
+  - mdx_math
+
+extra_javascript:
+  - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML
+  - assets/mathjaxhelper.js
+
+docs_dir: 'build'
+
+pages:
+  - Introduction: index.md
+  - Contrast coding categorical variables: contrasts.md

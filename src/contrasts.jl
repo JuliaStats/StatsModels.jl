@@ -22,7 +22,7 @@ instantiation optionally includes the levels to generate columns for and the bas
 level. If not specified these will be taken from the data when a `ContrastsMatrix` is
 generated (during `ModelFrame` construction).
 
-# Constructors
+**Constructors**
 
 For `C <: AbstractContrast`:
 
@@ -42,7 +42,7 @@ You can also specify the base level of the contrasts. The actual interpretation
 of this depends on the particular contrast type, but in general it can be
 thought of as a "reference" level.  It defaults to the first level.
 
-# Concrete types
+**Concrete types**
 
 * `DummyCoding` - Code each non-base level as a 0-1 indicator column.
 * `EffectsCoding` - Code each non-base level as 1, and base as -1.
@@ -83,12 +83,37 @@ type ContrastsMatrix{C <: AbstractContrasts, T}
 end
 
 """
-    ContrastsMatrix{C<:AbstractContrasts}(contrasts::C, levels::AbstractVector)
+An instantiation of a contrast coding strategy for particular levels
 
-Compute contrasts matrix for given data levels.
+This type is used internally for generating model matrices based on categorical
+data, and __most users will not need to deal with it directly__.  It's exported
+for developers that need to extend these facilities.  Conceptually, a
+`ContrastsMatrix` object stands for an instantiation of a contrast coding
+_strategy_ for a particular set of categorical _data levels_.
 
 If levels are specified in the `AbstractContrasts`, those will be used, and likewise
 for the base level (which defaults to the first level).
+
+**Constructors**
+
+```julia
+ContrastsMatrix{C <: AbstractContrasts}(contrasts::C, levels::AbstractVector)
+ContrastsMatrix(contrasts::AbstractContrasts,
+                data::Union{CategoricalArray, NullableCategoricalArray})
+ContrastsMatrix(matrix::ContrastsMatrix,
+                data::Union{CategoricalArray, NullableCategoricalArray})
+```
+
+**Arguments**
+
+* `contrasts`: The contrast coding strategy to use.
+* `levels`: The levels to generate contrasts for.
+* `data`: If categorical data is provided, levels will be extracted with
+  `levels(data)`.
+* `matrix`: Constructing a `ContrastsMatrix` from another will check that the
+  levels match.  This is used, for example, in constructing a model matrix
+  from a `ModelFrame` using different data.
+
 """
 function ContrastsMatrix{C <: AbstractContrasts}(contrasts::C, levels::AbstractVector)
 
