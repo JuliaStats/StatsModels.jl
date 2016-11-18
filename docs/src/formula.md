@@ -14,6 +14,10 @@ fields with possibly heterogeneous types.  One of the primary goals of
 `StatsModels` is to make it simpler to transform tabular data into matrix format
 suitable for statistical modeling.
 
+At the moment, "tabular data" means an `AbstractDataFrame`.  Ultimately, the
+goal is to support any tabular data format that adheres to a minimal API,
+__regardless of backend__.
+
 ## The `Formula` type
 
 The basic conceptual tool for this is the `Formula`, which has a left side and a
