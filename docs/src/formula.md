@@ -1,4 +1,11 @@
-## Modeling tabular data
+```@meta
+CurrentModule = StatsModels
+DocTestSetup = quote
+    using StatsModels
+end
+```
+
+# Modeling tabular data
 
 Most statistical models require that data be represented as a Matrix-like
 collection of a single numeric type.  Much of the data we want to model,
@@ -7,13 +14,14 @@ fields with possibly heterogeneous types.  One of the primary goals of
 `StatsModels` is to make it simpler to transform tabular data into matrix format
 suitable for statistical modeling.
 
-### The `Formula` type
+## The `Formula` type
 
 The basic conceptual tool for this is the `Formula`, which has a left side and a
 right side, separated by `~`:
 
-```julia
-f = y ~ 1 + x
+```jldoctest
+julia> y ~ 1 + x
+Formula: y ~ 1 + x
 ```
 
 The left side of a formula conventionally represents _dependent_ variables, and
@@ -27,33 +35,38 @@ Individual variables can be combined into _interaction terms_ with `&`, as in
 Because it's often convenient to include main effects and interactions for a
 number of variables, the `*` operator will expand in this way
 
-```julia
-y ~ 1 + x*y = y ~ 1 + x + y + x&y
+```jldoctest
+# Using the internal StatsModels.Terms to trigger expansion of the Formula...
+julia> Formula(StatsModels.Terms(y ~ 1 + x*y))
+Formula: y ~ 1 + x + y + x & y
 ```
 
 This applies to higher-order interactions, too: `x*y*z` expands to the main
 effects, all two-way interactions, and the three way interaction `x&y&z`.
 
-### The `ModelFrame` and `ModelMatrix` types
+Both the `*` and the `&` operators act like multiplication, and are distributive
+over addition:
 
-This package supplies `fit` methods for statistical models that take a `Formula`
-and `DataFrame`.  Internally, these methods use the `ModelFrame` and
-`ModelMatrix` types to create the numeric input these models require.  These
-types are exposed in case you want to use them for other purposes.
-
-The `ModelFrame` type is a wrapper that combines a `Formula` and a `DataFrame`:
-
-```julia
-mf = ModelFrame(y ~ 1 + x, df)
+```jldoctest
+julia> Formula(StatsModels.Terms(y ~ 1 + (a+b) & c))
+Formula: y ~ 1 + c & a + c & b
 ```
 
-This wrapper encapsulates all the information that's required to transform data
-of the same structure as the wrapped `DataFrame` into a model matrix.  This goes
-above and beyond what's expressed in the `Formula` itself, for instance
-including information on each categorical variable should be coded (see below).
+## The `ModelFrame` and `ModelMatrix` types
 
-The `ModelMatrix` type actually constructs a matrix suitable for modeling.
+The main use of `Formula`s is for fitting statistical models based on tabular
+data.  From the user's perspective, this is done by `fit` methods that take a
+`Formula` and a `DataFrame` instead of numeric matrices.
 
-```julia
-mm = ModelMatrix(ModelFrame(y ~ 1 + x, df))
+Internally, this is accomplished in three stages:
+
+1. The `Formula` is parsed into `Terms`.
+2. The `Terms` and the data source are wrapped in a `ModelFrame`.
+3. A numeric `ModelMatrix` is generated from the `ModelFrame` and passed to the
+   model's `fit` method.
+
+```@docs
+ModelFrame
+ModelMatrix
+Terms
 ```

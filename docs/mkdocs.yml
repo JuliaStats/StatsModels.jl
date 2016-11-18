@@ -27,4 +27,5 @@ docs_dir: 'build'
 
 pages:
   - Introduction: index.md
+  - Modeling tabular data: formula.md
   - Contrast coding categorical variables: contrasts.md
