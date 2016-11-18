@@ -14,8 +14,7 @@ script:
   - julia -e 'Pkg.clone(pwd()); Pkg.checkout("DataFrames", "dfk/statsmodel-purge"); Pkg.build("StatsModels"); Pkg.test("StatsModels"; coverage=true)'
 after_success:
   # build and deploy documentation with Documenter.jl
-  - openssl aes-256-cbc -K $encrypted_a9d536040c76_key -iv $encrypted_a9d536040c76_iv -in docs/.documenter.enc -out docs/.documenter -d
-  - julia -e 'cd(Pkg.dir("StatsModels")); Pkg.clone("https://github.com/MichaelHatherly/Documenter.jl"); include(joinpath("docs", "make.jl"))'
+  - julia -e 'cd(Pkg.dir("StatsModels")); Pkg.add("Documenter"); include(joinpath("docs", "make.jl"))'
   # push coverage results to Coveralls
   - julia -e 'cd(Pkg.dir("StatsModels")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
   # push coverage results to Codecov
