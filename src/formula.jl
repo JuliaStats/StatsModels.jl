@@ -24,9 +24,12 @@ macro ~(lhs, rhs)
     return ex
 end
 
-#
-# TODO: implement contrast types in Formula/Terms
-#
+"""
+Representation of parsed `Formula`
+
+This is an internal type whose implementation is likely to change in the near
+future.
+"""
 type Terms
     terms::Vector
     eterms::Vector        # evaluation terms
