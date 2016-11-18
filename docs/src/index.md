@@ -19,3 +19,7 @@ developers when dealing with statistical models and tabular data.
 
     * `StatisticalModel`
     * `RegressionModel`
+
+Much of this package was formerly part
+of [`DataFrames`](https://www.github.com/JuliaStats/DataFrames.jl)
+and [`StatsBase`](https://www.github.com/JuliaStats/StatsBase.jl).
