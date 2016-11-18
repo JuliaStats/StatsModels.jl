@@ -93,9 +93,8 @@ end
 An instantiation of a contrast coding strategy for particular levels
 
 This type is used internally for generating model matrices based on categorical
-data, and **most users will not need to deal with it directly**.  It's exported
-for developers that need to extend these facilities.  Conceptually, a
-`ContrastsMatrix` object stands for an instantiation of a contrast coding
+data, and **most users will not need to deal with it directly**.  Conceptually,
+a `ContrastsMatrix` object stands for an instantiation of a contrast coding
 *strategy* for a particular set of categorical *data levels*.
 
 If levels are specified in the `AbstractContrasts`, those will be used, and likewise
