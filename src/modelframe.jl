@@ -23,7 +23,7 @@ ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray, contrasts::Di
 
 **Arguments**
 
-* `f`: Formula whose left hand side is the _response_ and right hand side are
+* `f`: Formula whose left hand side is the *response* and right hand side are
   the predictors.
 * `df`: The data being modeled.  This is used at this stage to determine which
   variables are categorical, and otherwise held for [`ModelMatrix`](@ref).

@@ -5,7 +5,7 @@ CurrentModule = StatsModels
 # Modeling categorical data
 
 To convert categorical data into a numerical representation suitable for
-modeling, `StatsModels` implements a variety of __contrast coding strategies__.
+modeling, `StatsModels` implements a variety of **contrast coding strategies**.
 Each contrast coding strategy maps a categorical vector with $k$ levels onto
 $k-1$ linearly independent model matrix columns.
 
@@ -53,19 +53,19 @@ FullDummyCoding
 Generating model matrices from multiple variables, some of which are
 categorical, requires special care.  The reason for this is that rank-$k-1$
 contrasts are appropriate for a categorical variable with $k$ levels when it is
-_redundant_ with lower-order terms: using rank-$k$ will often result in a
+*redundant* with lower-order terms: using rank-$k$ will often result in a
 rank-deficient model matrix which leads to a model that can't be identified.  A
-categorical variable in a term is _redundant_ when the term obtained by dropping
+categorical variable in a term is *redundant* when the term obtained by dropping
 that variable is identical to a term already present in the
 formula.[^implicit-terms]
 
 For example: 
 * In `y ~ 1 + x`, `x` is redundant with the intercept `1`.
-* In `y ~ 0 + x`, `x` is _non-redundant_ with any other terms.
+* In `y ~ 0 + x`, `x` is *non-redundant* with any other terms.
 * In `y ~ 1 + x + x&y`:
     * The `y` in `x&y` is redundant, because dropping `y` from `x&y` leaves `x`,
       which is included in the formula
-    * The `x` in `x&y` is _non-redundant_: dropping it leaves `y`, which is not
+    * The `x` in `x&y` is *non-redundant*: dropping it leaves `y`, which is not
       present anywhere else in the formula.
 
 When constructing a `ModelFrame` from a `Formula`, each term is checked for

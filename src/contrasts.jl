@@ -93,10 +93,10 @@ end
 An instantiation of a contrast coding strategy for particular levels
 
 This type is used internally for generating model matrices based on categorical
-data, and __most users will not need to deal with it directly__.  It's exported
+data, and **most users will not need to deal with it directly**.  It's exported
 for developers that need to extend these facilities.  Conceptually, a
 `ContrastsMatrix` object stands for an instantiation of a contrast coding
-_strategy_ for a particular set of categorical _data levels_.
+*strategy* for a particular set of categorical *data levels*.
 
 If levels are specified in the `AbstractContrasts`, those will be used, and likewise
 for the base level (which defaults to the first level).
@@ -226,7 +226,7 @@ end
     FullDummyCoding()
 
 Coding that generates one indicator (1 or 0) column for each level,
-__including__ the base level.
+**including** the base level.
 
 Not exported but included here for the sake of completeness.
 Needed internally for some situations where a categorical variable with ``k``
@@ -289,7 +289,7 @@ contrasts_matrix(C::DummyCoding, baseind, n) = eye(n)[:, [1:(baseind-1); (basein
 
 Contrast coding that generates columns that code each non-base level as the
 deviation from the base level.  For each non-base level `x` of `variable`, a
-column is generated with 1 where `variable .== x` and -1 where `col .== base`.
+column is generated with 1 where `variable .== x` and -1 where `variable .== base`.
 
 `EffectsCoding` is like `DummyCoding`, but using -1 for the base level instead
 of 0.
@@ -300,8 +300,8 @@ generated columns are not orthogonal.  In a regression model with an
 effects-coded variable, the intercept corresponds to the grand mean.
 
 Also known as "sum coding" (`contr.sum` in R) or "simple coding" (SPSS). Note
-though that the default in R and SPSS is to use the _last_ level as the base.
-Here we use the _first_ level as the base, for consistency with other coding
+though that the default in R and SPSS is to use the *last* level as the base.
+Here we use the *first* level as the base, for consistency with other coding
 schemes.
 
 **Examples**
