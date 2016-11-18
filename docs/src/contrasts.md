@@ -40,6 +40,12 @@ HelmertCoding
 ContrastsCoding
 ```
 
+### Special internal contrasts
+
+```@docs
+FullDummyCoding
+```
+
 ## Further details
 
 ### Categorical variables in `Formula`s
