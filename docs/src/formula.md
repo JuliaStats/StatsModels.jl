@@ -37,15 +37,20 @@ which will evaluate to the data source column with that name as a symbol (`:x`).
 Individual variables can be combined into _interaction terms_ with `&`, as in
 `x&z`, which will evaluate to the product of the columns named `:x` and `:z`.
 Because it's often convenient to include main effects and interactions for a
-number of variables, the `*` operator will expand in this way
+number of variables, the `*` operator will expand in the following way:
 
 ```jldoctest
-julia> Formula(StatsModels.Terms(y ~ 1 + x*y)) # Parse by converting to Terms
-Formula: y ~ 1 + x + y + x & y
+julia> Formula(StatsModels.Terms(a ~ 1 + x*y)) # Parse by converting to Terms
+Formula: a ~ 1 + x + y + x & y
 ```
 
 This applies to higher-order interactions, too: `x*y*z` expands to the main
-effects, all two-way interactions, and the three way interaction `x&y&z`.
+effects, all two-way interactions, and the three way interaction `x&y&z`:
+
+```jldoctest
+julia> Formula(StatsModels.Terms(a ~ 1 + x*y*z))
+Formula: a ~ 1 + x + y + z + x & y + x & z + y & z + &(x,y,z)
+```
 
 Both the `*` and the `&` operators act like multiplication, and are distributive
 over addition:
@@ -53,6 +58,9 @@ over addition:
 ```jldoctest
 julia> Formula(StatsModels.Terms(y ~ 1 + (a+b) & c))
 Formula: y ~ 1 + c & a + c & b
+
+julia> Formula(StatsModels.Terms(y ~ 1 + (a+b) * c))
+Formula: y ~ 1 + a + b + c + c & a + c & b
 ```
 
 ## The `ModelFrame` and `ModelMatrix` types
