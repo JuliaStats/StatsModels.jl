@@ -68,17 +68,10 @@ For example:
     * The `x` in `x&y` is _non-redundant_: dropping it leaves `y`, which is not
       present anywhere else in the formula.
 
-
-Additionally, when constructing a `ModelFrame` from a `Formula` combined with a
-`DataFrame`, we check whether any categorical variables that occur in the
-formula are _non-redundant_ with other, lower-order terms.  For instance, the
-term `x` in `y ~ 1 + x` is redundant with the intercept term `1`, but in 
-`y ~ 0 + x` is non-redundant: using the default rank $k-1$ contrasts matrix will
-result in a non-fully-specified model. 
-
-Any such non-redundant categorical terms need to be promoted to full-rank
-contrasts, with one indicator column per level.
-
+When constructing a `ModelFrame` from a `Formula`, each term is checked for
+non-redundant categorical variables.  Any such non-redundant variables are
+"promoted" to full rank in that term by using [`FullDummyCoding`](@ref) instead
+of the contrasts used elsewhere for that variable.
 
 [^implicit-terms]: This includes implicit terms that result from promoting
     another categorical variable to full-rank.
