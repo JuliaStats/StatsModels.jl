@@ -4,7 +4,7 @@ typealias AbstractFloatMatrix{T<:AbstractFloat} AbstractMatrix{T}
 """
 Convert a `ModelFrame` into a numeric matrix suitable for modeling
 
-**Constructors**
+# Constructors
 
 ```julia
 ModelMatrix(mf::ModelFrame)

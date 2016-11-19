@@ -10,7 +10,7 @@ Creating a `ModelFrame` first parses the `Formula` into `Terms`, checks which
 variables are categorical and determines the appropriate contrasts to use, and
 then creates the necessary contrasts matrices and stores the results.
 
-**Constructors**
+# Constructors
 
 ```julia
 ModelFrame(f::Formula, df::AbstractDataFrame; contrasts::Dict = Dict())
@@ -21,7 +21,7 @@ ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray)
 ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray, contrasts::Dict{Symbol, ContrastsMatrix})
 ```
 
-**Arguments**
+# Arguments
 
 * `f::Formula`: Formula whose left hand side is the *response* and right hand
   side are the *predictors*.
@@ -38,7 +38,7 @@ ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray, contrasts::Di
 * `missing::BitArray`: For inner constructor, indicates whether each row of `df`
   contains any missing data.
 
-**Examples**
+# Examples
 
 ```julia
 julia> df = DataFrame(x = 1:4, y = 5:9)
