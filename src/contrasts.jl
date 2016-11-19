@@ -37,10 +37,10 @@ C(levels = ::Vector{Any}, base = ::Any) # specify levels and base
 
 * `levels`: Optionally, the data levels can be specified here.  This allows you
   to specify the order of the levels.  If specified, the levels will be checked
-  against the levels when the `ContrastsMatrix` is constructed. Any mismatch
-  will result in an error, because missing data levels would lead to empty
-  columns in the model matrix, and missing contrast levels would lead to empty
-  or undefined rows.
+  against the levels actually present in the data when the `ContrastsMatrix` is
+  constructed. Any mismatch will result in an error, because levels missing in
+  the data would lead to empty columns in the model matrix, and levels missing
+  from the contrasts would lead to empty or undefined rows.
 * `base`: The base level may also be specified.  The actual interpretation
   of this depends on the particular contrast type, but in general it can be
   thought of as a "reference" level.  It defaults to the first level.

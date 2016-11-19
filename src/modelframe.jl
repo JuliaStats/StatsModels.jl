@@ -2,7 +2,7 @@
 Wrapper which combines Formula (Terms) and an AbstractDataFrame
 
 This wrapper encapsulates all the information that's required to transform data
-of the same structure as the wrapped `DataFrame` into a model matrix.  This goes
+of the same structure as the wrapped data frame into a model matrix.  This goes
 above and beyond what's expressed in the `Formula` itself, for instance
 including information on how each categorical variable should be coded.
 
@@ -16,26 +16,27 @@ then creates the necessary contrasts matrices and stores the results.
 ModelFrame(f::Formula, df::AbstractDataFrame; contrasts::Dict = Dict())
 ModelFrame(ex::Expr, d::AbstractDataFrame; contrasts::Dict = Dict())
 ModelFrame(terms::Terms, df::AbstractDataFrame; contrasts::Dict = Dict())
-# Internal constructors:
+# Inner constructors:
 ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray)
 ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray, contrasts::Dict{Symbol, ContrastsMatrix})
 ```
 
 **Arguments**
 
-* `f`: Formula whose left hand side is the *response* and right hand side are
-  the predictors.
-* `df`: The data being modeled.  This is used at this stage to determine which
-  variables are categorical, and otherwise held for [`ModelMatrix`](@ref).
-* `contrasts`: An optional Dict of contrast codings for each categorical
+* `f::Formula`: Formula whose left hand side is the *response* and right hand
+  side are the *predictors*.
+* `df::AbstractDataFrame`: The data being modeled.  This is used at this stage
+  to determine which variables are categorical, and otherwise held for
+  [`ModelMatrix`](@ref).
+* `contrasts::Dict`: An optional Dict of contrast codings for each categorical
   variable.  Any unspecified variables will have [`DummyCoding`](@ref).  As a
   keyword argument, these can be either instances of a subtype of
-  [`AbstractContrasts`](@ref), or a [`ContrastsMatrix`](@ref).  For the internal
+  [`AbstractContrasts`](@ref), or a [`ContrastsMatrix`](@ref).  For the inner
   constructor, they must be [`ContrastsMatrix`](@ref)es.
-* `ex`: An expression will be converted into a `Formula`.
-* `terms`: For internal constructor, the parsed `Terms` from the `Formula`.
-* `missing`: For internal constructor, a `BitArray` of which rows of the data
-  contain any missing data.
+* `ex::Expr`: An expression which will be converted into a `Formula`.
+* `terms::Terms`: For inner constructor, the parsed `Terms` from the `Formula`.
+* `missing::BitArray`: For inner constructor, indicates whether each row of `df`
+  contains any missing data.
 
 **Examples**
 
