@@ -5,11 +5,11 @@ CurrentModule = StatsModels
 # Modeling categorical data
 
 To convert categorical data into a numerical representation suitable for
-modeling, `StatsModels` implements a variety of **contrast coding strategies**.
-Each contrast coding strategy maps a categorical vector with $k$ levels onto
+modeling, `StatsModels` implements a variety of **contrast coding systems**.
+Each contrast coding system maps a categorical vector with $k$ levels onto
 $k-1$ linearly independent model matrix columns.
 
-The following strategies are implemented:
+The following contrast coding systems are implemented:
 
 * [`DummyCoding`](@ref)
 * [`EffectsCoding`](@ref)
@@ -18,7 +18,7 @@ The following strategies are implemented:
 
 ## How to specify contrast coding
 
-The default contrast coding strategy is `DummyCoding`.  To override this, use
+The default contrast coding system is `DummyCoding`.  To override this, use
 the `contrasts` argument when constructing a `ModelFrame`:
 
 ```julia
@@ -38,7 +38,7 @@ AbstractContrasts
 ContrastsMatrix
 ```
 
-## Contrast coding strategies
+## Contrast coding systems
 
 ```@docs
 DummyCoding

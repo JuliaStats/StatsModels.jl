@@ -148,7 +148,7 @@ ModelFrame(ex::Expr, d::AbstractDataFrame; kwargs...) = ModelFrame(Formula(ex), 
 """
     setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
 
-Modify the contrast coding strategy of a ModelFrame in place.
+Modify the contrast coding system of a ModelFrame in place.
 """
 function setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
     new_contrasts = Dict([ Pair(col, ContrastsMatrix(contr, mf.df[col]))
