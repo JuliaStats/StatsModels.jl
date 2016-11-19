@@ -9,14 +9,14 @@ end
 
 Most statistical models require that data be represented as a `Matrix`-like
 collection of a single numeric type.  Much of the data we want to model,
-however, is __tabular data__, where data is represented as a collection of
+however, is **tabular data**, where data is represented as a collection of
 fields with possibly heterogeneous types.  One of the primary goals of
 `StatsModels` is to make it simpler to transform tabular data into matrix format
 suitable for statistical modeling.
 
 At the moment, "tabular data" means an `AbstractDataFrame`.  Ultimately, the
 goal is to support any tabular data format that adheres to a minimal API,
-__regardless of backend__.
+**regardless of backend**.
 
 ## The `Formula` type
 
@@ -28,13 +28,13 @@ julia> y ~ 1 + x
 Formula: y ~ 1 + x
 ```
 
-The left side of a formula conventionally represents _dependent_ variables, and
-the right side _independent_ variables (or regressors).  _Terms_ are separated
+The left side of a formula conventionally represents *dependent* variables, and
+the right side *independent* variables (or regressors).  *Terms* are separated
 by `+`.  Basic terms are the integers `1` or `0`—evaluated as the presence or
 absence of a constant intercept term, respectively—and variables like `x`,
 which will evaluate to the data source column with that name as a symbol (`:x`).
 
-Individual variables can be combined into _interaction terms_ with `&`, as in
+Individual variables can be combined into *interaction terms* with `&`, as in
 `x&z`, which will evaluate to the product of the columns named `:x` and `:z`.
 Because it's often convenient to include main effects and interactions for a
 number of variables, the `*` operator will expand in the following way:
