@@ -65,14 +65,14 @@ rank-deficient model matrix and a model that can't be identified.
 
 A categorical variable in a term is *redundant* when dropping that variable from
 the term results in a term that is present elsewhere in the formula.  For
-example, with categorical `x`, `y`, and `z`:
+example, with categorical `a`, `b`, and `c`:
 
-* In `a ~ 1 + x`, `x` is redundant with the intercept `1`.
-* In `a ~ 0 + x`, `x` is *non-redundant* with any other terms.
-* In `a ~ 1 + x + x&z`:
-    * The `y` in `x&z` is redundant, because dropping `z` from `x&z` leaves `x`,
+* In `y ~ 1 + a`, `a` is redundant with the intercept `1`.
+* In `y ~ 0 + a`, `a` is *non-redundant* with any other terms.
+* In `y ~ 1 + a + a&b`:
+    * The `b` in `a&b` is redundant, because dropping `b` from `a&b` leaves `a`,
       which is included in the formula
-    * The `x` in `x&z` is *non-redundant*: dropping it leaves `z`, which is not
+    * The `a` in `a&b` is *non-redundant*: dropping it leaves `b`, which is not
       present anywhere else in the formula.
 
 When constructing a `ModelFrame` from a `Formula`, each term is checked for

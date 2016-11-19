@@ -24,8 +24,8 @@ The basic conceptual tool for this is the `Formula`, which has a left side and a
 right side, separated by `~`:
 
 ```jldoctest
-julia> y ~ 1 + x
-Formula: y ~ 1 + x
+julia> y ~ 1 + a
+Formula: y ~ 1 + a
 ```
 
 The left side of a formula conventionally represents *dependent* variables, and
@@ -35,21 +35,27 @@ absence of a constant intercept term, respectively—and variables like `x`,
 which will evaluate to the data source column with that name as a symbol (`:x`).
 
 Individual variables can be combined into *interaction terms* with `&`, as in
-`x&z`, which will evaluate to the product of the columns named `:x` and `:z`.
-Because it's often convenient to include main effects and interactions for a
-number of variables, the `*` operator will expand in the following way:
+`a&b`, which will evaluate to the product of the columns named `:a` and `:b`.
+If either `a` or `b` are categorical, then the interaction term `a&b` generates
+all the product of each pair of the columns of `a` and `b`.
+
+It's often convenient to include main effects and interactions for a number of
+variables.  The `*` operator does this, expanding in the following way:
 
 ```jldoctest
-julia> Formula(StatsModels.Terms(a ~ 1 + x*y)) # Parse by converting to Terms
-Formula: a ~ 1 + x + y + x & y
+julia> Formula(StatsModels.Terms(y ~ 1 + a*b))
+Formula: y ~ 1 + a + b + a & b
 ```
 
-This applies to higher-order interactions, too: `x*y*z` expands to the main
-effects, all two-way interactions, and the three way interaction `x&y&z`:
+(We trigger parsing of the formula using the internal `Terms` type to show how
+the `Formula` expands).
+
+This applies to higher-order interactions, too: `a*b*c` expands to the main
+effects, all two-way interactions, and the three way interaction `a&b&c`:
 
 ```jldoctest
-julia> Formula(StatsModels.Terms(a ~ 1 + x*y*z))
-Formula: a ~ 1 + x + y + z + x & y + x & z + y & z + &(x,y,z)
+julia> Formula(StatsModels.Terms(y ~ 1 + a*b*c))
+Formula: y ~ 1 + a + b + c + a & b + a & c + b & c + &(a,b,c)
 ```
 
 Both the `*` and the `&` operators act like multiplication, and are distributive
@@ -71,9 +77,9 @@ data.  From the user's perspective, this is done by `fit` methods that take a
 
 Internally, this is accomplished in three stages:
 
-1. The `Formula` is parsed into `Terms`.
-2. The `Terms` and the data source are wrapped in a `ModelFrame`.
-3. A numeric `ModelMatrix` is generated from the `ModelFrame` and passed to the
+1. The `Formula` is parsed into [`Terms`](@ref).
+2. The `Terms` and the data source are wrapped in a [`ModelFrame`](@ref).
+3. A numeric [`ModelMatrix`](@ref) is generated from the `ModelFrame` and passed to the
    model's `fit` method.
 
 ```@docs
