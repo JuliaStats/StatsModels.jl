@@ -36,19 +36,24 @@ Base.show(io::IO, f::Formula) =
 abstract AbstractTerm
 
 type Term{H} <: AbstractTerm
-    children::Vector{Union{Term,Symbol}}
+    children::Vector{AbstractTerm}
 
-    Term() = new(Term[])
-    Term(children::Vector) = add_children!(new(Term[]), children)
-    Term(child::Symbol) = new([child])
+    Term() = new(AbstractTerm[])
+    Term(children::Vector) = add_children!(new(AbstractTerm[]), children)
+end
+
+type EvalTerm <: AbstractTerm
+    name::Symbol
 end
 
 typealias InterceptTerm Union{Term{0}, Term{-1}, Term{1}}
 
 ## equality of Terms
-Base.:(==){G,H}(::Term{G}, ::Term{H}) = false
 Base.:(==){H}(a::Term{H}, b::Term{H}) = a.children == b.children
 Base.hash{H}(t::Term{H}, h::UInt) = hash(t.children, hash(H, h))
+
+Base.:(==)(a::EvalTerm, b::EvalTerm) = a.name == b.name
+Base.hash(t::EvalTerm, h::UInt) = hash(t.name, h)
 
 ## display of terms
 function Base.show{H}(io::IO, t::Term{H})
@@ -59,14 +64,18 @@ function Base.show{H}(io::IO, t::Term{H})
         print(io, ")")
     end
 end
-Base.show(io::IO, t::Term{:eval}) = print(io, string(t.children[1]))
 ## show ranef term:
 Base.show(io::IO, t::Term{:|}) = print(io, "(", t.children[1], " | ", t.children[2], ")")
 
-## Converting to Term:
+Base.show(io::IO, t::EvalTerm) = print(io, string(t.name))
 
-## Symbols are converted to :eval terms (leaf nodes)
-Base.convert(::Type{Term}, s::Symbol) = Term{:eval}(s)
+## Converting to Term:
+Base.convert(::Type{AbstractTerm}, x::Any) = term(x)
+term(x::AbstractTerm) = x
+term(x::Any) = Term(x)
+
+## Symbols are converted to EvalTerms (leaf nodes)
+term(s::Symbol) = EvalTerm(s)
 
 ## Integers to intercept terms
 function Term(i::Integer)
@@ -78,14 +87,14 @@ end
 Term{H}(t::Term{H}) = t
 
 ## convert from one head type to another
-(::Type{Term{H}}){H,J}(t::Term{J}) = add_children!(Term{H}(), t, [])
+(::Type{Term{H}}){H}(t::AbstractTerm) = add_children!(Term{H}(), t, [])
 
 ## Expressions are recursively converted to Terms, depth-first, and then added
 ## as children.  Specific `add_children!` methods handle special cases like
 ## associative and distributive operators.
 function Base.convert(::Type{Term}, ex::Expr)
     ex.head == :call || error("non-call expression detected: '$(ex.head)'")
-    add_children!(Term{ex.args[1]}(), [Term(a) for a in ex.args[2:end]])
+    add_children!(Term{ex.args[1]}(), [term(a) for a in ex.args[2:end]])
 end
 
 
@@ -94,12 +103,12 @@ end
 ## General strategy: add one at a time to allow for dispatching on special
 ## cases, but also keep track of the rest of the children being added because at
 ## least the distributive rule requires that context.
-add_children!(t::Term, new_children::Vector) =
+add_children!(t::AbstractTerm, new_children::Vector) =
     isempty(new_children) ?
     t :
-    add_children!(t::Term, new_children[1], new_children[2:end])
+    add_children!(t, new_children[1], new_children[2:end])
 
-function add_children!(t::Term, c::Term, others::Vector)
+function add_children!(t::AbstractTerm, c::AbstractTerm, others::Vector)
     push!(t.children, c)
     add_children!(t, others)
 end
@@ -117,7 +126,7 @@ add_children!(t::Term{:&}, new_child::Term{:+}, others::Vector) =
     Term{:+}([add_children!(deepcopy(t), c, others) for c in new_child.children])
 
 ## Expansion of a*b -> a + b + a&b
-expand_star(a::Term,b::Term) = Term{:+}([a, b, Term{:&}([a,b])])
+expand_star(a::AbstractTerm,b::AbstractTerm) = Term{:+}([a, b, Term{:&}([a,b])])
 add_children!(t::Term, new_child::Term{:*}, others::Vector) =
     add_children!(t, cat(1, reduce(expand_star, new_child.children), others))
 
@@ -130,7 +139,7 @@ add_children!(t::Term{:-}, children::Vector) =
 ## sorting term by the degree of its children: order is 1 for everything except
 ## interaction Term{:&} where order is number of children
 degree(t::Term{:&}) = length(t.children)
-degree(::Term) = 1
+degree(::AbstractTerm) = 1
 degree(::InterceptTerm) = 0
 
 function Base.sort!(t::Term)
@@ -143,16 +152,14 @@ end
 
 ## extract evaluation terms: children of Term{:+} and Term{:&}, nothing for
 ## ranef Term{:|} and intercept terms, and Term itself for everything else.
-evt(t::Term) = Term[t]
-evt(t::Term{:eval}) = t.children
-evt(t::Term{:&}) = mapreduce(evt, vcat, t.children)
-evt(t::Term{:+}) = mapreduce(evt, vcat, t.children)
-evt(t::Term{:|}) = Term[]
-evt(t::InterceptTerm) = Term[]
+evt(t::AbstractTerm) = []
+evt(t::Term{:&}) = mapreduce(evt, vcat, [], t.children)
+evt(t::Term{:+}) = mapreduce(evt, vcat, [], t.children)
+evt(t::EvalTerm) = [t.name]
 
 ## whether a Term is for fixed effects or not
 isfe(t::Term{:|}) = false
-isfe(t::Term) = true
+isfe(t::AbstractTerm) = true
 
 type Terms
     terms::Vector
@@ -171,7 +178,7 @@ Base.:(==)(t1::Terms, t2::Terms) = all(getfield(t1, f)==getfield(t2, f) for f in
 
 function Terms(f::Formula)
     ## start by raising everything on the right-hand side by converting
-    rhs = sort!(Term{:+}(Term(f.rhs)))
+    rhs = sort!(Term{:+}(term(f.rhs)))
     terms = filter(isfe, unique(rhs.children))
 
     ## detect intercept
@@ -188,7 +195,7 @@ function Terms(f::Formula)
 
     haslhs = f.lhs !== nothing
     if haslhs
-        lhs = Term(f.lhs)
+        lhs = term(f.lhs)
         unshift!(evalterms, evt(lhs))
         unshift!(degrees, degree(lhs))
     end

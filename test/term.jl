@@ -1,31 +1,32 @@
 module TermTest
 
 using Base.Test
+using StatsModels
 
-import StatsModels.Term
+import StatsModels.term
 
 ## Associative property
-@test Term(:(a+(b+c))) == Term(:(a+b+c))
-@test Term(:((a+b)+c)) == Term(:(a+b+c))
-@test Term(:(a&(b&c))) == Term(:(a&b&c))
-@test Term(:((a&b)&c)) == Term(:(a&b&c))
+@test term(:(a+(b+c))) == term(:(a+b+c))
+@test term(:((a+b)+c)) == term(:(a+b+c))
+@test term(:(a&(b&c))) == term(:(a&b&c))
+@test term(:((a&b)&c)) == term(:(a&b&c))
 
 ## Distributive property
-@test Term(:(a & (b+c))) == Term(:(a&b + a&c))
-@test Term(:((a+b) & c)) == Term(:(a&c + b&c))
-@test Term(:((a+b) & (c+d))) == Term(:(a&c + a&d + b&c + b&d))
-@test Term(:(a & (b+c) & d)) == Term(:(a&b&d + a&c&d))
+@test term(:(a & (b+c))) == term(:(a&b + a&c))
+@test term(:((a+b) & c)) == term(:(a&c + b&c))
+@test term(:((a+b) & (c+d))) == term(:(a&c + a&d + b&c + b&d))
+@test term(:(a & (b+c) & d)) == term(:(a&b&d + a&c&d))
 
 ## Expand * to main effects + interactions
-@test Term{:+}(Term(:(a*b))) == Term(:(a+b+a&b))
-@test sort!(Term{:+}(Term(:(a*b*c)))) == Term(:(a+b+c+a&b+a&c+b&c+a&b&c))
-@test Term(:(a + b*c)) == Term(:(a + b + c + b&c))
-@test Term(:(a*b + c)) == Term(:(a + b + a&b + c))
+@test StatsModels.Term{:+}(term(:(a*b))) == term(:(a+b+a&b))
+@test sort!(StatsModels.Term{:+}(term(:(a*b*c)))) == term(:(a+b+c+a&b+a&c+b&c+a&b&c))
+@test term(:(a + b*c)) == term(:(a + b + c + b&c))
+@test term(:(a*b + c)) == term(:(a + b + a&b + c))
 
-## printing Terms:
-@test string(Term(:a)) == "a"
-@test string(Term(:(a+b))) == "+(a, b)"
-@test string(Term(:(a + a&b))) == "+(a, &(a, b))"
-@test string(Term(:(a+b | c))) == "(+(a, b) | c)"
+## printing terms:
+@test string(term(:a)) == "a"
+@test string(term(:(a+b))) == "+(a, b)"
+@test string(term(:(a + a&b))) == "+(a, &(a, b))"
+@test string(term(:(a+b | c))) == "(+(a, b) | c)"
 
 end # module
