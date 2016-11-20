@@ -74,7 +74,7 @@ variable is dropped.  For example, with categorical `a`:
 
 If a categorical variable aliases another term that is present elsewhere in the
 formula, we call that variable *redundant*.  A variable is *non-redundant* when
-the term that it alises is _not_ present elsewhere in the formula.  For
+the term that it alises is *not* present elsewhere in the formula.  For
 categorical `a`, `b`, and `c`:
 
 * In `y ~ 1 + a`, the `a` in the main effect of `a` aliases the intercept `1`.
@@ -92,12 +92,12 @@ of the contrasts used elsewhere for that variable.
 
 One additional complexity is introduced by promoting non-redundant variables to
 full rank.  For the purpose of determining redundancy, a full-rank dummy coded
-categorical variable _implicitly_ introduces the term that it aliases into the
+categorical variable *implicitly* introduces the term that it aliases into the
 formula.  Thus, in `y ~ 1 + a + a&b + b&c`:
 
 * In `a&b`, `a` aliases the main effect `b`, which is not explicitly present in
   the formula.  This makes it non-redundant and so its contrast coding is
-  promoted to `FullDummyCoding`, which _implicitly_ introduces the main effect
+  promoted to `FullDummyCoding`, which *implicitly* introduces the main effect
   of `b`.
-* Then, in `b&c`, the variable `c` is now _redundant_ because it aliases the main
+* Then, in `b&c`, the variable `c` is now *redundant* because it aliases the main
   effect of `b`, and so it keeps its original contrast coding system.
