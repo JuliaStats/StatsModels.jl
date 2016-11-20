@@ -1,5 +1,4 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
-build
-docs/site
+docs/build
