@@ -1,3 +1,51 @@
+"""
+Wrapper which combines Formula (Terms) and an AbstractDataFrame
+
+This wrapper encapsulates all the information that's required to transform data
+of the same structure as the wrapped data frame into a model matrix.  This goes
+above and beyond what's expressed in the `Formula` itself, for instance
+including information on how each categorical variable should be coded.
+
+Creating a `ModelFrame` first parses the `Formula` into `Terms`, checks which
+variables are categorical and determines the appropriate contrasts to use, and
+then creates the necessary contrasts matrices and stores the results.
+
+# Constructors
+
+```julia
+ModelFrame(f::Formula, df::AbstractDataFrame; contrasts::Dict = Dict())
+ModelFrame(ex::Expr, d::AbstractDataFrame; contrasts::Dict = Dict())
+ModelFrame(terms::Terms, df::AbstractDataFrame; contrasts::Dict = Dict())
+# Inner constructors:
+ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray)
+ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray, contrasts::Dict{Symbol, ContrastsMatrix})
+```
+
+# Arguments
+
+* `f::Formula`: Formula whose left hand side is the *response* and right hand
+  side are the *predictors*.
+* `df::AbstractDataFrame`: The data being modeled.  This is used at this stage
+  to determine which variables are categorical, and otherwise held for
+  [`ModelMatrix`](@ref).
+* `contrasts::Dict`: An optional Dict of contrast codings for each categorical
+  variable.  Any unspecified variables will have [`DummyCoding`](@ref).  As a
+  keyword argument, these can be either instances of a subtype of
+  [`AbstractContrasts`](@ref), or a [`ContrastsMatrix`](@ref).  For the inner
+  constructor, they must be [`ContrastsMatrix`](@ref)es.
+* `ex::Expr`: An expression which will be converted into a `Formula`.
+* `terms::Terms`: For inner constructor, the parsed `Terms` from the `Formula`.
+* `missing::BitArray`: For inner constructor, indicates whether each row of `df`
+  contains any missing data.
+
+# Examples
+
+```julia
+julia> df = DataFrame(x = 1:4, y = 5:9)
+julia> mf = ModelFrame(y ~ 1 + x, df)
+```
+
+"""
 type ModelFrame
     df::AbstractDataFrame
     terms::Terms
@@ -97,7 +145,11 @@ ModelFrame(df::AbstractDataFrame, term::Terms, msng::BitArray) = ModelFrame(df, 
 ModelFrame(f::Formula, d::AbstractDataFrame; kwargs...) = ModelFrame(Terms(f), d; kwargs...)
 ModelFrame(ex::Expr, d::AbstractDataFrame; kwargs...) = ModelFrame(Formula(ex), d; kwargs...)
 
-## modify contrasts in place
+"""
+    setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
+
+Modify the contrast coding system of a ModelFrame in place.
+"""
 function setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
     new_contrasts = Dict([ Pair(col, ContrastsMatrix(contr, mf.df[col]))
                       for (col, contr) in filter((k,v)->haskey(mf.df, k), new_contrasts) ])

@@ -1,6 +1,18 @@
 
 typealias AbstractFloatMatrix{T<:AbstractFloat} AbstractMatrix{T}
 
+"""
+Convert a `ModelFrame` into a numeric matrix suitable for modeling
+
+# Constructors
+
+```julia
+ModelMatrix(mf::ModelFrame)
+# Specify the type of the resulting matrix (default Matrix{Float64})
+ModelMatrix{T <: AbstractFloatMatrix}(mf::ModelFrame)
+```
+
+"""
 type ModelMatrix{T <: AbstractFloatMatrix}
     m::T
     assign::Vector{Int}
