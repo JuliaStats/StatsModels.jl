@@ -265,7 +265,7 @@ lower-order columns for interactions) but are orthogonal to each other. In a
 regression model, dummy coding leads to an intercept that is the mean of the
 dependent variable for base level.
 
-Also known as "treatment coding" (`contr.treatment` in R) or "one-hot encoding".
+Also known as "treatment coding" or "one-hot encoding".
 
 # Examples
 
@@ -298,7 +298,7 @@ columns that are mean centered (have mean 0).  For more than two levels the
 generated columns are not orthogonal.  In a regression model with an
 effects-coded variable, the intercept corresponds to the grand mean.
 
-Also known as "sum coding" (`contr.sum` in R) or "simple coding" (SPSS). Note
+Also known as "sum coding" or "simple coding". Note
 though that the default in R and SPSS is to use the *last* level as the base.
 Here we use the *first* level as the base, for consistency with other coding
 systems.
