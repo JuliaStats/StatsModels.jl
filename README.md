@@ -7,4 +7,6 @@
 Basic functionality for specifying, fitting, and evaluating statistical models
 in Julia.
 
+**Documentation:** [![Latest](https://img.shields.io/badge/docs-latest-blue.svg)](https://juliastats.github.io/StatsModels.jl/latest)
+
 Originally part of [DataFrames.jl](http://github.com/JuliaStats/DataFrames.jl).
