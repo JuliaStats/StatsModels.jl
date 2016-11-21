@@ -51,7 +51,6 @@ const DEFAULT_CONTRASTS = DummyCoding
 # TODO: could use "context" (rest of term) rather than aliases, to avoid
 # calculating aliases for continuous terms.
 function datify!(term::EvalTerm, aliases::Set, already::Set, source)
-    println("Processing term: $term\n  aliases: $aliases\n  already: $already")
     if is_categorical(term.name, source)
         if aliases in already
             contr = DEFAULT_CONTRASTS()
@@ -107,5 +106,13 @@ import StatsModels: term
 
 d = DataFrame(a = 1:10, b = categorical(repeat(["a", "b"], outer=5)))
 
-datify!(term(:(a+b)), d)
-datify!(term(:(1+a+b)), d)
+contrasts(t::Term) = map(contrasts, t.children)
+contrasts(t::Term{1}) = nothing
+contrasts(t::ContinuousTerm) = nothing
+contrasts{C}(t::CategoricalTerm{C}) = C
+
+t1 = datify!(term(:(a+b)), d)
+t2 = datify!(term(:(1+a+b)), d)
+
+t3 = datify!(term(:(a+b+a&b)), d)
+t4 = datify!(term(:(1+a+b+a&b)), d)
