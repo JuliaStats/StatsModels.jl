@@ -69,8 +69,11 @@ end
 
 function datify!(term::Term{:&}, already::Set, source)
     push!(already, Set(term.children))
-    map!(c -> datify!(c, Set(d for d in term.children if d!=c), already, source),
-         term.children)
+    term.children = map(c -> datify!(c,
+                                     Set(d for d in term.children if d!=c),
+                                     already,
+                                     source),
+                        term.children)
     return term
 end
 
