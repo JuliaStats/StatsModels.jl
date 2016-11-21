@@ -40,9 +40,9 @@ is_categorical(::Any) = false
 
 is_categorical(name::Symbol, source::AbstractDataFrame) = is_categorical(source[name])
 
-function datify!(terms::Term{:+}, source::AbstractDataFrame)
+function set_schema!(terms::Term{:+}, source::AbstractDataFrame)
     already = Set()
-    map!(t -> datify!(t, already, source), terms.children)
+    map!(t -> set_schema!(t, already, source), terms.children)
     terms
 end
 
@@ -50,7 +50,7 @@ const DEFAULT_CONTRASTS = DummyCoding
 
 # TODO: could use "context" (rest of term) rather than aliases, to avoid
 # calculating aliases for continuous terms.
-function datify!(term::EvalTerm, aliases::Set, already::Set, source)
+function set_schema!(term::EvalTerm, aliases::Set, already::Set, source)
     if is_categorical(term.name, source)
         if aliases in already
             contr = DEFAULT_CONTRASTS()
@@ -66,9 +66,9 @@ function datify!(term::EvalTerm, aliases::Set, already::Set, source)
     end
 end
 
-function datify!(term::Term{:&}, already::Set, source)
+function set_schema!(term::Term{:&}, already::Set, source)
     push!(already, Set(term.children))
-    term.children = map(c -> datify!(c,
+    term.children = map(c -> set_schema!(c,
                                      Set(d for d in term.children if d!=c),
                                      already,
                                      source),
@@ -76,12 +76,12 @@ function datify!(term::Term{:&}, already::Set, source)
     return term
 end
 
-function datify!(term::EvalTerm, already::Set, source)
+function set_schema!(term::EvalTerm, already::Set, source)
     push!(already, Set([term]))
-    return datify!(term, Set([Term{1}()]), already, source)
+    return set_schema!(term, Set([Term{1}()]), already, source)
 end
 
-datify!(x::Any, already::Set, source) = (push!(already, Set([x])); x)
+set_schema!(x::Any, already::Set, source) = (push!(already, Set([x])); x)
 
 
 # to add data to a term:
@@ -111,8 +111,8 @@ contrasts(t::Term{1}) = nothing
 contrasts(t::ContinuousTerm) = nothing
 contrasts{C}(t::CategoricalTerm{C}) = C
 
-t1 = datify!(term(:(a+b)), d)
-t2 = datify!(term(:(1+a+b)), d)
+t1 = set_schema!(term(:(a+b)), d)
+t2 = set_schema!(term(:(1+a+b)), d)
 
-t3 = datify!(term(:(a+b+a&b)), d)
-t4 = datify!(term(:(1+a+b+a&b)), d)
+t3 = set_schema!(term(:(a+b+a&b)), d)
+t4 = set_schema!(term(:(1+a+b+a&b)), d)
