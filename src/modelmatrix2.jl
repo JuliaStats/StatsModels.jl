@@ -22,11 +22,18 @@ type ContinuousTerm <: AbstractTerm
     source
 end
 
-type CategoricalTerm <: AbstractTerm
+type CategoricalTerm{C,T} <: AbstractTerm
     name::Symbol
-    contrasts::ContrastsMatrix
+    contrasts::ContrastsMatrix{C,T}
     source
 end
+
+Base.show(io::IO, t::ContinuousTerm) = print(io, "$(t.name)(continuous)")
+Base.show{C}(io::IO, t::CategoricalTerm{C}) = print(io, "$(t.name)($C)")
+
+Base.string(t::ContinuousTerm) = "$(t.name)(continuous)"
+Base.string{C}(t::CategoricalTerm{C}) = "$(t.name)($C)"
+
 
 is_categorical(::Union{CategoricalArray, NullableCategoricalArray}) = true
 is_categorical(::Any) = false
