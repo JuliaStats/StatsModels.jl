@@ -1,7 +1,7 @@
 # Experiments in Formula->Term tree->ModelMatrix
 
 # Two stage strategy.
-# First, add data to Term:
+# First, apply data schema with set_schema!:
 # * convert eval terms into ContinuousTerms and CategoricalTerms:
 # * check redundancy and create contrasts
 #
@@ -81,8 +81,35 @@ function set_schema!(term::EvalTerm, already::Set, source)
     return set_schema!(term, Set([Term{1}()]), already, source)
 end
 
-set_schema!(x::Any, already::Set, source) = (push!(already, Set([x])); x)
+# set_schema!(x::Any, already::Set, source) = (push!(already, Set([x])); x)
 
+# what to do about set_schema! when schema's already been set? could just error,
+# or better yet check whether schema matches.  for categorical terms, can
+# instantiate the contrasts matrix again adn that will do the check?
+
+function set_schema!(term::ContinuousTerm, aliases::Set, already::Set, source)
+    if is_categorical(term.name, source)
+        throw(ArgumentError("Term $(term) is continuous but $(term.name) is" *
+                            " categorical in schema"))
+    else
+        return ContinuousTerm(term.name, source)
+    end
+end
+
+function set_schema!(term::CategoricalTerm, aliases::Set, already::Set, source)
+    if is_categorical(term.name, source)
+        return CategoricalTerm(term.name,
+                               ContrastsMatrix(term.contrasts,
+                                               source[term.name]),
+                               source)
+    else
+        throw(ArgumentError("Term $(term) is categorical but $(term.name) is" *
+                            " continuous in schema"))
+    end
+end
+
+set_schema!(term::Union{ContinuousTerm, CategoricalTerm}, already::Set, source) =
+    set_schema!(term, Set([Term{1}()]), already, source)
 
 # to add data to a term:
 #   if +: initialize set of encountered terms. add data to each child.
