@@ -122,10 +122,60 @@ set_schema!(term::Union{ContinuousTerm, CategoricalTerm}, already::Set, source) 
 #     set.
 #   for others: ??? nothing.
 
+nc(t::Term{:+}) = mapreduce(nc, +, t.children)
+nc(t::Term{:&}) = mapreduce(nc, *, t.children)
+nc(::ContinuousTerm) = 1
+nc(t::CategoricalTerm) = size(t.contrasts.matrix, 2)
+nc(t::EvalTerm) = throw(ArgumentError("Can't compute number of columns for " *
+                                      "un-evaluated term $t. Use set_schema!"))
+nc(::Term{1}) = 1
+nc(::AbstractTerm) = 0
+
+modelmat_cols!(dest::AbstractArray, ::Term{1}) = fill!(dest, 1)
+function modelmat_cols!(dest::AbstractArray, ::AbstractTerm) end
+modelmat_cols!(dest::AbstractArray, t::ContinuousTerm) = copy!(dest, t.source[t.name])
+function modelmat_cols!(dest::AbstractArray, t::CategoricalTerm)
+    v = t.source[t.name]
+    reindex = [findfirst(t.contrasts.levels, l) for l in levels(v)]
+    copy!(dest, t.contrasts.matrix[reindex[v.refs], :])
+end
+
+function model_matrix(terms::AbstractTerm, data::AbstractDataFrame)
+    
+    terms = set_schema!(Term{:+}(terms), data)
+
+    term_sizes = map(nc, terms.children)
+    mat_size = (size(data, 1), sum(term_sizes))
+
+    mat = Matrix(mat_size...)
+
+    first_col = 0
+    for t in terms.children
+        ncol = nc(t)
+        col_inds = first_col + (1:ncol)
+        first_col += ncol
+        modelmat_cols!(view(mat, :, col_inds), t)
+    end
+
+    return mat
+end
 
 
-
-
+# to generate model matrix:
+#   calculate size of model matrix (sum of column sizes)
+#   for each term, fill in columns
+#
+# to fill in columns:
+#   if intercept, fill!(1.)
+#   if continuous, copy!(dest, source[t.name])
+#   if categorical, reindex and copy! OR: iterate over columns, and copy.
+#   if interaction:
+#     generate strides (cumprod sizes)
+#     for each column idx:
+#       generate indices of component terms (using ind2sub)
+#       write first column in place, then for rest iterate and multiply in place
+#       (TODO: can do this MUCH more efficiently by fusing contrast matrices,
+#        but tricky to handle both continuous and categorical)
 
 ################################################################################
 
@@ -143,3 +193,4 @@ t2 = set_schema!(term(:(1+a+b)), d)
 
 t3 = set_schema!(term(:(a+b+a&b)), d)
 t4 = set_schema!(term(:(1+a+b+a&b)), d)
+
