@@ -17,14 +17,10 @@ type Formula
 end
 
 macro formula(ex)
-    if ex.head === :macrocall && first(ex.args) === Symbol("@~")
+    if (ex.head === :macrocall && ex.args[1] === Symbol("@~")) || (ex.head === :call && ex.args[1] === :(~))
         length(ex.args) == 3 || error("malformed expression in formula")
         lhs = Base.Meta.quot(ex.args[2])
         rhs = Base.Meta.quot(ex.args[3])
-    elseif ex.head === :(~)
-        length(ex.args) == 2 || error("malformed expression in formula")
-        lhs = Base.Meta.quot(ex.args[1])
-        rhs = Base.Meta.quot(ex.args[2])
     else
         error("expected formula separator ~, got $(ex.head)")
     end
