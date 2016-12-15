@@ -290,7 +290,7 @@ mm = ModelMatrix(mf)
 @test mm.m == ModelMatrix{sparsetype}(mf).m
 
 ## Same variable on left and right side
-mf = ModelFrame(@formula(x1 => x1), df)
+mf = ModelFrame(@formula(x1 ~ x1), df)
 mm = ModelMatrix(mf)
 mm.m == float(model_response(mf))
 

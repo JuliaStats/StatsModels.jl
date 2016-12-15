@@ -3,9 +3,9 @@
 # Douglas M. Bates, and other contributors.
 
 ## Formulas are written as expressions and parsed by the Julia parser.
-## For example :(y => a + b + log(c))
+## For example :(y ~ a + b + log(c))
 ## In Julia the & operator is used for an interaction.  What would be written
-## in R as y ~ a + b + a:b is written :(y => a + b + a&b) in Julia.
+## in R as y ~ a + b + a:b is written :(y ~ a + b + a&b) in Julia.
 ## The equivalent R expression, y ~ a*b, is the same in Julia
 
 ## The lhs of a one-sided formula is 'nothing'
@@ -49,7 +49,7 @@ end
 Base.:(==)(t1::Terms, t2::Terms) = all(getfield(t1, f)==getfield(t2, f) for f in fieldnames(t1))
 
 function Base.show(io::IO, f::Formula)
-    print(io, "Formula: ", f.lhs === nothing ? "" : f.lhs, " => ", f.rhs)
+    print(io, "Formula: ", f.lhs === nothing ? "" : f.lhs, " ~ ", f.rhs)
 end
 
 # special operators in formulas
