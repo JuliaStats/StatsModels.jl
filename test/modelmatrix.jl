@@ -260,7 +260,7 @@ mm = ModelMatrix(mf)
 
 ## Distributive property of :& over :+
 df = deepcopy(d)
-f = @formula(y ~ (x1+x2)) & (x3+x4)
+f = @formula(y ~ (x1+x2) & (x3+x4))
 mf = ModelFrame(f, df)
 mm = ModelMatrix(mf)
 @test mm.m == hcat(ones(4), x1.*x3, x1.*x4, x2.*x3, x2.*x4)
