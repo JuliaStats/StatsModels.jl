@@ -9,7 +9,7 @@ using NullableArrays
 using CategoricalArrays
 
 
-export @~,
+export @model,
        Formula,
        ModelFrame,
        ModelMatrix,

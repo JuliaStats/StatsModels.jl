@@ -1,27 +1,27 @@
 # Formulas for representing and working with linear-model-type expressions
-# Original by Harlan D. Harris.  Later modifications by John Myles White
-# and Douglas M. Bates.
+# Original by Harlan D. Harris.  Later modifications by John Myles White,
+# Douglas M. Bates, and other contributors.
 
 ## Formulas are written as expressions and parsed by the Julia parser.
-## For example :(y ~ a + b + log(c))
+## For example :(y => a + b + log(c))
 ## In Julia the & operator is used for an interaction.  What would be written
-## in R as y ~ a + b + a:b is written :(y ~ a + b + a&b) in Julia.
+## in R as y ~ a + b + a:b is written :(y => a + b + a&b) in Julia.
 ## The equivalent R expression, y ~ a*b, is the same in Julia
 
 ## The lhs of a one-sided formula is 'nothing'
 ## The rhs of a formula can be 1
 
 type Formula
-    lhs::@compat(Union{Symbol, Expr, Void})
-    rhs::@compat(Union{Symbol, Expr, Integer})
+    lhs::Union{Symbol, Expr, Void}
+    rhs::Union{Symbol, Expr, Integer}
 end
 
-macro ~(lhs, rhs)
-    ex = Expr(:call,
-              :Formula,
-              Base.Meta.quot(lhs),
-              Base.Meta.quot(rhs))
-    return ex
+macro model(formula)
+    formula.head === :(=>) || error("expected formula separator =>, got $(formula.head)")
+    length(formula.args) == 2 || error("malformed expression in formula")
+    lhs = Base.Meta.quot(formula.args[1])
+    rhs = Base.Meta.quot(formula.args[2])
+    return Expr(:call, :Formula, lhs, rhs)
 end
 
 """
@@ -46,9 +46,7 @@ end
 Base.:(==)(t1::Terms, t2::Terms) = all(getfield(t1, f)==getfield(t2, f) for f in fieldnames(t1))
 
 function Base.show(io::IO, f::Formula)
-    print(io,
-          string("Formula: ",
-                 f.lhs == nothing ? "" : f.lhs, " ~ ", f.rhs))
+    print(io, "Formula: ", f.lhs === nothing ? "" : f.lhs, " => ", f.rhs)
 end
 
 # special operators in formulas
