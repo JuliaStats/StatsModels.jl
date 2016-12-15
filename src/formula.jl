@@ -16,11 +16,18 @@ type Formula
     rhs::Union{Symbol, Expr, Integer}
 end
 
-macro model(formula)
-    formula.head === :(=>) || error("expected formula separator =>, got $(formula.head)")
-    length(formula.args) == 2 || error("malformed expression in formula")
-    lhs = Base.Meta.quot(formula.args[1])
-    rhs = Base.Meta.quot(formula.args[2])
+macro formula(ex)
+    if ex.head === :macrocall && first(ex.args) === Symbol("@~")
+        length(ex.args) == 3 || error("malformed expression in formula")
+        lhs = Base.Meta.quot(ex.args[2])
+        rhs = Base.Meta.quot(ex.args[3])
+    elseif ex.head === :(~)
+        length(ex.args) == 2 || error("malformed expression in formula")
+        lhs = Base.Meta.quot(ex.args[1])
+        rhs = Base.Meta.quot(ex.args[2])
+    else
+        error("expected formula separator ~, got $(ex.head)")
+    end
     return Expr(:call, :Formula, lhs, rhs)
 end
 

@@ -6,7 +6,7 @@ using DataFrames
 using Compat
 
 # for testing while DataFrames still exports these:
-import StatsModels: @model, Formula, ModelMatrix, ModelFrame, DummyCoding, EffectsCoding, HelmertCoding, ContrastsCoding, setcontrasts!, coefnames
+import StatsModels: @formula, Formula, ModelMatrix, ModelFrame, DummyCoding, EffectsCoding, HelmertCoding, ContrastsCoding, setcontrasts!, coefnames
 
 
 ## Tests for constructing ModelFrame and ModelMatrix
@@ -24,7 +24,7 @@ x1 = [5.:8;]
 x2 = [9.:12;]
 x3 = [13.:16;]
 x4 = [17.:20;]
-f = @model y => x1 + x2
+f = @formula(y ~ x1 + x2)
 mf = ModelFrame(f, d)
 ## @test mm.response_colnames == ["y"] # nope: no response_colnames
 @test coefnames(mf) == ["(Intercept)","x1","x2"]
@@ -41,7 +41,7 @@ smm = ModelMatrix{sparsetype}(mf)
 #test_group("expanding a nominal array into a design matrix of indicators for each dummy variable")
 
 d[:x1p] = NullableCategoricalArray(d[:x1])
-mf = ModelFrame(@model y => x1p, d)
+mf = ModelFrame(@formula(y ~ x1p), d)
 mm = ModelMatrix(mf)
 
 @test mm.m[:,2] == [0, 1., 0, 0]
@@ -107,13 +107,13 @@ mm = ModelMatrix(mf)
 #test_group("Creating a model matrix using full formulas: y => x1 + x2, etc")
 
 df = deepcopy(d)
-f = @model y => x1 & x2
+f = @formula(y ~ x1 & x2)
 mf = ModelFrame(f, df)
 mm = ModelMatrix(mf)
 @test mm.m == [ones(4) x1.*x2]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-f = @model y => x1 * x2
+f = @formula(y ~ x1 * x2)
 mf = ModelFrame(f, df)
 mm = ModelMatrix(mf)
 @test mm.m == [ones(4) x1 x2 x1.*x2]
@@ -121,7 +121,7 @@ mm = ModelMatrix(mf)
 
 df[:x1] = CategoricalArray(x1)
 x1e = [[0, 1, 0, 0] [0, 0, 1, 0] [0, 0, 0, 1]]
-f = @model y => x1 * x2
+f = @formula(y ~ x1 * x2)
 mf = ModelFrame(f, df)
 mm = ModelMatrix(mf)
 @test mm.m == [ones(4) x1e x2 [0, 10, 0, 0] [0, 0, 11, 0] [0, 0, 0, 12]]
@@ -173,7 +173,7 @@ mm = ModelMatrix(mf)
 
 # additional tests from Tom
 y = [1., 2, 3, 4]
-mf = ModelFrame(@model y => x2, d)
+mf = ModelFrame(@formula(y ~ x2), d)
 mm = ModelMatrix(mf)
 @test mm.m == [ones(4) x2]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
@@ -182,12 +182,12 @@ mm = ModelMatrix(mf)
 df = deepcopy(d)
 df[:x1] = NullableCategoricalArray(df[:x1])
 
-f = @model y => x2 + x3 + x3*x2
+f = @formula(y ~ x2 + x3 + x3*x2)
 mm = ModelMatrix(ModelFrame(f, df))
 @test mm.m == [ones(4) x2 x3 x2.*x3]
-mm = ModelMatrix(ModelFrame(@model y => x3*x2 + x2 + x3, df))
+mm = ModelMatrix(ModelFrame(@formula(y ~ x3*x2 + x2 + x3), df))
 @test mm.m == [ones(4) x3 x2 x2.*x3]
-mm = ModelMatrix(ModelFrame(@model y => x1 + x2 + x3 + x4, df))
+mm = ModelMatrix(ModelFrame(@formula(y ~ x1 + x2 + x3 + x4), df))
 @test mm.m[:,2] == [0, 1., 0, 0]
 @test mm.m[:,3] == [0, 0, 1., 0]
 @test mm.m[:,4] == [0, 0, 0, 1.]
@@ -195,24 +195,24 @@ mm = ModelMatrix(ModelFrame(@model y => x1 + x2 + x3 + x4, df))
 @test mm.m[:,6] == x3
 @test mm.m[:,7] == x4
 
-mm = ModelMatrix(ModelFrame(@model y => x2 + x3 + x4, df))
+mm = ModelMatrix(ModelFrame(@formula(y ~ x2 + x3 + x4), df))
 @test mm.m == [ones(4) x2 x3 x4]
-mm = ModelMatrix(ModelFrame(@model y => x2 + x2, df))
+mm = ModelMatrix(ModelFrame(@formula(y ~ x2 + x2), df))
 @test mm.m == [ones(4) x2]
-mm = ModelMatrix(ModelFrame(@model y => x2*x3 + x2&x3, df))
+mm = ModelMatrix(ModelFrame(@formula(y ~ x2*x3 + x2&x3), df))
 @test mm.m == [ones(4) x2 x3 x2.*x3]
-mm = ModelMatrix(ModelFrame(@model y => x2*x3*x4, df))
+mm = ModelMatrix(ModelFrame(@formula(y ~ x2*x3*x4), df))
 @test mm.m == [ones(4) x2 x3 x4 x2.*x3 x2.*x4 x3.*x4 x2.*x3.*x4]
-mm = ModelMatrix(ModelFrame(@model y => x2&x3 + x2*x3, df))
+mm = ModelMatrix(ModelFrame(@formula(y ~ x2&x3 + x2*x3), df))
 @test mm.m == [ones(4) x2 x3 x2.*x3]
 
-f = @model y => x2 & x3 & x4
+f = @formula(y ~ x2 & x3 & x4)
 mf = ModelFrame(f, df)
 mm = ModelMatrix(mf)
 @test mm.m == [ones(4) x2.*x3.*x4]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-f = @model y => x1 & x2 & x3
+f = @formula(y ~ x1 & x2 & x3)
 mf = ModelFrame(f, df)
 mm = ModelMatrix(mf)
 @test mm.m[:, 2:end] == diagm(x2.*x3)
@@ -260,23 +260,23 @@ mm = ModelMatrix(mf)
 
 ## Distributive property of :& over :+
 df = deepcopy(d)
-f = @model y => (x1+x2) & (x3+x4)
+f = @formula(y ~ (x1+x2)) & (x3+x4)
 mf = ModelFrame(f, df)
 mm = ModelMatrix(mf)
 @test mm.m == hcat(ones(4), x1.*x3, x1.*x4, x2.*x3, x2.*x4)
 @test mm.m == ModelMatrix{sparsetype}(mf).m
 
 ## Condensing nested :+ calls
-f = @model y => x1 + (x2 + (x3 + x4))
+f = @formula(y ~ x1 + (x2 + (x3 + x4)))
 @test ModelMatrix(ModelFrame(f, df)).m == hcat(ones(4), x1, x2, x3, x4)
 
 
 ## Extra levels in categorical column
-mf_full = ModelFrame(@model y => x1p, d)
+mf_full = ModelFrame(@formula(y ~ x1p), d)
 mm_full = ModelMatrix(mf_full)
 @test size(mm_full) == (4,4)
 
-mf_sub = ModelFrame(@model y => x1p, d[2:4, :])
+mf_sub = ModelFrame(@formula(y ~ x1p), d[2:4, :])
 mm_sub = ModelMatrix(mf_sub)
 ## should have only three rows, and only three columns (intercept plus two
 ## levels of factor)
@@ -284,13 +284,13 @@ mm_sub = ModelMatrix(mf_sub)
 
 ## Missing data
 d[:x1m] = NullableArray(Nullable{Int}[5, 6, Nullable(), 7])
-mf = ModelFrame(@model y => x1m, d)
+mf = ModelFrame(@formula(y ~ x1m), d)
 mm = ModelMatrix(mf)
 @test isequal(NullableArray(mm.m[:, 2]), d[complete_cases(d), :x1m])
 @test mm.m == ModelMatrix{sparsetype}(mf).m
 
 ## Same variable on left and right side
-mf = ModelFrame(@model x1 => x1, df)
+mf = ModelFrame(@formula(x1 => x1), df)
 mm = ModelMatrix(mf)
 mm.m == float(model_response(mf))
 
@@ -305,7 +305,7 @@ d[:n] = 1.:8
 
 
 ## No intercept
-mf = ModelFrame(@model n => 0 + x, d, contrasts=cs)
+mf = ModelFrame(@formula(n ~ 0 + x), d, contrasts=cs)
 mm = ModelMatrix(mf)
 @test mm.m == [1 0
                0 1
@@ -319,7 +319,7 @@ mm = ModelMatrix(mf)
 @test coefnames(mf) == ["x: a", "x: b"]
 
 ## No first-order term for interaction
-mf = ModelFrame(@model n => 1 + x + x&y, d, contrasts=cs)
+mf = ModelFrame(@formula(n ~ 1 + x + x&y), d, contrasts=cs)
 mm = ModelMatrix(mf)
 @test mm.m[:, 2:end] == [-1 -1  0
                          1  0 -1
@@ -333,7 +333,7 @@ mm = ModelMatrix(mf)
 @test coefnames(mf) == ["(Intercept)", "x: b", "x: a & y: d", "x: b & y: d"]
 
 ## When both terms of interaction are non-redundant:
-mf = ModelFrame(@model n => 0 + x&y, d, contrasts=cs)
+mf = ModelFrame(@formula(n ~ 0 + x&y), d, contrasts=cs)
 mm = ModelMatrix(mf)
 @test mm.m == [1 0 0 0
                0 1 0 0
@@ -348,7 +348,7 @@ mm = ModelMatrix(mf)
                         "x: a & y: d", "x: b & y: d"]
 
 # only a three-way interaction: every term is promoted.
-mf = ModelFrame(@model n => 0 + x&y&z, d, contrasts=cs)
+mf = ModelFrame(@formula(n ~ 0 + x&y&z), d, contrasts=cs)
 mm = ModelMatrix(mf)
 @test mm.m == eye(8)
 @test mm.m == ModelMatrix{sparsetype}(mf).m
@@ -357,7 +357,7 @@ mm = ModelMatrix(mf)
 # first (both x and y), but only the old term (x) in the second (because
 # dropping x gives z which isn't found elsewhere, but dropping z gives x
 # which is found (implicitly) in the promoted interaction x&y).
-mf = ModelFrame(@model n => 0 + x&y + x&z, d, contrasts=cs)
+mf = ModelFrame(@formula(n ~ 0 + x&y + x&z), d, contrasts=cs)
 mm = ModelMatrix(mf)
 @test mm.m == [1 0 0 0 -1  0
                0 1 0 0  0 -1
@@ -375,7 +375,7 @@ mm = ModelMatrix(mf)
 # ...and adding a three-way interaction, only the shared term (x) is promoted.
 # this is because dropping x gives y&z which isn't present, but dropping y or z
 # gives x&z or x&z respectively, which are both present.
-mf = ModelFrame(@model n => 0 + x&y + x&z + x&y&z, d, contrasts=cs)
+mf = ModelFrame(@formula(n ~ 0 + x&y + x&z + x&y&z), d, contrasts=cs)
 mm = ModelMatrix(mf)
 @test mm.m == [1 0 0 0 -1  0  1  0
                0 1 0 0  0 -1  0  1
@@ -394,7 +394,7 @@ mm = ModelMatrix(mf)
 # two two-way interactions, with common lower-order term. the common term x is
 # promoted in both (along with lower-order term), because in every case, when
 # x is dropped, the remaining terms (1, y, and z) aren't present elsewhere.
-mf = ModelFrame(@model n => 0 + x + x&y + x&z, d, contrasts=cs)
+mf = ModelFrame(@formula(n ~ 0 + x + x&y + x&z), d, contrasts=cs)
 mm = ModelMatrix(mf)
 @test mm.m == [1 0 -1  0 -1  0
                0 1  0 -1  0 -1
@@ -435,17 +435,17 @@ mm = ModelMatrix(mf)
 
 # Ensure that random effects terms are dropped from coefnames
 df = DataFrame(x = [1,2,3], y = [4,5,6])
-mf = ModelFrame(@model y => 1 + (1 | x), df)
+mf = ModelFrame(@formula(y ~ 1 + (1 | x)), df)
 @test coefnames(mf) == ["(Intercept)"]
 
-mf = ModelFrame(@model y => 0 + (1 | x), df)
+mf = ModelFrame(@formula(y ~ 0 + (1 | x)), df)
 @test_throws ErrorException ModelMatrix(mf)
 @test coefnames(mf) == Vector{Compat.UTF8String}()
 
 
 # Ensure X is not a view on df column
 df = DataFrame(x = [1.0,2.0,3.0], y = [4.0,5.0,6.0])
-mf = ModelFrame(@model y => 0 + x, df)
+mf = ModelFrame(@formula(y ~ 0 + x), df)
 X = ModelMatrix(mf).m
 X[1] = 0.0
 @test mf.df[1, :x] === Nullable(1.0)
