@@ -105,4 +105,7 @@ t = Terms(@formula(y ~ x1 * x2 * x3))
 ## @test t.terms == [:x2, :(x1&x2)]    # == [:(1 & x1)]
 ## @test t.eterms == [:y, :x1, :x2]
 
+# Incorrect formula separator
+@test_throws ErrorException eval(:(@formula(y => x + 1)))
+
 end
