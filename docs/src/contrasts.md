@@ -22,7 +22,7 @@ The default contrast coding system is `DummyCoding`.  To override this, use
 the `contrasts` argument when constructing a `ModelFrame`:
 
 ```julia
-mf = ModelFrame(y ~ 1 + x, df, contrasts = Dict(:x => EffectsCoding()))
+mf = ModelFrame(@formula(y ~ 1 + x), df, contrasts = Dict(:x => EffectsCoding()))
 ```
 
 To change the contrast coding for one or more variables in place, use
