@@ -213,3 +213,23 @@ function Formula(t::Terms)
     append!(rhs.args,t.terms)
     Formula(lhs,rhs)
 end
+
+"""
+    dropterm(f::Formula, trm::Symbol)
+
+Return a copy of `f` without the term `trm`.
+
+# Examples
+```jl
+julia> dropterm(foo ~ 1 + bar + baz, :bar)
+foo ~ 1 + baz
+```
+"""
+function dropterm(f::Formula, trm::Symbol)
+    rhs = copy(f.rhs)
+    args = rhs.args
+    if !(Meta.isexpr(rhs, :call) && args[1] == :+ && (tpos = findlast(args, trm)) > 0)
+        throw(ArgumentError("$trm is not a summand in `$rhs`"))
+    end
+    Formula(f.lhs, Expr(:call, :+, deleteat!(args, [1, tpos])...))
+end
