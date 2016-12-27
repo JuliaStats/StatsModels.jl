@@ -214,6 +214,11 @@ function Formula(t::Terms)
     Formula(lhs,rhs)
 end
 
+function Base.copy(f::Formula)
+    lhs = isa(f.lhs, Symbol) ? f.lhs : copy(f.lhs)
+    return Formula(lhs, copy(f.rhs))
+end
+
 """
     dropterm(f::Formula, trm::Symbol)
 
@@ -222,14 +227,26 @@ Return a copy of `f` without the term `trm`.
 # Examples
 ```jl
 julia> dropterm(foo ~ 1 + bar + baz, :bar)
-foo ~ 1 + baz
+Formula: foo ~ 1 + baz
+
+julia> dropterm(foo ~ 1 + bar + baz, 1)
+Formula: foo ~ 0 + bar + baz
 ```
 """
-function dropterm(f::Formula, trm::Symbol)
-    rhs = copy(f.rhs)
-    args = rhs.args
-    if !(Meta.isexpr(rhs, :call) && args[1] == :+ && (tpos = findlast(args, trm)) > 0)
-        throw(ArgumentError("$trm is not a summand in `$rhs`"))
+dropterm(f::Formula, trm::Union{Number, Symbol, Expr}) = dropterm!(copy(f), trm)
+
+function dropterm!(f::Formula, trm::Union{Number, Symbol, Expr})
+    rhs = f.rhs
+    if !(Meta.isexpr(rhs, :call) && rhs.args[1] == :+ && (tpos = findlast(rhs.args, trm)) > 0)
+        throw(ArgumentError("$trm is not a summand of '$(f.rhs)'"))
     end
-    Formula(f.lhs, Expr(:call, :+, deleteat!(args, [1, tpos])...))
+    if isa(trm, Number)
+        if trm ≠ one(trm)
+            throw(ArgumentError("Cannot drop $trm from a formula"))
+        end
+        rhs.args[tpos] = 0
+    else
+        deleteat!(rhs.args, [tpos])
+    end
+    return f
 end
