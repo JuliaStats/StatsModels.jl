@@ -72,6 +72,13 @@ julia> Formula(StatsModels.Terms(@formula(y ~ 1 + (a+b) * c)))
 Formula: y ~ 1 + a + b + c + c & a + c & b
 ```
 
+You may be wondering why formulas in Julia require a macro, while in R they appear "bare."
+R supports nonstandard evaluation, allowing the formula to remain an unevaluated object
+while its terms are parsed out. Julia uses a much more standard evaluation mechanism,
+making this impossible using normal expressions. However, unlike R, Julia provides macros to
+explicitly indicate when code itself will be manipulated before it's evaluated. By constructing
+a formula using a macro, we're able to provide convenient, R-like syntax and semantics.
+
 ## The `ModelFrame` and `ModelMatrix` types
 
 The main use of `Formula`s is for fitting statistical models based on tabular
