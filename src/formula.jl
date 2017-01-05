@@ -177,8 +177,8 @@ evt(a) = Any[a]
 function Terms(f::Formula)
     rhs = condense(distribute(dospecials(f.rhs)))
     tt = unique(getterms(rhs))
-    tt = tt[!(tt .== 1)]             # drop any explicit 1's
-    noint = (tt .== 0) | (tt .== -1) # should also handle :(-(expr,1))
+    filter!(t -> t != 1, tt)                          # drop any explicit 1's
+    noint = BitArray(map(t -> t == 0 || t == -1, tt)) # should also handle :(-(expr,1))
     tt = tt[!noint]
     oo = Int[ord(t) for t in tt]     # orders of interaction terms
     if !issorted(oo)                 # sort terms by increasing order
