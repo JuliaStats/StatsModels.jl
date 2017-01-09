@@ -79,6 +79,11 @@ making this impossible using normal expressions. However, unlike R, Julia provid
 explicitly indicate when code itself will be manipulated before it's evaluated. By constructing
 a formula using a macro, we're able to provide convenient, R-like syntax and semantics.
 
+```@docs
+Formula
+dropterm
+```
+
 ## The `ModelFrame` and `ModelMatrix` types
 
 The main use of `Formula`s is for fitting statistical models based on tabular
