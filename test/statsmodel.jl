@@ -33,7 +33,7 @@ d[:x2] = [9:12;]
 d[:x3] = [13:16;]
 d[:x4] = [17:20;]
 
-f = y ~ x1 * x2
+f = @formula(y ~ x1 * x2)
 m = fit(DummyMod, f, d)
 @test model_response(m) == Array(d[:y])
 
@@ -64,7 +64,7 @@ show(io, m)
 
 ## with categorical variables
 d[:x1p] = NullableCategoricalArray(d[:x1])
-f2 = y ~ x1p
+f2 = @formula(y ~ x1p)
 m2 = fit(DummyMod, f2, d)
 
 @test coeftable(m2).rownms == ["(Intercept)", "x1p: 6", "x1p: 7", "x1p: 8"]
@@ -80,7 +80,7 @@ d3[:x1p] = NullableCategoricalVector(d3[:x1])
 
 ## fit with contrasts specified
 d[:x2p] = NullableCategoricalVector(d[:x2])
-f3 = y ~ x1p + x2p
+f3 = @formula(y ~ x1p + x2p)
 m3 = fit(DummyMod, f3, d)
 fit(DummyMod, f3, d, contrasts = Dict(:x1p => EffectsCoding()))
 fit(DummyMod, f3, d, contrasts = Dict(:x1p => EffectsCoding(),
