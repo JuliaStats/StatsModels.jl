@@ -27,6 +27,8 @@ macro formula(ex)
     return Expr(:call, :Formula, lhs, rhs)
 end
 
+Base.:(==)(f1::Formula, f2::Formula) = all(getfield(f1, f)==getfield(f2, f) for f in fieldnames(f1))
+
 """
 Representation of parsed `Formula`
 
@@ -213,4 +215,41 @@ function Formula(t::Terms)
     end
     append!(rhs.args,t.terms)
     Formula(lhs,rhs)
+end
+
+function Base.copy(f::Formula)
+    lhs = isa(f.lhs, Symbol) ? f.lhs : copy(f.lhs)
+    return Formula(lhs, copy(f.rhs))
+end
+
+"""
+    dropterm(f::Formula, trm::Symbol)
+
+Return a copy of `f` without the term `trm`.
+
+# Examples
+```jl
+julia> dropterm(@formula(foo ~ 1 + bar + baz), :bar)
+Formula: foo ~ 1 + baz
+
+julia> dropterm(@formula(foo ~ 1 + bar + baz), 1)
+Formula: foo ~ 0 + bar + baz
+```
+"""
+dropterm(f::Formula, trm::Union{Number, Symbol, Expr}) = dropterm!(copy(f), trm)
+
+function dropterm!(f::Formula, trm::Union{Number, Symbol, Expr})
+    rhs = f.rhs
+    if !(Meta.isexpr(rhs, :call) && rhs.args[1] == :+ && (tpos = findlast(rhs.args, trm)) > 0)
+        throw(ArgumentError("$trm is not a summand of '$(f.rhs)'"))
+    end
+    if isa(trm, Number)
+        if trm ≠ one(trm)
+            throw(ArgumentError("Cannot drop $trm from a formula"))
+        end
+        rhs.args[tpos] = 0
+    else
+        deleteat!(rhs.args, [tpos])
+    end
+    return f
 end

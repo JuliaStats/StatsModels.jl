@@ -21,6 +21,7 @@ export @formula,
        ContrastsCoding,
 
        coefnames,
+       dropterm,
        setcontrasts!
 
 map(include,
