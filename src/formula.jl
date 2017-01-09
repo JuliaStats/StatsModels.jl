@@ -229,10 +229,10 @@ Return a copy of `f` without the term `trm`.
 
 # Examples
 ```jl
-julia> dropterm(foo ~ 1 + bar + baz, :bar)
+julia> dropterm(@formula(foo ~ 1 + bar + baz), :bar)
 Formula: foo ~ 1 + baz
 
-julia> dropterm(foo ~ 1 + bar + baz, 1)
+julia> dropterm(@formula(foo ~ 1 + bar + baz), 1)
 Formula: foo ~ 0 + bar + baz
 ```
 """
