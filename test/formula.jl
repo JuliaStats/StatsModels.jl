@@ -106,9 +106,12 @@ t = Terms(y ~ x1 * x2 * x3)
 ## @test t.terms == [:x2, :(x1&x2)]    # == [:(1 & x1)]
 ## @test t.eterms == [:y, :x1, :x2]
 
-@test dropterm(foo ~ 1 + bar + baz, :bar).rhs == :(1 + baz)
-@test dropterm(foo ~ 1 + bar + baz, 1).rhs == :(0 + bar + baz)
+@test dropterm(foo ~ 1 + bar + baz, :bar) == (foo ~ 1 + baz)
+@test dropterm(foo ~ 1 + bar + baz, 1) == (foo ~ 0 + bar + baz)
 @test_throws ArgumentError dropterm(foo ~ 0 + bar + baz, 0)
 @test_throws ArgumentError dropterm(foo ~ 0 + bar + baz, :boz)
-
+form = foo ~ 1 + bar + baz
+@test form == (foo ~ 1 + bar + baz)
+@test StatsModels.dropterm!(form, :bar) == (foo ~ 1 + baz)
+@test form == (foo ~ 1 + baz)
 end

@@ -24,6 +24,8 @@ macro ~(lhs, rhs)
     return ex
 end
 
+Base.:(==)(f1::Formula, f2::Formula) = all(getfield(f1, f)==getfield(f2, f) for f in fieldnames(f1))
+
 """
 Representation of parsed `Formula`
 
