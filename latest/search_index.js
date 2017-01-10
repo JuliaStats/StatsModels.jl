@@ -33,11 +33,27 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "formula.html#StatsModels.Formula",
+    "page": "Modeling tabular data",
+    "title": "StatsModels.Formula",
+    "category": "Type",
+    "text": "Formula(t::Terms)\n\nReconstruct a Formula from Terms.\n\n\n\n"
+},
+
+{
+    "location": "formula.html#StatsModels.dropterm",
+    "page": "Modeling tabular data",
+    "title": "StatsModels.dropterm",
+    "category": "Function",
+    "text": "dropterm(f::Formula, trm::Symbol)\n\nReturn a copy of f without the term trm.\n\nExamples\n\njulia> dropterm(@formula(foo ~ 1 + bar + baz), :bar)\nFormula: foo ~ 1 + baz\n\njulia> dropterm(@formula(foo ~ 1 + bar + baz), 1)\nFormula: foo ~ 0 + bar + baz\n\n\n\n"
+},
+
+{
     "location": "formula.html#The-Formula-type-1",
     "page": "Modeling tabular data",
     "title": "The Formula type",
     "category": "section",
-    "text": "The basic conceptual tool for this is the Formula, which has a left side and a right side, separated by ~. Formulas are constructed using the @formula macro:julia> @formula(y ~ 1 + a)\nFormula: y ~ 1 + aNote that the @formula macro must be called with parentheses to ensure that the formula is parsed properly.The left side of a formula conventionally represents dependent variables, and the right side independent variables (or regressors).  Terms are separated by +.  Basic terms are the integers 1 or 0—evaluated as the presence or absence of a constant intercept term, respectively—and variables like x, which will evaluate to the data source column with that name as a symbol (:x).Individual variables can be combined into interaction terms with &, as in a&b, which will evaluate to the product of the columns named :a and :b. If either a or b are categorical, then the interaction term a&b generates all the product of each pair of the columns of a and b.It's often convenient to include main effects and interactions for a number of variables.  The * operator does this, expanding in the following way:julia> Formula(StatsModels.Terms(@formula(y ~ 1 + a*b)))\nFormula: y ~ 1 + a + b + a & b(We trigger parsing of the formula using the internal Terms type to show how the Formula expands).This applies to higher-order interactions, too: a*b*c expands to the main effects, all two-way interactions, and the three way interaction a&b&c:julia> Formula(StatsModels.Terms(@formula(y ~ 1 + a*b*c)))\nFormula: y ~ 1 + a + b + c + a & b + a & c + b & c + &(a,b,c)Both the * and the & operators act like multiplication, and are distributive over addition:julia> Formula(StatsModels.Terms(@formula(y ~ 1 + (a+b) & c)))\nFormula: y ~ 1 + c & a + c & b\n\njulia> Formula(StatsModels.Terms(@formula(y ~ 1 + (a+b) * c)))\nFormula: y ~ 1 + a + b + c + c & a + c & bYou may be wondering why formulas in Julia require a macro, while in R they appear \"bare.\" R supports nonstandard evaluation, allowing the formula to remain an unevaluated object while its terms are parsed out. Julia uses a much more standard evaluation mechanism, making this impossible using normal expressions. However, unlike R, Julia provides macros to explicitly indicate when code itself will be manipulated before it's evaluated. By constructing a formula using a macro, we're able to provide convenient, R-like syntax and semantics."
+    "text": "The basic conceptual tool for this is the Formula, which has a left side and a right side, separated by ~. Formulas are constructed using the @formula macro:julia> @formula(y ~ 1 + a)\nFormula: y ~ 1 + aNote that the @formula macro must be called with parentheses to ensure that the formula is parsed properly.The left side of a formula conventionally represents dependent variables, and the right side independent variables (or regressors).  Terms are separated by +.  Basic terms are the integers 1 or 0—evaluated as the presence or absence of a constant intercept term, respectively—and variables like x, which will evaluate to the data source column with that name as a symbol (:x).Individual variables can be combined into interaction terms with &, as in a&b, which will evaluate to the product of the columns named :a and :b. If either a or b are categorical, then the interaction term a&b generates all the product of each pair of the columns of a and b.It's often convenient to include main effects and interactions for a number of variables.  The * operator does this, expanding in the following way:julia> Formula(StatsModels.Terms(@formula(y ~ 1 + a*b)))\nFormula: y ~ 1 + a + b + a & b(We trigger parsing of the formula using the internal Terms type to show how the Formula expands).This applies to higher-order interactions, too: a*b*c expands to the main effects, all two-way interactions, and the three way interaction a&b&c:julia> Formula(StatsModels.Terms(@formula(y ~ 1 + a*b*c)))\nFormula: y ~ 1 + a + b + c + a & b + a & c + b & c + &(a,b,c)Both the * and the & operators act like multiplication, and are distributive over addition:julia> Formula(StatsModels.Terms(@formula(y ~ 1 + (a+b) & c)))\nFormula: y ~ 1 + c & a + c & b\n\njulia> Formula(StatsModels.Terms(@formula(y ~ 1 + (a+b) * c)))\nFormula: y ~ 1 + a + b + c + c & a + c & bYou may be wondering why formulas in Julia require a macro, while in R they appear \"bare.\" R supports nonstandard evaluation, allowing the formula to remain an unevaluated object while its terms are parsed out. Julia uses a much more standard evaluation mechanism, making this impossible using normal expressions. However, unlike R, Julia provides macros to explicitly indicate when code itself will be manipulated before it's evaluated. By constructing a formula using a macro, we're able to provide convenient, R-like syntax and semantics.Formula\ndropterm"
 },
 
 {
