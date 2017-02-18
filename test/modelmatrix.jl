@@ -2,10 +2,11 @@ module TestModelMatrix
 
 using Base.Test
 using StatsModels
-using DataFrames
+using DataTables
 using Compat
+using CategoricalArrays
 
-# for testing while DataFrames still exports these:
+# for testing while DataTables still exports these:
 import StatsModels: @formula, Formula, ModelMatrix, ModelFrame, DummyCoding, EffectsCoding, HelmertCoding, ContrastsCoding, setcontrasts!, coefnames
 
 
@@ -13,7 +14,7 @@ import StatsModels: @formula, Formula, ModelMatrix, ModelFrame, DummyCoding, Eff
 
 sparsetype = SparseMatrixCSC{Float64,Int}
 
-d = DataFrame()
+d = DataTable()
 d[:y] = [1:4;]
 d[:x1] = [5:8;]
 d[:x2] = [9:12;]
@@ -50,59 +51,59 @@ mm = ModelMatrix(mf)
 @test coefnames(mf)[2:end] == ["x1p: 6", "x1p: 7", "x1p: 8"]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-#test_group("create a design matrix from interactions from two DataFrames")
+#test_group("create a design matrix from interactions from two DataTables")
 ## this was removed in commit dead4562506badd7e84a2367086f5753fa49bb6a
 
-## b = DataFrame()
+## b = DataTable()
 ## b["x2"] = DataVector(x2)
 ## df = interaction_design_matrix(a,b)
 ## @test df[:,1] == DataVector([0, 10., 0, 0])
 ## @test df[:,2] == DataVector([0, 0, 11., 0])
 ## @test df[:,3] == DataVector([0, 0, 0, 12.])
 
-#test_group("expanding an singleton expression/symbol into a DataFrame")
+#test_group("expanding an singleton expression/symbol into a DataTable")
 ## generalized expand was dropped, too
 ## df = deepcopy(d)
 ## r = expand(:x2, df)
-## @test isa(r, DataFrame)
+## @test isa(r, DataTable)
 ## @test r[:,1] == DataVector([9,10,11,12])  # TODO: test float vs int return
 
 ## df = deepcopy(d)
 ## ex = :(log(x2))
 ## r = expand(ex, df)
-## @test isa(r, DataFrame)
+## @test isa(r, DataTable)
 ## @test r[:,1] == DataVector(log([9,10,11,12]))
 
 # ex = :(x1 & x2)
 # r = expand(ex, df)
-# @test isa(r, DataFrame)
+# @test isa(r, DataTable)
 # @test ncol(r) == 1
 # @test r[:,1] == DataArray([45, 60, 77, 96])
 
 ## r = expand(:(x1 + x2), df)
-## @test isa(r, DataFrame)
+## @test isa(r, DataTable)
 ## @test ncol(r) == 2
 ## @test r[:,1] == DataVector(df["x1"])
 ## @test r[:,2] == DataVector(df["x2"])
 
 ## df["x1"] = CategoricalArray(x1)
 ## r = expand(:x1, df)
-## @test isa(r, DataFrame)
+## @test isa(r, DataTable)
 ## @test ncol(r) == 3
-## @test r == expand(CategoricalArray(x1), "x1", DataFrame())
+## @test r == expand(CategoricalArray(x1), "x1", DataTable())
 
 ## r = expand(:(x1 + x2), df)
-## @test isa(r, DataFrame)
+## @test isa(r, DataTable)
 ## @test ncol(r) == 4
-## @test r[:,1:3] == expand(CategoricalArray(x1), "x1", DataFrame())
+## @test r[:,1:3] == expand(CategoricalArray(x1), "x1", DataTable())
 ## @test r[:,4] == DataVector(df["x2"])
 
 ## df["x2"] = CategoricalArray(x2)
 ## r = expand(:(x1 + x2), df)
-## @test isa(r, DataFrame)
+## @test isa(r, DataTable)
 ## @test ncol(r) == 6
-## @test r[:,1:3] == expand(CategoricalArray(x1), "x1", DataFrame())
-## @test r[:,4:6] == expand(CategoricalArray(x2), "x2", DataFrame())
+## @test r[:,1:3] == expand(CategoricalArray(x1), "x1", DataTable())
+## @test r[:,4:6] == expand(CategoricalArray(x2), "x2", DataTable())
 
 #test_group("Creating a model matrix using full formulas: y => x1 + x2, etc")
 
@@ -236,7 +237,7 @@ mm = ModelMatrix(mf)
 ##
 ## FAILS: behavior is wrong when no lower-order terms (1+x1+x2+x1&x2...)
 ##
-## df = DataFrame(y=1:27,
+## df = DataTable(y=1:27,
 ##                x1 = CategoricalArray(vec([x for x in 1:3, y in 4:6, z in 7:9])),
 ##                x2 = CategoricalArray(vec([y for x in 1:3, y in 4:6, z in 7:9])),
 ##                x3 = CategoricalArray(vec([z for x in 1:3, y in 4:6, z in 7:9])))
@@ -296,7 +297,7 @@ mm.m == float(model_response(mf))
 
 ## Promote non-redundant categorical terms to full rank
 
-d = DataFrame(x = Compat.repeat([:a, :b], outer = 4),
+d = DataTable(x = Compat.repeat([:a, :b], outer = 4),
               y = Compat.repeat([:c, :d], inner = 2, outer = 2),
               z = Compat.repeat([:e, :f], inner = 4))
 [categorical!(d, name) for name in names(d)]
@@ -434,7 +435,7 @@ mm = ModelMatrix(mf)
 
 
 # Ensure that random effects terms are dropped from coefnames
-df = DataFrame(x = [1,2,3], y = [4,5,6])
+df = DataTable(x = [1,2,3], y = [4,5,6])
 mf = ModelFrame(@formula(y ~ 1 + (1 | x)), df)
 @test coefnames(mf) == ["(Intercept)"]
 
@@ -444,7 +445,7 @@ mf = ModelFrame(@formula(y ~ 0 + (1 | x)), df)
 
 
 # Ensure X is not a view on df column
-df = DataFrame(x = [1.0,2.0,3.0], y = [4.0,5.0,6.0])
+df = DataTable(x = [1.0,2.0,3.0], y = [4.0,5.0,6.0])
 mf = ModelFrame(@formula(y ~ 0 + x), df)
 X = ModelMatrix(mf).m
 X[1] = 0.0

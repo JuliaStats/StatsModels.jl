@@ -1,5 +1,5 @@
 """
-Wrapper which combines Formula (Terms) and an AbstractDataFrame
+Wrapper which combines Formula (Terms) and an AbstractDataTable
 
 This wrapper encapsulates all the information that's required to transform data
 of the same structure as the wrapped data frame into a model matrix.  This goes
@@ -13,19 +13,19 @@ then creates the necessary contrasts matrices and stores the results.
 # Constructors
 
 ```julia
-ModelFrame(f::Formula, df::AbstractDataFrame; contrasts::Dict = Dict())
-ModelFrame(ex::Expr, d::AbstractDataFrame; contrasts::Dict = Dict())
-ModelFrame(terms::Terms, df::AbstractDataFrame; contrasts::Dict = Dict())
+ModelFrame(f::Formula, df::AbstractDataTable; contrasts::Dict = Dict())
+ModelFrame(ex::Expr, d::AbstractDataTable; contrasts::Dict = Dict())
+ModelFrame(terms::Terms, df::AbstractDataTable; contrasts::Dict = Dict())
 # Inner constructors:
-ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray)
-ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray, contrasts::Dict{Symbol, ContrastsMatrix})
+ModelFrame(df::AbstractDataTable, terms::Terms, missing::BitArray)
+ModelFrame(df::AbstractDataTable, terms::Terms, missing::BitArray, contrasts::Dict{Symbol, ContrastsMatrix})
 ```
 
 # Arguments
 
 * `f::Formula`: Formula whose left hand side is the *response* and right hand
   side are the *predictors*.
-* `df::AbstractDataFrame`: The data being modeled.  This is used at this stage
+* `df::AbstractDataTable`: The data being modeled.  This is used at this stage
   to determine which variables are categorical, and otherwise held for
   [`ModelMatrix`](@ref).
 * `contrasts::Dict`: An optional Dict of contrast codings for each categorical
@@ -41,13 +41,13 @@ ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray, contrasts::Di
 # Examples
 
 ```julia
-julia> df = DataFrame(x = 1:4, y = 5:9)
+julia> df = DataTable(x = 1:4, y = 5:9)
 julia> mf = ModelFrame(y ~ 1 + x, df)
 ```
 
 """
 type ModelFrame
-    df::AbstractDataFrame
+    df::AbstractDataTable
     terms::Terms
     msng::BitArray
     ## mapping from df keys to contrasts matrices
@@ -69,7 +69,7 @@ is_categorical(::AbstractArray) = true
 ##
 ## This modifies the Terms, setting `trms.is_non_redundant = true` for all non-
 ## redundant evaluation terms.
-function check_non_redundancy!(trms::Terms, df::AbstractDataFrame)
+function check_non_redundancy!(trms::Terms, df::AbstractDataTable)
 
     (n_eterms, n_terms) = size(trms.factors)
 
@@ -123,7 +123,7 @@ end
 ## Combine actual DF columns and contrast types if necessary to compute the
 ## actual contrasts matrices, levels, and term names (using DummyCoding
 ## as the default)
-function evalcontrasts(df::AbstractDataFrame, contrasts::Dict = Dict())
+function evalcontrasts(df::AbstractDataTable, contrasts::Dict = Dict())
     evaledContrasts = Dict()
     for (term, col) in eachcol(df)
         is_categorical(col) || continue
@@ -136,7 +136,7 @@ function evalcontrasts(df::AbstractDataFrame, contrasts::Dict = Dict())
 end
 
 ## Default NULL handler.  Others can be added as keyword arguments
-function null_omit(df::DataFrame)
+function null_omit(df::DataTable)
     cc = complete_cases(df)
     df[cc,:], cc
 end
@@ -144,9 +144,9 @@ end
 _droplevels!(x::Any) = x
 _droplevels!(x::Union{CategoricalArray, NullableCategoricalArray}) = droplevels!(x)
 
-function ModelFrame(trms::Terms, d::AbstractDataFrame;
+function ModelFrame(trms::Terms, d::AbstractDataTable;
                     contrasts::Dict = Dict())
-    df, msng = null_omit(DataFrame(map(x -> d[x], trms.eterms)))
+    df, msng = null_omit(DataTable(map(x -> d[x], trms.eterms)))
     names!(df, convert(Vector{Symbol}, map(string, trms.eterms)))
     for c in eachcol(df) _droplevels!(c[2]) end
 
@@ -158,9 +158,9 @@ function ModelFrame(trms::Terms, d::AbstractDataFrame;
     ModelFrame(df, trms, msng, evaledContrasts)
 end
 
-ModelFrame(df::AbstractDataFrame, term::Terms, msng::BitArray) = ModelFrame(df, term, msng, evalcontrasts(df))
-ModelFrame(f::Formula, d::AbstractDataFrame; kwargs...) = ModelFrame(Terms(f), d; kwargs...)
-ModelFrame(ex::Expr, d::AbstractDataFrame; kwargs...) = ModelFrame(Formula(ex), d; kwargs...)
+ModelFrame(df::AbstractDataTable, term::Terms, msng::BitArray) = ModelFrame(df, term, msng, evalcontrasts(df))
+ModelFrame(f::Formula, d::AbstractDataTable; kwargs...) = ModelFrame(Terms(f), d; kwargs...)
+ModelFrame(ex::Expr, d::AbstractDataTable; kwargs...) = ModelFrame(Formula(ex), d; kwargs...)
 
 """
     setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
