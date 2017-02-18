@@ -1,5 +1,7 @@
 
 typealias AbstractFloatMatrix{T<:AbstractFloat} AbstractMatrix{T}
+typealias AbstractRealVector{T<:Real} AbstractVector{T}
+typealias NullableRealVector{T<:NullableReal} AbstractVector{T}
 
 """
 Convert a `ModelFrame` into a numeric matrix suitable for modeling
@@ -35,18 +37,26 @@ function modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, name::Symbol, mf::Mode
     end
 end
 
-modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector) =
+modelmat_cols{T<:AbstractFloatMatrix, V<:AbstractRealVector}(::Type{T}, v::V) =
     convert(T, reshape(v, length(v), 1))
 # FIXME: this inefficient method should not be needed, cf. JuliaLang/julia#18264
-modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::NullableVector) =
+modelmat_cols{T<:AbstractFloatMatrix, V<:NullableRealVector}(::Type{T}, v::V) =
     convert(T, Matrix(reshape(v, length(v), 1)))
+modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::Union{CategoricalVector, NullableCategoricalVector}) =
+    modelmat_cols(T, reshape(v, length(v), 1))
 
+# All non-real columns are considered as categorical
+# Could be made more efficient by directly storing the result into the model matrix
 """
-    modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::PooledDataVector, contrast::ContrastsMatrix)
+    modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix)
 
 Construct `ModelMatrix` columns of type `T` based on specified contrasts, ensuring that
 levels align properly.
 """
+modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix) =
+    modelmat_cols(T, categorical(v), contrast)
+
+
 function modelmat_cols{T<:AbstractFloatMatrix}(::Type{T},
                                                v::Union{CategoricalVector, NullableCategoricalVector},
                                                contrast::ContrastsMatrix)
