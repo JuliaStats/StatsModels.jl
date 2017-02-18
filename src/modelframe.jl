@@ -137,7 +137,7 @@ end
 
 ## Default NULL handler.  Others can be added as keyword arguments
 function null_omit(df::DataTable)
-    cc = complete_cases(df)
+    cc = completecases(df)
     df[cc,:], cc
 end
 

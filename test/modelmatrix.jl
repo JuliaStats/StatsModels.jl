@@ -287,7 +287,7 @@ mm_sub = ModelMatrix(mf_sub)
 d[:x1m] = NullableArray(Nullable{Int}[5, 6, Nullable(), 7])
 mf = ModelFrame(@formula(y ~ x1m), d)
 mm = ModelMatrix(mf)
-@test isequal(NullableArray(mm.m[:, 2]), d[complete_cases(d), :x1m])
+@test isequal(NullableArray(mm.m[:, 2]), d[completecases(d), :x1m])
 @test mm.m == ModelMatrix{sparsetype}(mf).m
 
 ## Same variable on left and right side
