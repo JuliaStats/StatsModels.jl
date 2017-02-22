@@ -42,7 +42,8 @@ modelmat_cols{T<:AbstractFloatMatrix, V<:AbstractRealVector}(::Type{T}, v::V) =
 # FIXME: this inefficient method should not be needed, cf. JuliaLang/julia#18264
 modelmat_cols{T<:AbstractFloatMatrix, V<:NullableRealVector}(::Type{T}, v::V) =
     convert(T, Matrix(reshape(v, length(v), 1)))
-modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::Union{CategoricalVector, NullableCategoricalVector}) =
+# Categorical column, does not make sense to convert to float
+modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector) =
     modelmat_cols(T, reshape(v, length(v), 1))
 
 # All non-real columns are considered as categorical
