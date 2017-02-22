@@ -141,14 +141,10 @@ function null_omit(df::DataTable)
     df[cc,:], cc
 end
 
-_droplevels!(x::Any) = x
-_droplevels!(x::Union{CategoricalArray, NullableCategoricalArray}) = droplevels!(x)
-
 function ModelFrame(trms::Terms, d::AbstractDataTable;
                     contrasts::Dict = Dict())
     df, msng = null_omit(DataTable(map(x -> d[x], trms.eterms)))
     names!(df, convert(Vector{Symbol}, map(string, trms.eterms)))
-    for c in eachcol(df) _droplevels!(c[2]) end
 
     evaledContrasts = evalcontrasts(df, contrasts)
 
@@ -194,8 +190,7 @@ end
     termnames(term::Symbol, col)
 Returns a vector of strings with the names of the coefficients
 associated with a term.  If the column corresponding to the term
-is not a `CategoricalArray` or `NullableCategoricalArray`,
-a one-element vector is returned.
+is not categorical, a one-element vector is returned.
 """
 termnames(term::Symbol, col) = [string(term)]
 function termnames(term::Symbol, mf::ModelFrame; non_redundant::Bool = false)
