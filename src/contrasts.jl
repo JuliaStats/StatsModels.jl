@@ -104,18 +104,14 @@ for the base level (which defaults to the first level).
 
 ```julia
 ContrastsMatrix{C <: AbstractContrasts}(contrasts::C, levels::AbstractVector)
-ContrastsMatrix(contrasts::AbstractContrasts,
-                data::Union{CategoricalArray, NullableCategoricalArray})
-ContrastsMatrix(contrasts_matrix::ContrastsMatrix,
-                data::Union{CategoricalArray, NullableCategoricalArray})
+ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
+ContrastsMatrix(contrasts_matrix::ContrastsMatrix, levels::AbstractVector)
 ```
 
 # Arguments
 
 * `contrasts::AbstractContrasts`: The contrast coding system to use.
 * `levels::AbstractVector`: The levels to generate contrasts for.
-* `data::[Nullable]CategoricalVector`: If categorical data is provided, levels
-  will be extracted with `levels(data)`.
 * `contrasts_matrix::ContrastsMatrix`: Constructing a `ContrastsMatrix` from
   another will check that the levels match.  This is used, for example, in
   constructing a model matrix from a `ModelFrame` using different data.
@@ -197,7 +193,7 @@ nullify(x::Nullable) = x
 nullify(x) = Nullable(x)
 
 # Making a contrast type T only requires that there be a method for
-# contrasts_matrix(T, v::Union{CategoricalArray, NullableCategoricalArray}).
+# contrasts_matrix(T,  baseind, n) and optionally termnames(T, levels, baseind)
 # The rest is boilerplate.
 for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
     @eval begin
@@ -241,8 +237,8 @@ type FullDummyCoding <: AbstractContrasts
 # Dummy contrasts have no base level (since all levels produce a column)
 end
 
-ContrastsMatrix{T}(C::FullDummyCoding, lvls::Vector{T}) =
-    ContrastsMatrix(eye(Float64, length(lvls)), lvls, lvls, C)
+ContrastsMatrix{T}(C::FullDummyCoding, levels::Vector{T}) =
+    ContrastsMatrix(eye(Float64, length(levels)), levels, levels, C)
 
 "Promote contrasts matrix to full rank version"
 Base.convert(::Type{ContrastsMatrix{FullDummyCoding}}, C::ContrastsMatrix) =
