@@ -1,5 +1,5 @@
 """
-Wrapper which combines Formula (Terms) and an AbstractDataTable
+Wrapper which combines Formula (Terms) and an Table
 
 This wrapper encapsulates all the information that's required to transform data
 of the same structure as the wrapped data frame into a model matrix.  This goes
@@ -13,19 +13,19 @@ then creates the necessary contrasts matrices and stores the results.
 # Constructors
 
 ```julia
-ModelFrame(f::Formula, df::AbstractDataTable; contrasts::Dict = Dict())
-ModelFrame(ex::Expr, d::AbstractDataTable; contrasts::Dict = Dict())
-ModelFrame(terms::Terms, df::AbstractDataTable; contrasts::Dict = Dict())
+ModelFrame(f::Formula, df::Table; contrasts::Dict = Dict())
+ModelFrame(ex::Expr, d::Table; contrasts::Dict = Dict())
+ModelFrame(terms::Terms, df::Table; contrasts::Dict = Dict())
 # Inner constructors:
-ModelFrame(df::AbstractDataTable, terms::Terms, missing::BitArray)
-ModelFrame(df::AbstractDataTable, terms::Terms, missing::BitArray, contrasts::Dict{Symbol, ContrastsMatrix})
+ModelFrame(df::Table, terms::Terms, missing::BitArray)
+ModelFrame(df::Table, terms::Terms, missing::BitArray, contrasts::Dict{Symbol, ContrastsMatrix})
 ```
 
 # Arguments
 
 * `f::Formula`: Formula whose left hand side is the *response* and right hand
   side are the *predictors*.
-* `df::AbstractDataTable`: The data being modeled.  This is used at this stage
+* `df::Table`: The data being modeled.  This is used at this stage
   to determine which variables are categorical, and otherwise held for
   [`ModelMatrix`](@ref).
 * `contrasts::Dict`: An optional Dict of contrast codings for each categorical
@@ -41,13 +41,13 @@ ModelFrame(df::AbstractDataTable, terms::Terms, missing::BitArray, contrasts::Di
 # Examples
 
 ```julia
-julia> df = DataTable(x = 1:4, y = 5:9)
+julia> df = Table(x = 1:4, y = 5:9)
 julia> mf = ModelFrame(y ~ 1 + x, df)
 ```
 
 """
 type ModelFrame
-    df::AbstractDataTable
+    df::Table
     terms::Terms
     msng::BitArray
     ## mapping from df keys to contrasts matrices
@@ -69,7 +69,7 @@ is_categorical(::AbstractArray) = true
 ##
 ## This modifies the Terms, setting `trms.is_non_redundant = true` for all non-
 ## redundant evaluation terms.
-function check_non_redundancy!(trms::Terms, df::AbstractDataTable)
+function check_non_redundancy!(trms::Terms, df::Table)
 
     (n_eterms, n_terms) = size(trms.factors)
 
@@ -104,46 +104,46 @@ end
 
 const DEFAULT_CONTRASTS = DummyCoding
 
-_unique(x::CategoricalArray) = unique(x)
-_unique(x::NullableCategoricalArray) = [get(l) for l in unique(x) if !isnull(l)]
+# _unique(x::CategoricalArray) = unique(x)
+# _unique(x::NullableCategoricalArray) = [get(l) for l in unique(x) if !isnull(l)]
 
-function _unique{T<:Nullable}(x::AbstractArray{T})
-    levs = [get(l) for l in unique(x) if !isnull(l)]
-    try; sort!(levs); end
-    return levs
-end
+# function _unique{T<:Nullable}(x::AbstractArray{T})
+#     levs = [get(l) for l in unique(x) if !isnull(l)]
+#     try; sort!(levs); end
+#     return levs
+# end
 
-function _unique(x::AbstractArray)
-    levs = unique(x)
-    try; sort!(levs); end
-    return levs
-end
+# function _unique(x::AbstractArray)
+#     levs = unique(x)
+#     try; sort!(levs); end
+#     return levs
+# end
 
 ## Set up contrasts:
 ## Combine actual DF columns and contrast types if necessary to compute the
 ## actual contrasts matrices, levels, and term names (using DummyCoding
 ## as the default)
-function evalcontrasts(df::AbstractDataTable, contrasts::Dict = Dict())
+function evalcontrasts(df::Table, contrasts::Dict = Dict())
     evaledContrasts = Dict()
     for (term, col) in eachcol(df)
         is_categorical(col) || continue
         evaledContrasts[term] = ContrastsMatrix(haskey(contrasts, term) ?
                                                 contrasts[term] :
                                                 DEFAULT_CONTRASTS(),
-                                                _unique(col))
+                                                unique(col))
     end
     return evaledContrasts
 end
 
 ## Default NULL handler.  Others can be added as keyword arguments
-function null_omit(df::DataTable)
+function null_omit(df::Table)
     cc = completecases(df)
     df[cc,:], cc
 end
 
-function ModelFrame(trms::Terms, d::AbstractDataTable;
+function ModelFrame(trms::Terms, d::Table;
                     contrasts::Dict = Dict())
-    df, msng = null_omit(DataTable(map(x -> d[x], trms.eterms)))
+    df, msng = null_omit(typeof(d)(map(x -> d[x], trms.eterms)))
     names!(df, convert(Vector{Symbol}, map(string, trms.eterms)))
 
     evaledContrasts = evalcontrasts(df, contrasts)
@@ -154,9 +154,9 @@ function ModelFrame(trms::Terms, d::AbstractDataTable;
     ModelFrame(df, trms, msng, evaledContrasts)
 end
 
-ModelFrame(df::AbstractDataTable, term::Terms, msng::BitArray) = ModelFrame(df, term, msng, evalcontrasts(df))
-ModelFrame(f::Formula, d::AbstractDataTable; kwargs...) = ModelFrame(Terms(f), d; kwargs...)
-ModelFrame(ex::Expr, d::AbstractDataTable; kwargs...) = ModelFrame(Formula(ex), d; kwargs...)
+ModelFrame(df::Table, term::Terms, msng::BitArray) = ModelFrame(df, term, msng, evalcontrasts(df))
+ModelFrame(f::Formula, d::Table; kwargs...) = ModelFrame(Terms(f), d; kwargs...)
+ModelFrame(ex::Expr, d::Table; kwargs...) = ModelFrame(Formula(ex), d; kwargs...)
 
 """
     setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
@@ -164,7 +164,7 @@ ModelFrame(ex::Expr, d::AbstractDataTable; kwargs...) = ModelFrame(Formula(ex), 
 Modify the contrast coding system of a ModelFrame in place.
 """
 function setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
-    new_contrasts = Dict([ Pair(col, ContrastsMatrix(contr, _unique(mf.df[col])))
+    new_contrasts = Dict([ Pair(col, ContrastsMatrix(contr, unique(mf.df[col])))
                       for (col, contr) in filter((k,v)->haskey(mf.df, k), new_contrasts) ])
 
     mf.contrasts = merge(mf.contrasts, new_contrasts)

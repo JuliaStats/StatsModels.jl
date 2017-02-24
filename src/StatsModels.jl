@@ -3,10 +3,12 @@ __precompile__(true)
 module StatsModels
 
 using Compat
-using DataTables
+using TableBase
+using TableBase: Table
+# using DataTables
 using StatsBase
-using NullableArrays
-using CategoricalArrays
+# using NullableArrays
+# using CategoricalArrays
 
 
 export @formula,
@@ -23,6 +25,10 @@ export @formula,
        coefnames,
        dropterm,
        setcontrasts!
+
+# TEMPORARY DEFINITIONS
+const AbstractCategoricalVector = Any
+
 
 map(include,
     [

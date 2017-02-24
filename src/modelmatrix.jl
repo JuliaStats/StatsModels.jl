@@ -59,7 +59,7 @@ modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector, contrast::Co
 
 
 function modelmat_cols{T<:AbstractFloatMatrix}(::Type{T},
-                                               v::Union{CategoricalVector, NullableCategoricalVector},
+                                               v::AbstractCategoricalVector,
                                                contrast::ContrastsMatrix)
     ## make sure the levels of the contrast matrix and the categorical data
     ## are the same by constructing a re-indexing vector. Indexing into
