@@ -11,7 +11,7 @@ notifications:
 # uncomment the following lines to override the default test script
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'Pkg.clone(pwd()); Pkg.clone("https://github.com/JuliaData/DataTables.jl.git"); Pkg.build("StatsModels"); Pkg.test("StatsModels"; coverage=true)'
+  - julia -e 'Pkg.clone(pwd()); Pkg.build("StatsModels"); Pkg.test("StatsModels"; coverage=true)'
 after_success:
   # build and deploy documentation with Documenter.jl
   - julia -e 'cd(Pkg.dir("StatsModels")); Pkg.add("Documenter"); include(joinpath("docs", "make.jl"))'
