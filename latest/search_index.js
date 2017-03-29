@@ -68,7 +68,7 @@ var documenterSearchIndex = {"docs": [
     "location": "formula.html#StatsModels.ModelMatrix",
     "page": "Modeling tabular data",
     "title": "StatsModels.ModelMatrix",
-    "category": "Constant",
+    "category": "Type",
     "text": "Convert a ModelFrame into a numeric matrix suitable for modeling\n\nConstructors\n\nModelMatrix(mf::ModelFrame)\n# Specify the type of the resulting matrix (default Matrix{Float64})\nModelMatrix{T <: AbstractFloatMatrix}(mf::ModelFrame)\n\n\n\n"
 },
 
@@ -132,7 +132,7 @@ var documenterSearchIndex = {"docs": [
     "location": "contrasts.html#StatsModels.ContrastsMatrix",
     "page": "Contrast coding categorical variables",
     "title": "StatsModels.ContrastsMatrix",
-    "category": "Constant",
+    "category": "Type",
     "text": "An instantiation of a contrast coding system for particular levels\n\nThis type is used internally for generating model matrices based on categorical data, and most users will not need to deal with it directly.  Conceptually, a ContrastsMatrix object stands for an instantiation of a contrast coding system for a particular set of categorical data levels.\n\nIf levels are specified in the AbstractContrasts, those will be used, and likewise for the base level (which defaults to the first level).\n\nConstructors\n\nContrastsMatrix{C <: AbstractContrasts}(contrasts::C, levels::AbstractVector)\nContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)\nContrastsMatrix(contrasts_matrix::ContrastsMatrix, levels::AbstractVector)\n\nArguments\n\ncontrasts::AbstractContrasts: The contrast coding system to use.\nlevels::AbstractVector: The levels to generate contrasts for.\ncontrasts_matrix::ContrastsMatrix: Constructing a ContrastsMatrix from another will check that the levels match.  This is used, for example, in constructing a model matrix from a ModelFrame using different data.\n\n\n\n"
 },
 
