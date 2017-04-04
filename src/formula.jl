@@ -16,6 +16,8 @@ type Formula
     rhs::Union{Symbol, Expr, Integer}
 end
 
+Base.:(==)(a::Formula, b::Formula) = a.lhs == b.lhs && a.rhs == b.rhs
+
 macro formula(ex)
     if (ex.head === :macrocall && ex.args[1] === Symbol("@~")) || (ex.head === :call && ex.args[1] === :(~))
         length(ex.args) == 3 || error("malformed expression in formula")
