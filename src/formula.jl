@@ -17,15 +17,37 @@ type Formula
 end
 
 macro formula(ex)
+    raise_tilde!(ex)
     if (ex.head === :macrocall && ex.args[1] === Symbol("@~")) || (ex.head === :call && ex.args[1] === :(~))
-        length(ex.args) == 3 || error("malformed expression in formula")
-        lhs = Base.Meta.quot(ex.args[2])
-        rhs = Base.Meta.quot(ex.args[3])
+        2 <= length(ex.args) <= 3 || error("malformed formula: $ex")
+        lhs = length(ex.args) == 3 ? Base.Meta.quot(ex.args[2]) : nothing
+        rhs = Base.Meta.quot(ex.args[end])
     else
         error("expected formula separator ~, got $(ex.head)")
     end
     return Expr(:call, :Formula, lhs, rhs)
 end
+
+"""
+    raise_tilde!(ex::Expr)
+
+"Correct" the parser's handling of non-infix ~ in order to support one-sided
+formulas.  The parser treats it as a unary operator, so the tilde call ends
+up as the first argument of the central expression.
+
+That is, the one-sided formula ~1+a parses as :(~(1)+a), which needs to be
+converted to :(~(1+a)).
+
+"""
+function raise_tilde!(ex::Expr)
+    if Meta.isexpr(ex, :call) && Meta.isexpr(ex.args[2], :call) && ex.args[2].args[1] === :~
+        length(ex.args[2].args) == 2 || throw(ArgumentError("malformed formula: $ex"))
+        ex.args[2] = ex.args[2].args[2]
+        ex.args = [:~, deepcopy(ex)]
+    end
+    ex
+end
+
 
 Base.:(==)(f1::Formula, f2::Formula) = all(getfield(f1, f)==getfield(f2, f) for f in fieldnames(f1))
 

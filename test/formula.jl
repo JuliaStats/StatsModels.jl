@@ -15,7 +15,7 @@ using Compat
 import StatsModels: @formula, Formula, Terms
 
 ## totally empty
-t = Terms(Formula(nothing, 0))
+t = Terms(@formula(~ 0))
 @test t.response == false
 @test t.intercept == false
 @test t.terms == []
@@ -42,6 +42,13 @@ t = Terms(@formula(y ~ 1 + x1 + x2))
 @test t.intercept == true
 @test t.terms == [:x1, :x2]
 @test t.eterms == [:y, :x1, :x2]
+
+## tilde raised for one-sided expression
+t = Terms(@formula( ~ 1 + x1 + x2))
+@test t.intercept == true
+@test t.response == false
+@test t.terms == [:x1, :x2]
+@test t.eterms == [:x1, :x2]
 
 ## implicit intercept behavior:
 t = Terms(@formula(y ~ x1 + x2))
