@@ -181,7 +181,7 @@ function Terms(f::Formula)
     tt = unique(getterms(rhs))
     filter!(t -> t != 1, tt)                          # drop any explicit 1's
     noint = BitArray(map(t -> t == 0 || t == -1, tt)) # should also handle :(-(expr,1))
-    tt = tt[!noint]
+    tt = tt[map(!, noint)]
     oo = Int[ord(t) for t in tt]     # orders of interaction terms
     if !issorted(oo)                 # sort terms by increasing order
         pp = sortperm(oo)
