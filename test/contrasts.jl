@@ -5,7 +5,7 @@ using DataTables
 using CategoricalArrays
 using StatsModels
 
-import StatsModels: ContrastsMatrix
+using StatsModels: ContrastsMatrix
 
 d = DataTable(x = CategoricalVector([:a, :b, :c, :a, :a, :b]))
 
