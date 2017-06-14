@@ -89,6 +89,17 @@ type ContrastsMatrix{C <: AbstractContrasts, T}
     contrasts::C
 end
 
+# only check equality of matrix, termnames, and levels, and that the type is the
+# same for the contrasts (values are irrelevant).  This ensures that the two
+# will behave identically in creating modelmatrix columns
+Base.:(==){C<:AbstractContrasts,T}(a::ContrastsMatrix{C,T}, b::ContrastsMatrix{C,T}) =
+    a.matrix == b.matrix &&
+    a.termnames == b.termnames &&
+    a.levels == b.levels
+
+Base.hash{C}(a::ContrastsMatrix{C}, h::UInt) =
+    hash(C, hash(a.matrix, hash(a.termnames, hash(a.levels, h))))
+
 """
 An instantiation of a contrast coding system for particular levels
 

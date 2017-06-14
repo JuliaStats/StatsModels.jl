@@ -5,10 +5,35 @@ using DataTables
 using CategoricalArrays
 using StatsModels
 
+using StatsModels: ContrastsMatrix
 
 d = DataTable(x = CategoricalVector([:a, :b, :c, :a, :a, :b]))
 
 mf = ModelFrame(Formula(nothing, :x), d)
+
+## testing equality of ContrastsMatrix
+should_equal = [ContrastsMatrix(DummyCoding(), [:a, :b, :c]),
+                ContrastsMatrix(DummyCoding(base=:a), [:a, :b, :c]),
+                ContrastsMatrix(DummyCoding(base=:a, levels=[:a, :b, :c]), [:a, :b, :c]),
+                ContrastsMatrix(DummyCoding(levels=[:a, :b, :c]), [:a, :b, :c])]
+
+for c in should_equal
+    @test mf.contrasts[:x] == c
+    @test hash(mf.contrasts[:x]) == hash(c)
+end
+
+should_not_equal = [ContrastsMatrix(EffectsCoding(), [:a, :b, :c]),
+                    ContrastsMatrix(DummyCoding(), [:b, :c]),
+                    ContrastsMatrix(DummyCoding(), [:b, :c, :a]),
+                    ContrastsMatrix(DummyCoding(), [:b, :c, :a]),
+                    ContrastsMatrix(DummyCoding(), [:b, :c, :a]),
+                    ContrastsMatrix(DummyCoding(base=:b), [:a, :b, :c]),
+                    ContrastsMatrix(DummyCoding(base=:a, levels=[:b, :a, :c]), [:a, :b, :c])]
+
+for c in should_not_equal
+    @test mf.contrasts[:x] != c
+end
+
 
 # Dummy coded contrasts by default:
 @test ModelMatrix(mf).m == [1  0  0
