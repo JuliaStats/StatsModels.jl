@@ -4,6 +4,7 @@ module StatsModels
 
 using Compat
 using DataTables
+using Distributions
 using StatsBase
 using NullableArrays
 using CategoricalArrays

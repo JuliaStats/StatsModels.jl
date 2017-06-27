@@ -98,7 +98,7 @@ function droprandomeffects(trms::Terms)
     if !any(retrms)  # return trms unchanged
         trms
     elseif all(retrms) && !trms.response   # return an empty Terms object
-        Terms(Any[],Any[],Array(Bool, (0,0)),Array(Bool, (0,0)), Int[], false, trms.intercept)
+        Terms(Any[],Any[],Array{Bool}((0,0)),Array{Bool}((0,0)), Int[], false, trms.intercept)
     else
         # the rows of `trms.factors` correspond to `eterms`, the columns to `terms`
         # After dropping random-effects terms we drop any eterms whose rows are all false

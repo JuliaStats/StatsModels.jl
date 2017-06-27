@@ -3,6 +3,7 @@ module TestModelMatrix
 using Base.Test
 using StatsModels
 using DataTables
+using Distributions
 using Compat
 using CategoricalArrays
 
@@ -29,7 +30,7 @@ f = @formula(y ~ x1 + x2)
 mf = ModelFrame(f, d)
 ## @test mm.response_colnames == ["y"] # nope: no response_colnames
 @test coefnames(mf) == ["(Intercept)","x1","x2"]
-## @test model_response(mf) == transpose([1. 2 3 4]) # fails: Int64 vs. Float64
+@test model_response(mf) == [1., 2, 3, 4]
 mm = ModelMatrix(mf)
 smm = ModelMatrix{sparsetype}(mf)
 @test mm.m[:,1] == ones(4)
@@ -50,6 +51,10 @@ mm = ModelMatrix(mf)
 @test mm.m[:,4] == [0, 0, 0, 1.]
 @test coefnames(mf)[2:end] == ["x1p: 6", "x1p: 7", "x1p: 8"]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
+
+d[:yy] = NullableCategoricalArray(['N', 'N', 'Y', 'Y'])
+mf = ModelFrame(@formula(yy ~ 1 + x1 + x2), d)
+@test model_response(mf, Bernoulli()) == [0., 0, 1, 1]
 
 #test_group("create a design matrix from interactions from two DataTables")
 ## this was removed in commit dead4562506badd7e84a2367086f5753fa49bb6a
@@ -178,7 +183,7 @@ mf = ModelFrame(@formula(y ~ x2), d)
 mm = ModelMatrix(mf)
 @test mm.m == [ones(4) x2]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
-## @test model_response(mf) == y''     # fails: Int64 vs. Float64
+@test model_response(mf) == y
 
 df = deepcopy(d)
 df[:x1] = NullableCategoricalArray(df[:x1])
@@ -293,7 +298,7 @@ mm = ModelMatrix(mf)
 ## Same variable on left and right side
 mf = ModelFrame(@formula(x1 ~ x1), df)
 mm = ModelMatrix(mf)
-mm.m == float(model_response(mf))
+mm.m == model_response(mf)
 
 ## Promote non-redundant categorical terms to full rank
 

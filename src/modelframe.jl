@@ -172,19 +172,40 @@ function setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
 end
 setcontrasts!(mf::ModelFrame; kwargs...) = setcontrasts!(mf, Dict(kwargs))
 
+convertinsupport(v::AbstractVector, d::Distribution) = Vector{partype(d)}(v)
+
+function convertinsupport(v::Union{AbstractCategoricalVector, AbstractNullableCategoricalVector},
+    d::Bernoulli)
+    vdrp = droplevels!(copy(v))
+    levs = CategoricalArrays.levels(vdrp)
+    llv = length(levs)
+    if llv < 2
+        zeros(vdrp, partype(d))
+    elseif llv == 2
+        partype(d)[get(x) == levs[2] for x in vdrp]
+    else
+        throw(ArgumentError("length(levels(droplevels!(v))) = $llv, should be ≤ 2"))
+    end
+end
+
+function convertinsupport(v::Vector{String}, d::Bernoulli)
+    convertinsupport(CategoricalVector(v), d)
+end
+
 """
     StatsBase.model_response(mf::ModelFrame)
 Extract the response column, if present.  `DataVector` or
 `PooledDataVector` columns are converted to `Array`s
 """
-function StatsBase.model_response(mf::ModelFrame)
+function StatsBase.model_response(mf::ModelFrame, d::Distribution)
     if mf.terms.response
-        convert(Array, mf.df[mf.terms.eterms[1]])
+        convertinsupport(mf.df[mf.terms.eterms[1]], d)
     else
         error("Model formula one-sided")
     end
 end
 
+StatsBase.model_response(mf::ModelFrame) = model_response(mf, Normal())
 
 """
     termnames(term::Symbol, col)
