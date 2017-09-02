@@ -1,13 +1,12 @@
 module TestContrasts
 
 using Base.Test
-using DataTables
-using CategoricalArrays
+using DataFrames
 using StatsModels
 
 using StatsModels: ContrastsMatrix
 
-d = DataTable(x = CategoricalVector([:a, :b, :c, :a, :a, :b]))
+d = DataFrame(x = CategoricalVector([:a, :b, :c, :a, :a, :b]))
 
 mf = ModelFrame(Formula(nothing, :x), d)
 
