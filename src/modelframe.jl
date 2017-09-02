@@ -54,9 +54,7 @@ type ModelFrame
     contrasts::Dict{Symbol, ContrastsMatrix}
 end
 
-is_categorical{T<:Real}(::AbstractArray{T}) = false
-typealias NullableReal{T<:Real} Nullable{T}
-is_categorical{T<:NullableReal}(::AbstractArray{T}) = false
+is_categorical(::AbstractArray{<:Union{Null, Real}}) = false
 is_categorical(::AbstractArray) = true
 
 ## Check for non-redundancy of columns.  For instance, if x is a factor with two
@@ -104,17 +102,14 @@ end
 
 const DEFAULT_CONTRASTS = DummyCoding
 
-_unique(x::CategoricalArray) = unique(x)
-_unique(x::NullableCategoricalArray) = [get(l) for l in unique(x) if !isnull(l)]
+_unique(x::AbstractCategoricalArray) = unique(x)
+_unique(x::AbstractCategoricalArray{T}) where {T>:Null} =
+    convert(Array{Nulls.T(T)}, filter!(!isnull, unique(x)))
 
-function _unique{T<:Nullable}(x::AbstractArray{T})
-    levs = [get(l) for l in unique(x) if !isnull(l)]
-    try; sort!(levs); end
-    return levs
-end
-
-function _unique(x::AbstractArray)
-    levs = unique(x)
+function _unique(x::AbstractArray{T}) where T
+    levs = T >: Null ?
+           convert(Array{Nulls.T(T)}, filter!(!isnull, unique(x))) :
+           unique(x)
     try; sort!(levs); end
     return levs
 end
@@ -142,7 +137,7 @@ function null_omit(df::DataFrame)
 end
 
 _droplevels!(x::Any) = x
-_droplevels!(x::Union{CategoricalArray, NullableCategoricalArray}) = droplevels!(x)
+_droplevels!(x::AbstractCategoricalArray) = droplevels!(x)
 
 function ModelFrame(trms::Terms, d::AbstractDataFrame;
                     contrasts::Dict = Dict())

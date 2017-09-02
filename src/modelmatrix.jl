@@ -1,7 +1,5 @@
 
 typealias AbstractFloatMatrix{T<:AbstractFloat} AbstractMatrix{T}
-typealias AbstractRealVector{T<:Real} AbstractVector{T}
-typealias NullableRealVector{T<:NullableReal} AbstractVector{T}
 
 """
 Convert a `ModelFrame` into a numeric matrix suitable for modeling
@@ -37,11 +35,8 @@ function modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, name::Symbol, mf::Mode
     end
 end
 
-modelmat_cols{T<:AbstractFloatMatrix, V<:AbstractRealVector}(::Type{T}, v::V) =
+modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector{<:Union{Null, Real}}) =
     convert(T, reshape(v, length(v), 1))
-# FIXME: this inefficient method should not be needed, cf. JuliaLang/julia#18264
-modelmat_cols{T<:AbstractFloatMatrix, V<:NullableRealVector}(::Type{T}, v::V) =
-    convert(T, Matrix(reshape(v, length(v), 1)))
 # Categorical column, does not make sense to convert to float
 modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector) =
     modelmat_cols(T, reshape(v, length(v), 1))
@@ -59,7 +54,7 @@ modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector, contrast::Co
 
 
 function modelmat_cols{T<:AbstractFloatMatrix}(::Type{T},
-                                               v::Union{CategoricalVector, NullableCategoricalVector},
+                                               v::AbstractCategoricalVector,
                                                contrast::ContrastsMatrix)
     ## make sure the levels of the contrast matrix and the categorical data
     ## are the same by constructing a re-indexing vector. Indexing into

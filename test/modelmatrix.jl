@@ -2,7 +2,9 @@ module TestModelMatrix
 
 using Base.Test
 using StatsModels
+using StatsBase
 using DataFrames
+using Nulls
 using Compat
 
 # for testing while DataFrames still exports these:
@@ -40,7 +42,7 @@ smm = ModelMatrix{sparsetype}(mf)
 
 #test_group("expanding a nominal array into a design matrix of indicators for each dummy variable")
 
-d[:x1p] = NullableCategoricalArray(d[:x1])
+d[:x1p] = CategoricalArray(d[:x1])
 mf = ModelFrame(@formula(y ~ x1p), d)
 mm = ModelMatrix(mf)
 
@@ -180,7 +182,7 @@ mm = ModelMatrix(mf)
 ## @test model_response(mf) == y''     # fails: Int64 vs. Float64
 
 df = deepcopy(d)
-df[:x1] = NullableCategoricalArray(df[:x1])
+df[:x1] = CategoricalArray{Union{Null, Float64}}(df[:x1])
 
 f = @formula(y ~ x2 + x3 + x3*x2)
 mm = ModelMatrix(ModelFrame(f, df))
@@ -283,10 +285,10 @@ mm_sub = ModelMatrix(mf_sub)
 @test size(mm_sub) == (3,3)
 
 ## Missing data
-d[:x1m] = NullableArray(Nullable{Int}[5, 6, Nullable(), 7])
+d[:x1m] = [5, 6, null, 7]
 mf = ModelFrame(@formula(y ~ x1m), d)
 mm = ModelMatrix(mf)
-@test isequal(NullableArray(mm.m[:, 2]), d[completecases(d), :x1m])
+@test mm.m[:, 2] == d[completecases(d), :x1m]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
 
 ## Same variable on left and right side
@@ -448,12 +450,12 @@ df = DataFrame(x = [1.0,2.0,3.0], y = [4.0,5.0,6.0])
 mf = ModelFrame(@formula(y ~ 0 + x), df)
 X = ModelMatrix(mf).m
 X[1] = 0.0
-@test mf.df[1, :x] === Nullable(1.0)
+@test mf.df[1, :x] === 1.0
 
 # Ensure string columns are supported
-df1 = DataTable(A = 1:4, B = categorical(["M", "F", "F", "M"]))
-df2 = DataTable(A = 1:4, B = ["M", "F", "F", "M"])
-df3 = DataTable(Any[1:4, ["M", "F", "F", "M"]], [:A, :B])
+df1 = DataFrame(A = 1:4, B = categorical(["M", "F", "F", "M"]))
+df2 = DataFrame(A = 1:4, B = ["M", "F", "F", "M"])
+df3 = DataFrame(Any[1:4, ["M", "F", "F", "M"]], [:A, :B])
 
 M1 = ModelMatrix(ModelFrame(@formula(A ~ B), df1))
 M2 = ModelMatrix(ModelFrame(@formula(A ~ B), df2))
