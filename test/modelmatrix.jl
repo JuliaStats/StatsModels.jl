@@ -42,7 +42,7 @@ smm = ModelMatrix{sparsetype}(mf)
 
 #test_group("expanding a nominal array into a design matrix of indicators for each dummy variable")
 
-d[:x1p] = CategoricalArray(d[:x1])
+d[:x1p] = CategoricalArray{Union{String, Null}}(string.(d[:x1]))
 mf = ModelFrame(@formula(y ~ x1p), d)
 mm = ModelMatrix(mf)
 
@@ -121,7 +121,7 @@ mm = ModelMatrix(mf)
 @test mm.m == [ones(4) x1 x2 x1.*x2]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-df[:x1] = CategoricalArray(x1)
+df[:x1] = CategoricalArray{Union{String, Null}}(string.(x1))
 x1e = [[0, 1, 0, 0] [0, 0, 1, 0] [0, 0, 0, 1]]
 f = @formula(y ~ x1 * x2)
 mf = ModelFrame(f, df)
@@ -182,7 +182,7 @@ mm = ModelMatrix(mf)
 ## @test model_response(mf) == y''     # fails: Int64 vs. Float64
 
 df = deepcopy(d)
-df[:x1] = CategoricalArray{Union{Null, Float64}}(df[:x1])
+df[:x1] = CategoricalArray{Union{String, Null}}(string.(df[:x1]))
 
 f = @formula(y ~ x2 + x3 + x3*x2)
 mm = ModelMatrix(ModelFrame(f, df))
@@ -298,9 +298,9 @@ mm.m == float(model_response(mf))
 
 ## Promote non-redundant categorical terms to full rank
 
-d = DataFrame(x = Compat.repeat([:a, :b], outer = 4),
-              y = Compat.repeat([:c, :d], inner = 2, outer = 2),
-              z = Compat.repeat([:e, :f], inner = 4))
+d = DataFrame(x = Compat.repeat(["a", "b"], outer = 4),
+              y = Compat.repeat(["c", "d"], inner = 2, outer = 2),
+              z = Compat.repeat(["e", "f"], inner = 4))
 [categorical!(d, name) for name in names(d)]
 cs = Dict([Pair(name, EffectsCoding()) for name in names(d)])
 d[:n] = 1.:8
