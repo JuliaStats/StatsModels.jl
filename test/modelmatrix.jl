@@ -294,7 +294,7 @@ mm = ModelMatrix(mf)
 ## Same variable on left and right side
 mf = ModelFrame(@formula(x1 ~ x1), df)
 mm = ModelMatrix(mf)
-mm.m == float(model_response(mf))
+mm.m == model_response(mf)
 
 ## Promote non-redundant categorical terms to full rank
 
