@@ -26,7 +26,7 @@ Base.size(mm::ModelMatrix, dim...) = size(mm.m, dim...)
 
 
 ## construct model matrix columns from model frame + name (checks for contrasts)
-function modelmat_cols{T <: AbstractFloatMatrix}(::Type{T}, name::Symbol, mf::ModelFrame; non_redundant::Bool = false)
+function modelmat_cols(::Type{T}, name::Symbol, mf::ModelFrame; non_redundant::Bool = false) where T <: AbstractFloatMatrix
     if haskey(mf.contrasts, name)
         modelmat_cols(T, mf.df[name],
                       non_redundant ?
@@ -37,10 +37,10 @@ function modelmat_cols{T <: AbstractFloatMatrix}(::Type{T}, name::Symbol, mf::Mo
     end
 end
 
-modelmat_cols{T <: AbstractFloatMatrix, V<:AbstractRealVector}(::Type{T}, v::V) =
+modelmat_cols(::Type{T}, v::V) where {T <: AbstractFloatMatrix, V<:AbstractRealVector} =
 convert(T, reshape(v, length(v), 1))
 # FIXME: this inefficient method should not be needed, cf. JuliaLang/julia#18264
-modelmat_cols{T <: AbstractFloatMatrix, V <: NullableRealVector}(::Type{<:AbstractFloatMatrix}, v::V) =
+modelmat_cols(::Type{<:AbstractFloatMatrix}, v::V) where {T <: AbstractFloatMatrix, V <: NullableRealVector} =
     convert(T, Matrix(reshape(v, length(v), 1)))
 # Categorical column, does not make sense to convert to float
 modelmat_cols(T <: AbstractFloatMatrix, v::AbstractVector) =
@@ -77,7 +77,7 @@ indexrows(m::AbstractMatrix, ind::AbstractVector{Int}) = m[ind, :]
     expandcols{T <: AbstractFloatMatrix}(trm::Vector{T})
 Create pairwise products of columns from a vector of matrices
 """
-function expandcols{T <: AbstractFloatMatrix}(trm::Vector{T})
+function expandcols(trm::Vector{T}) where T <: AbstractFloatMatrix
     if length(trm) == 1
         trm[1]
     else
