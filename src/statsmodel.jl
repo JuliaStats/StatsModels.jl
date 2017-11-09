@@ -32,13 +32,13 @@ macro delegate(source, targets)
 end
 
 # Wrappers for DataTableStatisticalModel and DataTableRegressionModel
-immutable DataTableStatisticalModel{M,T} <: StatisticalModel
+struct DataTableStatisticalModel{M,T} <: StatisticalModel
     model::M
     mf::ModelFrame
     mm::ModelMatrix{T}
 end
 
-immutable DataTableRegressionModel{M,T} <: RegressionModel
+struct DataTableRegressionModel{M,T} <: RegressionModel
     model::M
     mf::ModelFrame
     mm::ModelMatrix{T}
