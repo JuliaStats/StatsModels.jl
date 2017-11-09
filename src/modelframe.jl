@@ -46,7 +46,7 @@ julia> mf = ModelFrame(y ~ 1 + x, df)
 ```
 
 """
-type ModelFrame
+mutable struct ModelFrame
     df::AbstractDataTable
     terms::Terms
     msng::BitArray
