@@ -15,7 +15,7 @@ ModelMatrix{T <: AbstractFloatMatrix}(mf::ModelFrame)
 ```
 
 """
-type ModelMatrix{T <: AbstractFloatMatrix}
+mutable struct ModelMatrix{T <: AbstractFloatMatrix}
     m::T
     assign::Vector{Int}
 end
