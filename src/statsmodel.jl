@@ -47,8 +47,8 @@ end
 for (modeltype, dfmodeltype) in ((:StatisticalModel, DataTableStatisticalModel),
                                  (:RegressionModel, DataTableRegressionModel))
     @eval begin
-        function StatsBase.fit{T<:$modeltype}(::Type{T}, f::Formula, df::AbstractDataTable,
-                                              args...; contrasts::Dict = Dict(), kwargs...)
+        function StatsBase.fit(::Type{T}, f::Formula, df::AbstractDataTable,
+                               args...; contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
             mf = ModelFrame(f, df, contrasts=contrasts)
             mm = ModelMatrix(mf)
             y = model_response(mf)
@@ -58,7 +58,7 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, DataTableStatisticalModel),
 end
 
 # Delegate functions from StatsBase that use our new types
-typealias DataTableModels @compat(Union{DataTableStatisticalModel, DataTableRegressionModel})
+const DataTableModels = Union{DataTableStatisticalModel, DataTableRegressionModel}
 @delegate DataTableModels.model [StatsBase.coef, StatsBase.confint,
                                  StatsBase.deviance, StatsBase.nulldeviance,
                                  StatsBase.loglikelihood, StatsBase.nullloglikelihood,

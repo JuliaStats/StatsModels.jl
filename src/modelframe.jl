@@ -54,9 +54,9 @@ mutable struct ModelFrame
     contrasts::Dict{Symbol, ContrastsMatrix}
 end
 
-is_categorical{T<:Real}(::AbstractArray{T}) = false
-typealias NullableReal{T<:Real} Nullable{T}
-is_categorical{T<:NullableReal}(::AbstractArray{T}) = false
+is_categorical(::AbstractArray{T}) where {T<:Real} = false
+NullableReal{T<:Real} =  Nullable{T}
+is_categorical(::AbstractArray{T}) where {T<:NullableReal} = false
 is_categorical(::AbstractArray) = true
 
 ## Check for non-redundancy of columns.  For instance, if x is a factor with two
@@ -107,7 +107,7 @@ const DEFAULT_CONTRASTS = DummyCoding
 _unique(x::CategoricalArray) = unique(x)
 _unique(x::NullableCategoricalArray) = [get(l) for l in unique(x) if !isnull(l)]
 
-function _unique{T<:Nullable}(x::AbstractArray{T})
+function _unique(x::AbstractArray{T}) where T<:Nullable
     levs = [get(l) for l in unique(x) if !isnull(l)]
     try; sort!(levs); end
     return levs
@@ -229,11 +229,11 @@ function coefnames(mf::ModelFrame)
     terms = droprandomeffects(dropresponse!(mf.terms))
 
     ## strategy mirrors ModelMatrx constructor:
-    eterm_names = @compat Dict{Tuple{Symbol,Bool}, Vector{Compat.UTF8String}}()
-    term_names = Vector{Compat.UTF8String}[]
+    eterm_names = Dict{Tuple{Symbol,Bool}, Vector{String}}()
+    term_names = Vector{String}[]
 
     if terms.intercept
-        push!(term_names, Compat.UTF8String["(Intercept)"])
+        push!(term_names, String["(Intercept)"])
     end
 
     factors = terms.factors
@@ -241,7 +241,7 @@ function coefnames(mf::ModelFrame)
     for (i_term, term) in enumerate(terms.terms)
 
         ## names for columns for eval terms
-        names = Vector{Compat.UTF8String}[]
+        names = Vector{String}[]
 
         ff = Compat.view(factors, :, i_term)
         eterms = Compat.view(terms.eterms, ff)
@@ -256,5 +256,5 @@ function coefnames(mf::ModelFrame)
         push!(term_names, expandtermnames(names))
     end
 
-    reduce(vcat, Vector{Compat.UTF8String}(), term_names)
+    reduce(vcat, Vector{String}(), term_names)
 end

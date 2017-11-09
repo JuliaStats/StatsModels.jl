@@ -79,7 +79,7 @@ termnames(C::MyCoding, levels, baseind) = ...
 ```
 
 """
-abstract AbstractContrasts
+abstract type AbstractContrasts end
 
 # Contrasts + Levels (usually from data) = ContrastsMatrix
 mutable struct ContrastsMatrix{C <: AbstractContrasts, T}
@@ -92,12 +92,12 @@ end
 # only check equality of matrix, termnames, and levels, and that the type is the
 # same for the contrasts (values are irrelevant).  This ensures that the two
 # will behave identically in creating modelmatrix columns
-Base.:(==){C<:AbstractContrasts,T}(a::ContrastsMatrix{C,T}, b::ContrastsMatrix{C,T}) =
+Base.:(==)(a::ContrastsMatrix{C,T}, b::ContrastsMatrix{C,T}) where {C<:AbstractContrasts,T} =
     a.matrix == b.matrix &&
     a.termnames == b.termnames &&
     a.levels == b.levels
 
-Base.hash{C}(a::ContrastsMatrix{C}, h::UInt) =
+Base.hash(a::ContrastsMatrix{C}, h::UInt) where {C} =
     hash(C, hash(a.matrix, hash(a.termnames, hash(a.levels, h))))
 
 """
@@ -128,7 +128,7 @@ ContrastsMatrix(contrasts_matrix::ContrastsMatrix, levels::AbstractVector)
   constructing a model matrix from a `ModelFrame` using different data.
 
 """
-function ContrastsMatrix{C <: AbstractContrasts}(contrasts::C, levels::AbstractVector)
+function ContrastsMatrix(contrasts::C, levels::AbstractVector) where C <: AbstractContrasts
 
     # if levels are defined on contrasts, use those, validating that they line up.
     # what does that mean? either:
@@ -176,7 +176,7 @@ function ContrastsMatrix{C <: AbstractContrasts}(contrasts::C, levels::AbstractV
     ContrastsMatrix(mat, tnames, c_levels, contrasts)
 end
 
-ContrastsMatrix{C <: AbstractContrasts}(c::Type{C}, levels::AbstractVector) =
+ContrastsMatrix(c::Type{C}, levels::AbstractVector) where {C <: AbstractContrasts} =
     throw(ArgumentError("contrast types must be instantiated (use $c() instead of $c)"))
 
 # given an existing ContrastsMatrix, check that all passed levels are present
@@ -208,7 +208,7 @@ nullify(x) = Nullable(x)
 # The rest is boilerplate.
 for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
     @eval begin
-        type $contrastType <: AbstractContrasts
+        mutable struct $contrastType <: AbstractContrasts
             base::Nullable{Any}
             levels::Nullable{Vector}
         end
@@ -244,11 +244,11 @@ julia> StatsModels.ContrastsMatrix(StatsModels.FullDummyCoding(), ["a", "b", "c"
  0.0  0.0  0.0  1.0
 ```
 """
-type FullDummyCoding <: AbstractContrasts
+mutable struct FullDummyCoding <: AbstractContrasts
 # Dummy contrasts have no base level (since all levels produce a column)
 end
 
-ContrastsMatrix{T}(C::FullDummyCoding, levels::Vector{T}) =
+ContrastsMatrix(C::FullDummyCoding, levels::Vector{T}) where {T} =
     ContrastsMatrix(eye(Float64, length(levels)), levels, levels, C)
 
 "Promote contrasts matrix to full rank version"
@@ -367,7 +367,7 @@ end
 Coding by manual specification of contrasts matrix. For k levels, the contrasts
 must be a k by k-1 Matrix.
 """
-type ContrastsCoding <: AbstractContrasts
+mutable struct ContrastsCoding <: AbstractContrasts
     mat::Matrix
     base::Nullable{Any}
     levels::Nullable{Vector}
