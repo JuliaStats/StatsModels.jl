@@ -70,7 +70,7 @@ from levels to `ModelMatrix` column values, and (optionally) a `termnames`
 method:
 
 ```julia
-type MyCoding <: AbstractContrasts
+mutable struct MyCoding <: AbstractContrasts
     ...
 end
 
@@ -82,7 +82,7 @@ termnames(C::MyCoding, levels, baseind) = ...
 abstract AbstractContrasts
 
 # Contrasts + Levels (usually from data) = ContrastsMatrix
-type ContrastsMatrix{C <: AbstractContrasts, T}
+mutable struct ContrastsMatrix{C <: AbstractContrasts, T}
     matrix::Matrix{Float64}
     termnames::Vector{T}
     levels::Vector{T}
