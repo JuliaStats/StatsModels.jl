@@ -144,7 +144,7 @@ end
 function ModelFrame(trms::Terms, d::AbstractDataTable;
                     contrasts::Dict = Dict())
     df, msng = null_omit(DataTable(map(x -> d[x], trms.eterms)))
-    names!(df, convert(Vector{Symbol}, map(string, trms.eterms)))
+    names!(df, Symbol.(string.(trms.eterms)))
 
     evaledContrasts = evalcontrasts(df, contrasts)
 
