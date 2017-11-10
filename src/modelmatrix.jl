@@ -26,7 +26,7 @@ Base.size(mm::ModelMatrix, dim...) = size(mm.m, dim...)
 
 
 ## construct model matrix columns from model frame + name (checks for contrasts)
-function modelmat_cols(::Type{T}, name::Symbol, mf::ModelFrame; non_redundant::Bool = false) where T<:AbstractFloatMatrix
+function modelmat_cols(T::AbstractFloatMatrix, name::Symbol, mf::ModelFrame; non_redundant::Bool = false)
     if haskey(mf.contrasts, name)
         modelmat_cols(T, mf.df[name],
                       non_redundant ?
@@ -37,30 +37,29 @@ function modelmat_cols(::Type{T}, name::Symbol, mf::ModelFrame; non_redundant::B
     end
 end
 
-modelmat_cols(::Type{T}, v::V) where {T<:AbstractFloatMatrix, V<:AbstractRealVector} =
-    convert(T, reshape(v, length(v), 1))
+modelmat_cols(T::AbstractFloatMatrix, v::AbstractRealVector) =
 # FIXME: this inefficient method should not be needed, cf. JuliaLang/julia#18264
-modelmat_cols(::Type{T}, v::V) where {T<:AbstractFloatMatrix, V<:NullableRealVector} =
+modelmat_cols(T::AbstractFloatMatrix, v::NullableRealVector) =
     convert(T, Matrix(reshape(v, length(v), 1)))
 # Categorical column, does not make sense to convert to float
-modelmat_cols(::Type{T}, v::AbstractVector) where {T<:AbstractFloatMatrix} =
+modelmat_cols(T::AbstractFloatMatrix, v::AbstractVector) =
     modelmat_cols(T, reshape(v, length(v), 1))
 
 # All non-real columns are considered as categorical
 # Could be made more efficient by directly storing the result into the model matrix
 """
-    modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix)
+    modelmat_cols(T::AbstractFloatMatrix, v::AbstractVector, contrast::ContrastsMatrix)
 
 Construct `ModelMatrix` columns of type `T` based on specified contrasts, ensuring that
 levels align properly.
 """
-modelmat_cols(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix) where {T<:AbstractFloatMatrix} =
+modelmat_cols(T::AbstractFloatMatrix, v::AbstractVector, contrast::ContrastsMatrix) =
     modelmat_cols(T, categorical(v), contrast)
 
 
-function modelmat_cols(::Type{T},
-                       v::Union{CategoricalVector, NullableCategoricalVector},
-                       contrast::ContrastsMatrix) where T<:AbstractFloatMatrix
+function modelmat_cols(T::AbstractFloatMatrix,
+    v::Union{CategoricalVector, NullableCategoricalVector},
+    contrast::ContrastsMatrix)
     ## make sure the levels of the contrast matrix and the categorical data
     ## are the same by constructing a re-indexing vector. Indexing into
     ## reindex with v.refs will give the corresponding row number of the
@@ -70,14 +69,14 @@ function modelmat_cols(::Type{T},
     return indexrows(contrastmatrix, reindex[v.refs])
 end
 
-indexrows(m::SparseMatrixCSC, ind::Vector{Int}) = m'[:, ind]'
-indexrows(m::AbstractMatrix, ind::Vector{Int}) = m[ind, :]
+indexrows(m::SparseMatrixCSC, ind::AbstractVector{Int}) = m'[:, ind]'
+indexrows(m::AbstractMatrix, ind::AbstractVector{Int}) = m[ind, :]
 
 """
-    expandcols{T<:AbstractFloatMatrix}(trm::Vector{T})
+    expandcols(trm::AbstractVector{AbstractFloatMatrix})
 Create pairwise products of columns from a vector of matrices
 """
-function expandcols(trm::Vector{T}) where T<:AbstractFloatMatrix
+function expandcols(trm::AbstractVector{AbstractFloatMatrix})
     if length(trm) == 1
         trm[1]
     else

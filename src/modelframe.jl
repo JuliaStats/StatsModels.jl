@@ -54,9 +54,9 @@ mutable struct ModelFrame
     contrasts::Dict{Symbol, ContrastsMatrix}
 end
 
-is_categorical(::AbstractArray{T}) where {T<:Real} = false
+is_categorical(::AbstractArray{<:Real}) = false
 NullableReal{T<:Real} =  Nullable{T}
-is_categorical(::AbstractArray{T}) where {T<:NullableReal} = false
+is_categorical(::AbstractArray{<:NullableReal}) = false
 is_categorical(::AbstractArray) = true
 
 ## Check for non-redundancy of columns.  For instance, if x is a factor with two
@@ -87,7 +87,7 @@ function check_non_redundancy!(trms::Terms, df::AbstractDataTable)
                 dropped = trms.factors[:,i_term]
                 dropped[i_eterm] = 0
 
-                if findfirst(equalto(encountered_columns), dropped) == 0
+                if findfirst(x -> x == encountered_columns, dropped) == 0
                     trms.is_non_redundant[i_eterm, i_term] = true
                     push!(encountered_columns, dropped)
                 end
@@ -107,7 +107,7 @@ const DEFAULT_CONTRASTS = DummyCoding
 _unique(x::CategoricalArray) = unique(x)
 _unique(x::NullableCategoricalArray) = [get(l) for l in unique(x) if !isnull(l)]
 
-function _unique(x::AbstractArray{T}) where T<:Nullable
+function _unique(x::AbstractArray{T<:Nullable})
     levs = [get(l) for l in unique(x) if !isnull(l)]
     try; sort!(levs); end
     return levs
@@ -230,7 +230,7 @@ function coefnames(mf::ModelFrame)
 
     ## strategy mirrors ModelMatrx constructor:
     eterm_names = Dict{Tuple{Symbol,Bool}, Vector{String}}()
-    term_names = Vector{String}[]
+    term_names = Vector{Vector{String}}()
 
     if terms.intercept
         push!(term_names, String["(Intercept)"])
@@ -241,7 +241,7 @@ function coefnames(mf::ModelFrame)
     for (i_term, term) in enumerate(terms.terms)
 
         ## names for columns for eval terms
-        names = Vector{String}[]
+        names = Vector{Vector{String}}()
 
         ff = Compat.view(factors, :, i_term)
         eterms = Compat.view(terms.eterms, ff)
