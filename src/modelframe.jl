@@ -87,7 +87,7 @@ function check_non_redundancy!(trms::Terms, df::AbstractDataTable)
                 dropped = trms.factors[:,i_term]
                 dropped[i_eterm] = 0
 
-                if findfirst(x -> x == encountered_columns, dropped) == 0
+                if !(dropped in encountered_columns)
                     trms.is_non_redundant[i_eterm, i_term] = true
                     push!(encountered_columns, dropped)
                 end
