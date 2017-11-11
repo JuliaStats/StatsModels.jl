@@ -92,7 +92,7 @@ end
 # only check equality of matrix, termnames, and levels, and that the type is the
 # same for the contrasts (values are irrelevant).  This ensures that the two
 # will behave identically in creating modelmatrix columns
-Base.:(==){C,T}(a::ContrastsMatrix{C,T}, b::ContrastsMatrix{C,T}) where X<: AbstractContrasts =
+Base.:(==)(a::ContrastsMatrix{C,T}, b::ContrastsMatrix{C,T}) where {C <: AbstractContrasts, T} =
     a.matrix == b.matrix &&
     a.termnames == b.termnames &&
     a.levels == b.levels
