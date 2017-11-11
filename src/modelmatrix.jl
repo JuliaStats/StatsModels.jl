@@ -65,7 +65,7 @@ function modelmat_cols(::Type{T},
     ## are the same by constructing a re-indexing vector. Indexing into
     ## reindex with v.refs will give the corresponding row number of the
     ## contrast matrix
-    reindex = [findfirst(x -> x == contrast.levels, l) for l in levels(v)]
+    reindex = [findfirst(x -> x == l, contrast.levels) for l in levels(v)]
     contrastmatrix = convert(T, contrast.matrix)
     return indexrows(contrastmatrix, reindex[v.refs])
 end
