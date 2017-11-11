@@ -97,7 +97,7 @@ Base.:(==)(a::ContrastsMatrix{AbstractContrasts,T}, b::ContrastsMatrix{AbstractC
     a.termnames == b.termnames &&
     a.levels == b.levels
 
-Base.hash{C}(a::ContrastsMatrix{C}, h::UInt) =
+Base.hash(a::ContrastsMatrix{C}, h::UInt) where {C} =
     hash(C, hash(a.matrix, hash(a.termnames, hash(a.levels, h))))
 
 """
