@@ -86,13 +86,13 @@ mutable struct ContrastsMatrix{C <: AbstractContrasts, T}
     matrix::Matrix{Float64}
     termnames::Vector{T}
     levels::Vector{T}
-    contrasts::AbstractContrasts
+    contrasts::C
 end
 
 # only check equality of matrix, termnames, and levels, and that the type is the
 # same for the contrasts (values are irrelevant).  This ensures that the two
 # will behave identically in creating modelmatrix columns
-Base.:(==)(a::ContrastsMatrix{AbstractContrasts,T}, b::ContrastsMatrix{AbstractContrasts,T}) =
+Base.:(==){C,T}(a::ContrastsMatrix{C,T}, b::ContrastsMatrix{C,T}) where X<: AbstractContrasts =
     a.matrix == b.matrix &&
     a.termnames == b.termnames &&
     a.levels == b.levels
