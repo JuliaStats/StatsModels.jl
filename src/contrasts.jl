@@ -82,7 +82,7 @@ termnames(C::MyCoding, levels, baseind) = ...
 abstract type AbstractContrasts end
 
 # Contrasts + Levels (usually from data) = ContrastsMatrix
-mutable struct ContrastsMatrix{T}
+mutable struct ContrastsMatrix{C <: AbstractContrasts, T}
     matrix::Matrix{Float64}
     termnames::Vector{T}
     levels::Vector{T}
@@ -97,7 +97,7 @@ Base.:(==)(a::ContrastsMatrix{AbstractContrasts,T}, b::ContrastsMatrix{AbstractC
     a.termnames == b.termnames &&
     a.levels == b.levels
 
-Base.hash(a::ContrastsMatrix, h::UInt) =
+Base.hash{C}(a::ContrastsMatrix{C}, h::UInt) =
     hash(C, hash(a.matrix, hash(a.termnames, hash(a.levels, h))))
 
 """
@@ -176,7 +176,7 @@ function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
     ContrastsMatrix(mat, tnames, c_levels, contrasts)
 end
 
-ContrastsMatrix(c::AbstractContrasts, levels::AbstractVector) =
+ContrastsMatrix(c::Type{<:AbstractContrasts}, levels::AbstractVector) =
     throw(ArgumentError("contrast types must be instantiated (use $c() instead of $c)"))
 
 # given an existing ContrastsMatrix, check that all passed levels are present

@@ -107,7 +107,7 @@ const DEFAULT_CONTRASTS = DummyCoding
 _unique(x::CategoricalArray) = unique(x)
 _unique(x::NullableCategoricalArray) = [get(l) for l in unique(x) if !isnull(l)]
 
-function _unique(x::AbstractArray{T<:Nullable})
+function _unique(x::AbstractArray{<:Nullable})
     levs = [get(l) for l in unique(x) if !isnull(l)]
     try; sort!(levs); end
     return levs

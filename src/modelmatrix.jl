@@ -26,7 +26,7 @@ Base.size(mm::ModelMatrix, dim...) = size(mm.m, dim...)
 
 
 ## construct model matrix columns from model frame + name (checks for contrasts)
-function modelmat_cols(T::AbstractFloatMatrix, name::Symbol, mf::ModelFrame; non_redundant::Bool = false)
+function modelmat_cols{T <: AbstractFloatMatrix}(::Type{T}, name::Symbol, mf::ModelFrame; non_redundant::Bool = false)
     if haskey(mf.contrasts, name)
         modelmat_cols(T, mf.df[name],
                       non_redundant ?
@@ -37,12 +37,13 @@ function modelmat_cols(T::AbstractFloatMatrix, name::Symbol, mf::ModelFrame; non
     end
 end
 
-modelmat_cols(T::AbstractFloatMatrix, v::AbstractRealVector) =
+modelmat_cols{T <: AbstractFloatMatrix, V<:AbstractRealVector}(::Type{T}, v::V) =
+convert(T, reshape(v, length(v), 1))
 # FIXME: this inefficient method should not be needed, cf. JuliaLang/julia#18264
-modelmat_cols(T::AbstractFloatMatrix, v::NullableRealVector) =
+modelmat_cols{T <: AbstractFloatMatrix, V <: NullableRealVector}(::Type{<:AbstractFloatMatrix}, v::V) =
     convert(T, Matrix(reshape(v, length(v), 1)))
 # Categorical column, does not make sense to convert to float
-modelmat_cols(T::AbstractFloatMatrix, v::AbstractVector) =
+modelmat_cols(T <: AbstractFloatMatrix, v::AbstractVector) =
     modelmat_cols(T, reshape(v, length(v), 1))
 
 # All non-real columns are considered as categorical
@@ -64,7 +65,7 @@ function modelmat_cols(T::AbstractFloatMatrix,
     ## are the same by constructing a re-indexing vector. Indexing into
     ## reindex with v.refs will give the corresponding row number of the
     ## contrast matrix
-    reindex = [findfirst(equalto(contrast.levels), l) for l in levels(v)]
+    reindex = [findfirst(x -> x == contrast.levels, l) for l in levels(v)]
     contrastmatrix = convert(T, contrast.matrix)
     return indexrows(contrastmatrix, reindex[v.refs])
 end
@@ -73,10 +74,10 @@ indexrows(m::SparseMatrixCSC, ind::AbstractVector{Int}) = m'[:, ind]'
 indexrows(m::AbstractMatrix, ind::AbstractVector{Int}) = m[ind, :]
 
 """
-    expandcols(trm::AbstractVector{AbstractFloatMatrix})
+    expandcols{T <: AbstractFloatMatrix}(trm::Vector{T})
 Create pairwise products of columns from a vector of matrices
 """
-function expandcols(trm::AbstractVector{AbstractFloatMatrix})
+function expandcols{T <: AbstractFloatMatrix}(trm::Vector{T})
     if length(trm) == 1
         trm[1]
     else
