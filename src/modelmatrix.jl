@@ -15,7 +15,7 @@ ModelMatrix{T}(mf::ModelFrame) where T<: AbstractFloatMatrix
 ```
 
 """
-mutable struct ModelMatrix{T} where T<:AbstractFloatMatrix
+mutable struct ModelMatrix{T <: AbstractFloatMatrix}
     m::T
     assign::Vector{Int}
 end
@@ -49,18 +49,18 @@ modelmat_cols(::Type{T}, v::AbstractVector) where T<:AbstractFloatMatrix =
 # All non-real columns are considered as categorical
 # Could be made more efficient by directly storing the result into the model matrix
 """
-    modelmat_cols(T::AbstractFloatMatrix, v::AbstractVector, contrast::ContrastsMatrix)
+    modelmat_cols(::Type{<:AbstractFloatMatrix}, v::AbstractVector, contrast::ContrastsMatrix)
 
 Construct `ModelMatrix` columns of type `T` based on specified contrasts, ensuring that
 levels align properly.
 """
-modelmat_cols(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix) where T<:AbstractFloatMatrix =
+modelmat_cols(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix) where {T<:AbstractFloatMatrix} =
     modelmat_cols(T, categorical(v), contrast)
 
 
 function modelmat_cols(::Type{T},
-    v::Union{CategoricalVector, NullableCategoricalVector},
-    contrast::ContrastsMatrix) where T<:AbstractFloatMatrix
+                       v::Union{CategoricalVector, NullableCategoricalVector},
+                       contrast::ContrastsMatrix) where T<:AbstractFloatMatrix
     ## make sure the levels of the contrast matrix and the categorical data
     ## are the same by constructing a re-indexing vector. Indexing into
     ## reindex with v.refs will give the corresponding row number of the
@@ -74,16 +74,16 @@ indexrows(m::SparseMatrixCSC, ind::AbstractVector{Int}) = m'[:, ind]'
 indexrows(m::AbstractMatrix, ind::AbstractVector{Int}) = m[ind, :]
 
 """
-    expandcols(trm::Vector{T}) where T<:AbstractFloatMatrix
+    expandcols(trm::Vector{<:AbstractFloatMatrix})
 Create pairwise products of columns from a vector of matrices
 """
-function expandcols(trm::Vector{T}) where T<:AbstractFloatMatrix
+function expandcols(trm::Vector{<:AbstractFloatMatrix})
     if length(trm) == 1
         trm[1]
     else
         a = trm[1]
         b = expandcols(trm[2 : end])
-        reduce(hcat, [broadcast(*, a, Compat.view(b, :, j)) for j in 1 : size(b, 2)])
+        reduce(hcat, [broadcast(*, a, view(b, :, j)) for j in 1 : size(b, 2)])
     end
 end
 
