@@ -14,7 +14,7 @@ fields with possibly heterogeneous types.  One of the primary goals of
 `StatsModels` is to make it simpler to transform tabular data into matrix format
 suitable for statistical modeling.
 
-At the moment, "tabular data" means an `AbstractDataFrame`.  Ultimately, the
+At the moment, "tabular data" means an `AbstractDataTable`.  Ultimately, the
 goal is to support any tabular data format that adheres to a minimal API,
 **regardless of backend**.
 
@@ -88,7 +88,7 @@ dropterm
 
 The main use of `Formula`s is for fitting statistical models based on tabular
 data.  From the user's perspective, this is done by `fit` methods that take a
-`Formula` and a `DataFrame` instead of numeric matrices.
+`Formula` and a `DataTable` instead of numeric matrices.
 
 Internally, this is accomplished in three stages:
 

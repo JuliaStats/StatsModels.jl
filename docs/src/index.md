@@ -21,5 +21,5 @@ developers when dealing with statistical models and tabular data.
     * `RegressionModel`
 
 Much of this package was formerly part
-of [`DataFrames`](https://www.github.com/JuliaStats/DataFrames.jl)
+of [`DataTables`](https://www.github.com/JuliaStats/DataTables.jl)
 and [`StatsBase`](https://www.github.com/JuliaStats/StatsBase.jl).

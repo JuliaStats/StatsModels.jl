@@ -1,8 +1,7 @@
 module TestStatsModels
 
 using StatsModels
-using StatsBase
-using DataFrames
+using DataTables
 using Base.Test
 using Compat
 
@@ -27,9 +26,9 @@ StatsBase.coeftable(mod::DummyMod) =
               0)
 
 ## Test fitting
-d = DataFrame()
+d = DataTable()
 d[:y] = [1:4;]
-d[:x1] = Vector{Union{Null, Int}}(5:8)
+d[:x1] = [5:8;]
 d[:x2] = [9:12;]
 d[:x3] = [13:16;]
 d[:x4] = [17:20;]
@@ -48,11 +47,11 @@ StatsBase.predict(mod::DummyMod, newX::Matrix) = newX * mod.beta
 mm = ModelMatrix(ModelFrame(f, d))
 @test predict(m, mm.m) == mm.m * collect(1:4)
 
-## new data from DataFrame (via ModelMatrix)
-@test predict(m, d) == predict(m, mm.m)
+## new data from DataTable (via ModelMatrix)
+@test isequal(predict(m, d), NullableArray(predict(m, mm.m)))
 
 d2 = deepcopy(d)
-d2[3, :x1] = null
+d2[3, :x1] = Nullable()
 @test length(predict(m, d2)) == 4
 
 ## test copying of names from Terms to CoefTable
@@ -64,23 +63,23 @@ io = IOBuffer()
 show(io, m)
 
 ## with categorical variables
-d[:x1p] = CategoricalArray{Union{String, Null}}(string.(d[:x1]))
+d[:x1p] = NullableCategoricalArray(d[:x1])
 f2 = @formula(y ~ x1p)
 m2 = fit(DummyMod, f2, d)
 
 @test coeftable(m2).rownms == ["(Intercept)", "x1p: 6", "x1p: 7", "x1p: 8"]
 
 ## predict w/ new data missing levels
-@test predict(m2, d[2:4, :]) == predict(m2)[2:4]
+@test isequal(predict(m2, d[2:4, :]), NullableArray(predict(m2)[2:4]))
 
 ## predict w/ new data with _extra_ levels (throws an error)
 d3 = deepcopy(d)
 d3[1, :x1] = 0
-d3[:x1p] = CategoricalVector{Union{String, Null}}(string.(d3[:x1]))
+d3[:x1p] = NullableCategoricalVector(d3[:x1])
 @test_throws ArgumentError predict(m2, d3)
 
 ## fit with contrasts specified
-d[:x2p] = CategoricalVector{Union{String, Null}}(string.(d[:x2]))
+d[:x2p] = NullableCategoricalVector(d[:x2])
 f3 = @formula(y ~ x1p + x2p)
 m3 = fit(DummyMod, f3, d)
 fit(DummyMod, f3, d, contrasts = Dict(:x1p => EffectsCoding()))
