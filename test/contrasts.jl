@@ -1,34 +1,34 @@
 module TestContrasts
 
 using Base.Test
-using DataTables
-using CategoricalArrays
+using DataFrames
 using StatsModels
+using Nulls
 
 using StatsModels: ContrastsMatrix
 
-d = DataTable(x = CategoricalVector([:a, :b, :c, :a, :a, :b]))
+d = DataFrame(x = CategoricalVector{Union{Null, String}}(["a", "b", "c", "a", "a", "b"]))
 
 mf = ModelFrame(Formula(nothing, :x), d)
 
 ## testing equality of ContrastsMatrix
-should_equal = [ContrastsMatrix(DummyCoding(), [:a, :b, :c]),
-                ContrastsMatrix(DummyCoding(base=:a), [:a, :b, :c]),
-                ContrastsMatrix(DummyCoding(base=:a, levels=[:a, :b, :c]), [:a, :b, :c]),
-                ContrastsMatrix(DummyCoding(levels=[:a, :b, :c]), [:a, :b, :c])]
+should_equal = [ContrastsMatrix(DummyCoding(), ["a", "b", "c"]),
+                ContrastsMatrix(DummyCoding(base="a"), ["a", "b", "c"]),
+                ContrastsMatrix(DummyCoding(base="a", levels=["a", "b", "c"]), ["a", "b", "c"]),
+                ContrastsMatrix(DummyCoding(levels=["a", "b", "c"]), ["a", "b", "c"])]
 
 for c in should_equal
     @test mf.contrasts[:x] == c
     @test hash(mf.contrasts[:x]) == hash(c)
 end
 
-should_not_equal = [ContrastsMatrix(EffectsCoding(), [:a, :b, :c]),
-                    ContrastsMatrix(DummyCoding(), [:b, :c]),
-                    ContrastsMatrix(DummyCoding(), [:b, :c, :a]),
-                    ContrastsMatrix(DummyCoding(), [:b, :c, :a]),
-                    ContrastsMatrix(DummyCoding(), [:b, :c, :a]),
-                    ContrastsMatrix(DummyCoding(base=:b), [:a, :b, :c]),
-                    ContrastsMatrix(DummyCoding(base=:a, levels=[:b, :a, :c]), [:a, :b, :c])]
+should_not_equal = [ContrastsMatrix(EffectsCoding(), ["a", "b", "c"]),
+                    ContrastsMatrix(DummyCoding(), ["b", "c"]),
+                    ContrastsMatrix(DummyCoding(), ["b", "c", "a"]),
+                    ContrastsMatrix(DummyCoding(), ["b", "c", "a"]),
+                    ContrastsMatrix(DummyCoding(), ["b", "c", "a"]),
+                    ContrastsMatrix(DummyCoding(base="b"), ["a", "b", "c"]),
+                    ContrastsMatrix(DummyCoding(base="a", levels=["b", "a", "c"]), ["a", "b", "c"])]
 
 for c in should_not_equal
     @test mf.contrasts[:x] != c
@@ -58,7 +58,7 @@ setcontrasts!(mf, x = EffectsCoding())
 @test coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
 
 # change base level of contrast
-setcontrasts!(mf, x = EffectsCoding(base = :b))
+setcontrasts!(mf, x = EffectsCoding(base = "b"))
 @test ModelMatrix(mf).m == [1  1  0
                             1 -1 -1
                             1  0  1
@@ -68,7 +68,7 @@ setcontrasts!(mf, x = EffectsCoding(base = :b))
 @test coefnames(mf) == ["(Intercept)"; "x: a"; "x: c"]
 
 # change levels of contrast
-setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a]))
+setcontrasts!(mf, x = EffectsCoding(levels = ["c", "b", "a"]))
 @test ModelMatrix(mf).m == [1  0  1
                             1  1  0
                             1 -1 -1
@@ -79,7 +79,7 @@ setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a]))
 
 
 # change levels and base level of contrast
-setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a], base = :a))
+setcontrasts!(mf, x = EffectsCoding(levels = ["c", "b", "a"], base = "a"))
 @test ModelMatrix(mf).m == [1 -1 -1
                             1  0  1
                             1  1  0
@@ -99,10 +99,10 @@ setcontrasts!(mf, x = HelmertCoding())
 @test coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
 
 # Mismatching types of data and contrasts levels throws an error:
-@test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = ["a", "b", "c"]))
+@test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = [:a, :b, :c]))
 
 # Missing data is handled gracefully, dropping columns when a level is lost
-d[3, :x] = Nullable()
+d[3, :x] = null
 mf_missing = ModelFrame(Formula(nothing, :x), d, contrasts = Dict(:x => EffectsCoding()))
 @test ModelMatrix(mf_missing).m == [1 -1
                                     1  1
@@ -113,9 +113,9 @@ mf_missing = ModelFrame(Formula(nothing, :x), d, contrasts = Dict(:x => EffectsC
 
 # Things that are bad to do:
 # Applying contrasts that only have a subset of data levels:
-@test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = [:a, :b]))
+@test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = ["a", "b"]))
 # Applying contrasts that expect levels not found in data:
-@test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = [:a, :b, :c, :d]))
+@test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = ["a", "b", "c", :d]))
 # Asking for base level that's not found in data
 @test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(base = :e))
 
