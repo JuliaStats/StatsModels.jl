@@ -4,7 +4,7 @@ using Base.Test
 using StatsModels
 using StatsBase
 using DataFrames
-using Nulls
+using Missings
 using Compat
 
 # for testing while DataFrames still exports these:
@@ -182,7 +182,7 @@ mm = ModelMatrix(mf)
 ## @test model_response(mf) == y''     # fails: Int64 vs. Float64
 
 df = deepcopy(d)
-df[:x1] = CategoricalArray{Union{Null, Float64}}(df[:x1])
+df[:x1] = CategoricalArray{Union{Missing, Float64}}(df[:x1])
 
 f = @formula(y ~ x2 + x3 + x3*x2)
 mm = ModelMatrix(ModelFrame(f, df))
@@ -285,7 +285,7 @@ mm_sub = ModelMatrix(mf_sub)
 @test size(mm_sub) == (3,3)
 
 ## Missing data
-d[:x1m] = [5, 6, null, 7]
+d[:x1m] = [5, 6, missing, 7]
 mf = ModelFrame(@formula(y ~ x1m), d)
 mm = ModelMatrix(mf)
 @test mm.m[:, 2] == d[completecases(d), :x1m]

@@ -1,6 +1,6 @@
 julia 0.6
 DataFrames 0.11
-CategoricalArrays 0.2.0
-Nulls
+CategoricalArrays 0.3.0
+Missings
 StatsBase 0.11.1
 Compat 0.9.2

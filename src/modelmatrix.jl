@@ -35,7 +35,7 @@ function modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, name::Symbol, mf::Mode
     end
 end
 
-modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector{<:Union{Null, Real}}) =
+modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector{<:Union{Missing, Real}}) =
     convert(T, reshape(v, length(v), 1))
 # Categorical column, does not make sense to convert to float
 modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector) =

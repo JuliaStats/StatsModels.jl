@@ -3,11 +3,11 @@ module TestContrasts
 using Base.Test
 using DataFrames
 using StatsModels
-using Nulls
+using Missings
 
 using StatsModels: ContrastsMatrix
 
-d = DataFrame(x = CategoricalVector{Union{Null, Symbol}}([:a, :b, :c, :a, :a, :b]))
+d = DataFrame(x = CategoricalVector{Union{Missing, Symbol}}([:a, :b, :c, :a, :a, :b]))
 
 mf = ModelFrame(Formula(nothing, :x), d)
 
@@ -102,7 +102,7 @@ setcontrasts!(mf, x = HelmertCoding())
 @test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = ["a", "b", "c"]))
 
 # Missing data is handled gracefully, dropping columns when a level is lost
-d[3, :x] = null
+d[3, :x] = missing
 mf_missing = ModelFrame(Formula(nothing, :x), d, contrasts = Dict(:x => EffectsCoding()))
 @test ModelMatrix(mf_missing).m == [1 -1
                                     1  1

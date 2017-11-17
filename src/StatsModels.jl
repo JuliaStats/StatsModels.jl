@@ -5,7 +5,7 @@ module StatsModels
 using Compat
 using DataFrames
 using StatsBase
-using Nulls
+using Missings
 using CategoricalArrays
 
 

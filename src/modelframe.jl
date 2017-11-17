@@ -54,7 +54,7 @@ type ModelFrame
     contrasts::Dict{Symbol, ContrastsMatrix}
 end
 
-is_categorical(::AbstractArray{<:Union{Null, Real}}) = false
+is_categorical(::AbstractArray{<:Union{Missing, Real}}) = false
 is_categorical(::AbstractArray) = true
 
 ## Check for non-redundancy of columns.  For instance, if x is a factor with two
@@ -103,12 +103,12 @@ end
 const DEFAULT_CONTRASTS = DummyCoding
 
 _unique(x::AbstractCategoricalArray) = unique(x)
-_unique(x::AbstractCategoricalArray{T}) where {T>:Null} =
-    convert(Array{Nulls.T(T)}, filter!(!isnull, unique(x)))
+_unique(x::AbstractCategoricalArray{T}) where {T>:Missing} =
+    convert(Array{Missings.T(T)}, filter!(!ismissing, unique(x)))
 
 function _unique(x::AbstractArray{T}) where T
-    levs = T >: Null ?
-           convert(Array{Nulls.T(T)}, filter!(!isnull, unique(x))) :
+    levs = T >: Missing ?
+           convert(Array{Missings.T(T)}, filter!(!ismissing, unique(x))) :
            unique(x)
     try; sort!(levs); end
     return levs
@@ -131,7 +131,7 @@ function evalcontrasts(df::AbstractDataFrame, contrasts::Dict = Dict())
 end
 
 ## Default NULL handler.  Others can be added as keyword arguments
-function null_omit(df::DataFrame)
+function missing_omit(df::DataFrame)
     cc = completecases(df)
     df[cc,:], cc
 end
@@ -141,7 +141,7 @@ _droplevels!(x::AbstractCategoricalArray) = droplevels!(x)
 
 function ModelFrame(trms::Terms, d::AbstractDataFrame;
                     contrasts::Dict = Dict())
-    df, msng = null_omit(DataFrame(map(x -> d[x], trms.eterms)))
+    df, msng = missing_omit(DataFrame(map(x -> d[x], trms.eterms)))
     names!(df, convert(Vector{Symbol}, map(string, trms.eterms)))
 
     evaledContrasts = evalcontrasts(df, contrasts)

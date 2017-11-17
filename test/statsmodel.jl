@@ -29,7 +29,7 @@ StatsBase.coeftable(mod::DummyMod) =
 ## Test fitting
 d = DataFrame()
 d[:y] = [1:4;]
-d[:x1] = Vector{Union{Null, Int}}(5:8)
+d[:x1] = Vector{Union{Missing, Int}}(5:8)
 d[:x2] = [9:12;]
 d[:x3] = [13:16;]
 d[:x4] = [17:20;]
@@ -52,7 +52,7 @@ mm = ModelMatrix(ModelFrame(f, d))
 @test predict(m, d) == predict(m, mm.m)
 
 d2 = deepcopy(d)
-d2[3, :x1] = null
+d2[3, :x1] = missing
 @test length(predict(m, d2)) == 4
 
 ## test copying of names from Terms to CoefTable
@@ -64,7 +64,7 @@ io = IOBuffer()
 show(io, m)
 
 ## with categorical variables
-d[:x1p] = CategoricalArray{Union{Null, Int}}(d[:x1])
+d[:x1p] = CategoricalArray{Union{Missing, Int}}(d[:x1])
 f2 = @formula(y ~ x1p)
 m2 = fit(DummyMod, f2, d)
 
@@ -76,11 +76,11 @@ m2 = fit(DummyMod, f2, d)
 ## predict w/ new data with _extra_ levels (throws an error)
 d3 = deepcopy(d)
 d3[1, :x1] = 0
-d3[:x1p] = CategoricalVector{Union{Null, Int}}(d3[:x1])
+d3[:x1p] = CategoricalVector{Union{Missing, Int}}(d3[:x1])
 @test_throws ArgumentError predict(m2, d3)
 
 ## fit with contrasts specified
-d[:x2p] = CategoricalVector{Union{Null, Int}}(d[:x2])
+d[:x2p] = CategoricalVector{Union{Missing, Int}}(d[:x2])
 f3 = @formula(y ~ x1p + x2p)
 m3 = fit(DummyMod, f3, d)
 fit(DummyMod, f3, d, contrasts = Dict(:x1p => EffectsCoding()))
