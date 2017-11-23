@@ -9,7 +9,7 @@ using Compat
 # Tests for statsmodel.jl
 
 # A dummy RegressionModel type
-immutable DummyMod <: RegressionModel
+struct DummyMod <: RegressionModel
     beta::Vector{Float64}
     x::Matrix
     y::Vector
@@ -91,8 +91,8 @@ fit(DummyMod, f3, d, contrasts = Dict(:x1p => EffectsCoding(),
 
 
 ## Another dummy model type to test fall-through show method
-immutable DummyModTwo <: RegressionModel
-    msg::Compat.UTF8String
+struct DummyModTwo <: RegressionModel
+    msg::String
 end
 
 StatsBase.fit(::Type{DummyModTwo}, ::Matrix, ::Vector) = DummyModTwo("hello!")
