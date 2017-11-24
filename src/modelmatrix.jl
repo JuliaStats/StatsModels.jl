@@ -1,5 +1,5 @@
 
-typealias AbstractFloatMatrix{T<:AbstractFloat} AbstractMatrix{T}
+AbstractFloatMatrix{T<:AbstractFloat} =  AbstractMatrix{T}
 
 """
 Convert a `ModelFrame` into a numeric matrix suitable for modeling
@@ -13,7 +13,7 @@ ModelMatrix{T <: AbstractFloatMatrix}(mf::ModelFrame)
 ```
 
 """
-type ModelMatrix{T <: AbstractFloatMatrix}
+mutable struct ModelMatrix{T <: AbstractFloatMatrix}
     m::T
     assign::Vector{Int}
 end
@@ -24,7 +24,7 @@ Base.size(mm::ModelMatrix, dim...) = size(mm.m, dim...)
 
 
 ## construct model matrix columns from model frame + name (checks for contrasts)
-function modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, name::Symbol, mf::ModelFrame; non_redundant::Bool = false)
+function modelmat_cols(::Type{T}, name::Symbol, mf::ModelFrame; non_redundant::Bool = false) where T<:AbstractFloatMatrix
     if haskey(mf.contrasts, name)
         modelmat_cols(T, mf.df[name],
                       non_redundant ?
@@ -35,10 +35,10 @@ function modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, name::Symbol, mf::Mode
     end
 end
 
-modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector{<:Union{Missing, Real}}) =
+modelmat_cols(::Type{T}, v::AbstractVector{<:Union{Missing, Real}}) where {T<:AbstractFloatMatrix} =
     convert(T, reshape(v, length(v), 1))
 # Categorical column, does not make sense to convert to float
-modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector) =
+modelmat_cols(::Type{T}, v::AbstractVector) where {T<:AbstractFloatMatrix} =
     modelmat_cols(T, reshape(v, length(v), 1))
 
 # All non-real columns are considered as categorical
@@ -49,13 +49,13 @@ modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector) =
 Construct `ModelMatrix` columns of type `T` based on specified contrasts, ensuring that
 levels align properly.
 """
-modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix) =
+modelmat_cols(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix) where {T<:AbstractFloatMatrix} =
     modelmat_cols(T, categorical(v), contrast)
 
 
-function modelmat_cols{T<:AbstractFloatMatrix}(::Type{T},
-                                               v::AbstractCategoricalVector,
-                                               contrast::ContrastsMatrix)
+function modelmat_cols(::Type{T},
+                       v::AbstractCategoricalVector,
+                       contrast::ContrastsMatrix) where T<:AbstractFloatMatrix
     ## make sure the levels of the contrast matrix and the categorical data
     ## are the same by constructing a re-indexing vector. Indexing into
     ## reindex with v.refs will give the corresponding row number of the
@@ -72,7 +72,7 @@ indexrows(m::AbstractMatrix, ind::Vector{Int}) = m[ind, :]
     expandcols{T<:AbstractFloatMatrix}(trm::Vector{T})
 Create pairwise products of columns from a vector of matrices
 """
-function expandcols{T<:AbstractFloatMatrix}(trm::Vector{T})
+function expandcols(trm::Vector{T}) where T<:AbstractFloatMatrix
     if length(trm) == 1
         trm[1]
     else
@@ -139,7 +139,7 @@ If there is an intercept in the model, that column occurs first and its
 Mixed-effects models include "random-effects" terms which are ignored when
 creating the model matrix.
 """
-@compat function (::Type{ModelMatrix{T}}){T<:AbstractFloatMatrix}(mf::ModelFrame)
+function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractFloatMatrix
     dfrm = mf.df
     terms = droprandomeffects(dropresponse!(mf.terms))
 
@@ -153,7 +153,7 @@ creating the model matrix.
     factors = terms.factors
 
     ## Map eval. term name + redundancy bool to cached model matrix columns
-    eterm_cols = @compat Dict{Tuple{Symbol,Bool}, T}()
+    eterm_cols = Dict{Tuple{Symbol,Bool}, T}()
     ## Accumulator for each term's vector of eval. term columns.
 
     ## TODO: this method makes multiple copies of the data in the ModelFrame:

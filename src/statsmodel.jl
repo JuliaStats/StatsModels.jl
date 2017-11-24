@@ -32,13 +32,13 @@ macro delegate(source, targets)
 end
 
 # Wrappers for DataFrameStatisticalModel and DataFrameRegressionModel
-immutable DataFrameStatisticalModel{M,T} <: StatisticalModel
+struct DataFrameStatisticalModel{M,T} <: StatisticalModel
     model::M
     mf::ModelFrame
     mm::ModelMatrix{T}
 end
 
-immutable DataFrameRegressionModel{M,T} <: RegressionModel
+struct DataFrameRegressionModel{M,T} <: RegressionModel
     model::M
     mf::ModelFrame
     mm::ModelMatrix{T}
@@ -47,8 +47,8 @@ end
 for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
                                  (:RegressionModel, DataFrameRegressionModel))
     @eval begin
-        function StatsBase.fit{T<:$modeltype}(::Type{T}, f::Formula, df::AbstractDataFrame,
-                                              args...; contrasts::Dict = Dict(), kwargs...)
+        function StatsBase.fit(::Type{T}, f::Formula, df::AbstractDataFrame,
+                               args...; contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
             mf = ModelFrame(f, df, contrasts=contrasts)
             mm = ModelMatrix(mf)
             y = model_response(mf)
@@ -58,7 +58,7 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
 end
 
 # Delegate functions from StatsBase that use our new types
-typealias DataFrameModels @compat(Union{DataFrameStatisticalModel, DataFrameRegressionModel})
+const DataFrameModels = Union{DataFrameStatisticalModel, DataFrameRegressionModel}
 @delegate DataFrameModels.model [StatsBase.coef, StatsBase.confint,
                                  StatsBase.deviance, StatsBase.nulldeviance,
                                  StatsBase.loglikelihood, StatsBase.nullloglikelihood,

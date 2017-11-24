@@ -11,7 +11,7 @@
 ## The lhs of a one-sided formula is 'nothing'
 ## The rhs of a formula can be 1
 
-type Formula
+mutable struct Formula
     lhs::Union{Symbol, Expr, Void}
     rhs::Union{Symbol, Expr, Integer}
 end
@@ -35,7 +35,7 @@ Representation of parsed `Formula`
 This is an internal type whose implementation is likely to change in the near
 future.
 """
-type Terms
+mutable struct Terms
     terms::Vector
     eterms::Vector        # evaluation terms
     factors::Matrix{Bool} # maps terms to evaluation terms
@@ -87,7 +87,7 @@ end
 dospecials(a::Any) = a
 
 ## Distribution of & over +
-const distributive = @compat Dict(:& => :+)
+const distributive = Dict(:& => :+)
 
 distribute(ex::Expr) = distribute!(copy(ex))
 distribute(a::Any) = a
