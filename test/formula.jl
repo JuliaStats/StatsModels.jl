@@ -6,7 +6,7 @@ using Compat
 
 # TODO:
 # - grouped variables in formulas with interactions
-# - is it fast?  Can expand() handle DataTables?
+# - is it fast?  Can expand() handle DataFrames?
 # - deal with intercepts
 # - implement ^2 for datavector's
 # - support more transformations with I()?
