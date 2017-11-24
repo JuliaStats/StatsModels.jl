@@ -3,9 +3,9 @@ __precompile__(true)
 module StatsModels
 
 using Compat
-using DataTables
+using DataFrames
 using StatsBase
-using NullableArrays
+using Missings
 using CategoricalArrays
 
 
