@@ -115,7 +115,6 @@ for the base level (which defaults to the first level).
 
 ```julia
 ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
-ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
 ContrastsMatrix(contrasts_matrix::ContrastsMatrix, levels::AbstractVector)
 ```
 
