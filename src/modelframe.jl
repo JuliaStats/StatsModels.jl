@@ -141,7 +141,6 @@ _droplevels!(x::AbstractCategoricalArray) = droplevels!(x)
 
 function ModelFrame(trms::Terms, d::AbstractDataFrame;
                     contrasts::Dict = Dict())
-  
     df, msng = missing_omit(DataFrame(map(x -> d[x], trms.eterms)))
     names!(df, convert(Vector{Symbol}, map(string, trms.eterms)))
 
@@ -240,9 +239,7 @@ function StatsBase.coefnames(mf::ModelFrame)
     for (i_term, term) in enumerate(terms.terms)
 
         ## names for columns for eval terms
-    
         names = Vector{Vector{String}}()
-
         ff = Compat.view(factors, :, i_term)
         eterms = Compat.view(terms.eterms, ff)
         non_redundants = Compat.view(terms.is_non_redundant, ff, i_term)
