@@ -1,6 +1,7 @@
 module TestContrasts
 
-using Base.Test
+using Compat
+using Compat.Test
 using DataFrames
 using StatsModels
 using Missings

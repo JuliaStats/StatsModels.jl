@@ -3,8 +3,8 @@ module TestStatsModels
 using StatsModels
 using StatsBase
 using DataFrames
-using Base.Test
 using Compat
+using Compat.Test
 
 # Tests for statsmodel.jl
 

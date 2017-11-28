@@ -1,6 +1,7 @@
 module TestModelMatrix
 
-using Base.Test
+using Compat
+using Compat.Test
 using StatsModels
 using StatsBase
 using DataFrames

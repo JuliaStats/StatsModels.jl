@@ -1,6 +1,7 @@
 module TestFormula
 
-using Base.Test
+using Compat
+using Compat.Test
 using StatsModels
 using Compat
 
