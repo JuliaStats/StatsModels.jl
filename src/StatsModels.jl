@@ -2,7 +2,6 @@ __precompile__(true)
 
 module StatsModels
 
-using Compat
 using DataFrames
 using StatsBase
 using Missings

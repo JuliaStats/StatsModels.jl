@@ -78,7 +78,7 @@ function expandcols(trm::Vector{T}) where T<:AbstractFloatMatrix
     else
         a = trm[1]
         b = expandcols(trm[2 : end])
-        reduce(hcat, [broadcast(*, a, Compat.view(b, :, j)) for j in 1 : size(b, 2)])
+        reduce(hcat, [broadcast(*, a, view(b, :, j)) for j in 1 : size(b, 2)])
     end
 end
 
@@ -93,7 +93,7 @@ function droprandomeffects(trms::Terms)
     if !any(retrms)  # return trms unchanged
         trms
     elseif all(retrms) && !trms.response   # return an empty Terms object
-        Terms(Any[],Any[],Array(Bool, (0,0)),Array(Bool, (0,0)), Int[], false, trms.intercept)
+        Terms(Any[],Any[],Array{Bool}(0,0), Array{Bool}(0,0), Int[], false, trms.intercept)
     else
         # the rows of `trms.factors` correspond to `eterms`, the columns to `terms`
         # After dropping random-effects terms we drop any eterms whose rows are all false
@@ -166,9 +166,9 @@ function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractFloatMatrix
     for (i_term, term) in enumerate(terms.terms)
         term_cols = T[]
         ## Pull out the eval terms, and the non-redundancy flags for this term
-        ff = Compat.view(factors, :, i_term)
-        eterms = Compat.view(terms.eterms, ff)
-        non_redundants = Compat.view(terms.is_non_redundant, ff, i_term)
+        ff = view(factors, :, i_term)
+        eterms = view(terms.eterms, ff)
+        non_redundants = view(terms.is_non_redundant, ff, i_term)
         ## Get cols for each eval term (either previously generated, or generating
         ## and storing as necessary)
         for (et, nr) in zip(eterms, non_redundants)
