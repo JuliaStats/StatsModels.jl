@@ -3,6 +3,7 @@ module TestContrasts
 using Compat
 using Compat.Test
 using DataFrames
+using StatsBase
 using StatsModels
 using Missings
 
