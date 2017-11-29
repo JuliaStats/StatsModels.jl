@@ -22,7 +22,7 @@ macro formula(ex)
         lhs = Base.Meta.quot(ex.args[2])
         rhs = Base.Meta.quot(ex.args[3])
     else
-        error("expected formula separator ~, got $(ex.head)")
+        return :(error($("expected formula separator ~, got $(ex.head)")))
     end
     return Expr(:call, :Formula, lhs, rhs)
 end

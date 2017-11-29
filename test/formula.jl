@@ -115,6 +115,6 @@ form = @formula(foo ~ 1 + bar + baz)
 @test form == @formula(foo ~ 1 + baz)
 
 # Incorrect formula separator
-@test_throws ErrorException eval(:(@formula(y => x + 1)))
+@test_throws ErrorException @formula(y => x + 1)
 
 end
