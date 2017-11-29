@@ -44,7 +44,7 @@ end
                             1  0  0
                             1  0  0
                             1  1  0]
-@test StatsBase.coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
+@test coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
 
 mmm = ModelMatrix(mf).m
 setcontrasts!(mf, x = DummyCoding())
@@ -57,7 +57,7 @@ setcontrasts!(mf, x = EffectsCoding())
                             1 -1 -1
                             1 -1 -1
                             1  1  0]
-@test StatsBase.coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
+@test coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
 
 # change base level of contrast
 setcontrasts!(mf, x = EffectsCoding(base = :b))
@@ -67,7 +67,7 @@ setcontrasts!(mf, x = EffectsCoding(base = :b))
                             1  1  0
                             1  1  0
                             1 -1 -1]
-@test StatsBase.coefnames(mf) == ["(Intercept)"; "x: a"; "x: c"]
+@test coefnames(mf) == ["(Intercept)"; "x: a"; "x: c"]
 
 # change levels of contrast
 setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a]))
@@ -77,7 +77,7 @@ setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a]))
                             1  0  1
                             1  0  1
                             1  1  0]
-@test StatsBase.coefnames(mf) == ["(Intercept)"; "x: b"; "x: a"]
+@test coefnames(mf) == ["(Intercept)"; "x: b"; "x: a"]
 
 
 # change levels and base level of contrast
@@ -88,7 +88,7 @@ setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a], base = :a))
                             1 -1 -1
                             1 -1 -1
                             1  0  1]
-@test StatsBase.coefnames(mf) == ["(Intercept)"; "x: c"; "x: b"]
+@test coefnames(mf) == ["(Intercept)"; "x: c"; "x: b"]
 
 # Helmert coded contrasts
 setcontrasts!(mf, x = HelmertCoding())
@@ -98,7 +98,7 @@ setcontrasts!(mf, x = HelmertCoding())
                             1 -1 -1
                             1 -1 -1
                             1  1 -1]
-@test StatsBase.coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
+@test coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
 
 # Mismatching types of data and contrasts levels throws an error:
 @test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = ["a", "b", "c"]))
@@ -111,7 +111,7 @@ mf_missing = ModelFrame(Formula(nothing, :x), d, contrasts = Dict(:x => EffectsC
                                     1 -1
                                     1 -1
                                     1  1]
-@test StatsBase.coefnames(mf_missing) == ["(Intercept)"; "x: b"]
+@test coefnames(mf_missing) == ["(Intercept)"; "x: b"]
 
 # Things that are bad to do:
 # Applying contrasts that only have a subset of data levels:

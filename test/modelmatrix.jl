@@ -30,7 +30,7 @@ x4 = [17.:20;]
 f = @formula(y ~ x1 + x2)
 mf = ModelFrame(f, d)
 ## @test mm.response_colnames == ["y"] # nope: no response_colnames
-@test StatsBase.coefnames(mf) == ["(Intercept)","x1","x2"]
+@test coefnames(mf) == ["(Intercept)","x1","x2"]
 ## @test model_response(mf) == transpose([1. 2 3 4]) # fails: Int64 vs. Float64
 mm = ModelMatrix(mf)
 smm = ModelMatrix{sparsetype}(mf)
@@ -50,7 +50,7 @@ mm = ModelMatrix(mf)
 @test mm.m[:,2] == [0, 1., 0, 0]
 @test mm.m[:,3] == [0, 0, 1., 0]
 @test mm.m[:,4] == [0, 0, 0, 1.]
-@test StatsBase.coefnames(mf)[2:end] == ["x1p: 6", "x1p: 7", "x1p: 8"]
+@test coefnames(mf)[2:end] == ["x1p: 6", "x1p: 7", "x1p: 8"]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
 
 #test_group("create a design matrix from interactions from two DataFrames")
@@ -245,7 +245,7 @@ mm = ModelMatrix(mf)
 ##                x3 = CategoricalArray(vec([z for x in 1:3, y in 4:6, z in 7:9])))
 ## f = y ~ x1 & x2 & x3
 ## mf = ModelFrame(f, df)
-## @test StatsBase.coefnames(mf)[2:end] ==
+## @test coefnames(mf)[2:end] ==
 ##     vec([string("x1: ", x, " & x2: ", y, " & x3: ", z) for
 ##          x in 2:3,
 ##          y in 5:6,
@@ -319,7 +319,7 @@ mm = ModelMatrix(mf)
                1 0
                0 1]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
-@test StatsBase.coefnames(mf) == ["x: a", "x: b"]
+@test coefnames(mf) == ["x: a", "x: b"]
 
 ## No first-order term for interaction
 mf = ModelFrame(@formula(n ~ 1 + x + x&y), d, contrasts=cs)
@@ -333,7 +333,7 @@ mm = ModelMatrix(mf)
                          -1  1  0
                          1  0  1]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
-@test StatsBase.coefnames(mf) == ["(Intercept)", "x: b", "x: a & y: d", "x: b & y: d"]
+@test coefnames(mf) == ["(Intercept)", "x: b", "x: a & y: d", "x: b & y: d"]
 
 ## When both terms of interaction are non-redundant:
 mf = ModelFrame(@formula(n ~ 0 + x&y), d, contrasts=cs)
@@ -347,7 +347,7 @@ mm = ModelMatrix(mf)
                0 0 1 0
                0 0 0 1]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
-@test StatsBase.coefnames(mf) == ["x: a & y: c", "x: b & y: c",
+@test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
                         "x: a & y: d", "x: b & y: d"]
 
 # only a three-way interaction: every term is promoted.
@@ -371,7 +371,7 @@ mm = ModelMatrix(mf)
                0 0 1 0  1  0
                0 0 0 1  0  1]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
-@test StatsBase.coefnames(mf) == ["x: a & y: c", "x: b & y: c",
+@test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
                         "x: a & y: d", "x: b & y: d",
                         "x: a & z: f", "x: b & z: f"]
 
@@ -389,7 +389,7 @@ mm = ModelMatrix(mf)
                0 0 1 0  1  0  1  0
                0 0 0 1  0  1  0  1]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
-@test StatsBase.coefnames(mf) == ["x: a & y: c", "x: b & y: c",
+@test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
                         "x: a & y: d", "x: b & y: d",
                         "x: a & z: f", "x: b & z: f",
                         "x: a & y: d & z: f", "x: b & y: d & z: f"]
@@ -408,7 +408,7 @@ mm = ModelMatrix(mf)
                1 0  1  0  1  0
                0 1  0  1  0  1]
 @test mm.m == ModelMatrix{sparsetype}(mf).m
-@test StatsBase.coefnames(mf) == ["x: a", "x: b",
+@test coefnames(mf) == ["x: a", "x: b",
                         "x: a & y: d", "x: b & y: d",
                         "x: a & z: f", "x: b & z: f"]
 
@@ -421,7 +421,7 @@ mm = ModelMatrix(mf)
 #                             1 0 1 0
 #                             1 0 0 1
 #                             1 0 0 0]
-# @test StatsBase.coefnames(mf) == ["x: a & y: c", "x: b & y: c",
+# @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
 #                         "x: a & y: d", "x: b & y: d"]
 
 ## note that R also does not detect this automatically. it's left to glm et al.
@@ -439,11 +439,11 @@ mm = ModelMatrix(mf)
 # Ensure that random effects terms are dropped from coefnames
 df = DataFrame(x = [1,2,3], y = [4,5,6])
 mf = ModelFrame(@formula(y ~ 1 + (1 | x)), df)
-@test StatsBase.coefnames(mf) == ["(Intercept)"]
+@test coefnames(mf) == ["(Intercept)"]
 
 mf = ModelFrame(@formula(y ~ 0 + (1 | x)), df)
 @test_throws ErrorException ModelMatrix(mf)
-@test StatsBase.coefnames(mf) == Vector{Compat.UTF8String}()
+@test coefnames(mf) == Vector{Compat.UTF8String}()
 
 
 # Ensure X is not a view on df column
