@@ -92,7 +92,7 @@ end
 # coeftable implementation
 function StatsBase.coeftable(model::DataFrameModels)
     ct = coeftable(model.model)
-    cfnames = StatsBase.coefnames(model.mf)
+    cfnames = coefnames(model.mf)
     if length(ct.rownms) == length(cfnames)
         ct.rownms = cfnames
     end
