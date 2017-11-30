@@ -94,7 +94,7 @@ function check_non_redundancy!(trms::Terms, df::AbstractDataFrame)
         end
         ## once we've checked all the eterms in this term, add it to the list
         ## of encountered terms/columns
-        push!(encountered_columns, Compat.view(trms.factors, :, i_term))
+        push!(encountered_columns, view(trms.factors, :, i_term))
     end
 
     return trms.is_non_redundant
@@ -241,9 +241,9 @@ function StatsBase.coefnames(mf::ModelFrame)
         ## names for columns for eval terms
         names = Vector{String}[]
 
-        ff = Compat.view(factors, :, i_term)
-        eterms = Compat.view(terms.eterms, ff)
-        non_redundants = Compat.view(terms.is_non_redundant, ff, i_term)
+        ff = view(factors, :, i_term)
+        eterms = view(terms.eterms, ff)
+        non_redundants = view(terms.is_non_redundant, ff, i_term)
 
         for (et, nr) in zip(eterms, non_redundants)
             if !haskey(eterm_names, (et, nr))
