@@ -2,14 +2,18 @@
 AbstractFloatMatrix{T<:AbstractFloat} =  AbstractMatrix{T}
 
 """
-Convert a `ModelFrame` into a numeric matrix suitable for modeling
+    ModelMatrix
+
+An `AbstractFloatMatrix` and an `assign` Int vector mapping columns to terms.
+
+# Members
+
+- `m`: An `AbstractFloatMatrix`
+- `assign`: A `Vector{Int}` of length `size(m, 2)` with elements in `0:nterms`.
 
 # Constructors
 
-```julia
-ModelMatrix(mf::ModelFrame)
-# Specify the type of the resulting matrix (default Matrix{Float64})
-ModelMatrix{T <: AbstractFloatMatrix}(mf::ModelFrame)
+    ModelMatrix(mf::ModelFrame)
 ```
 
 """
@@ -69,8 +73,9 @@ indexrows(m::SparseMatrixCSC, ind::Vector{Int}) = m'[:, ind]'
 indexrows(m::AbstractMatrix, ind::Vector{Int}) = m[ind, :]
 
 """
-    expandcols{T<:AbstractFloatMatrix}(trm::Vector{T})
-Create pairwise products of columns from a vector of matrices
+    expandcols(trm::Vector{T}) where T <: AbstractFloatMatrix
+
+Return pairwise products of columns from a vector of matrices
 """
 function expandcols(trm::Vector{T}) where T<:AbstractFloatMatrix
     if length(trm) == 1
@@ -84,9 +89,11 @@ end
 
 """
     droprandomeffects(trms::Terms)
+
+Return a `Terms` object with any random-effects terms from `trms` removed.
+
 Expressions of the form `(a|b)` are "random-effects" terms and are not
-incorporated in the ModelMatrix.  This function checks for such terms and,
-if any are present, drops them from the `Terms` object.
+incorporated in the ModelMatrix.
 """
 function droprandomeffects(trms::Terms)
     retrms = Bool[Meta.isexpr(t, :call) && t.args[1] == :| for t in trms.terms]
@@ -97,7 +104,7 @@ function droprandomeffects(trms::Terms)
     else
         # the rows of `trms.factors` correspond to `eterms`, the columns to `terms`
         # After dropping random-effects terms we drop any eterms whose rows are all false
-        ckeep = !retrms                 # columns to retain
+        ckeep = .!retrms                   # columns to retain
         facs = trms.factors[:, ckeep]
         rkeep = vec(sum(facs, 2) .> 0)
         Terms(trms.terms[ckeep], trms.eterms[rkeep], facs[rkeep, :],
