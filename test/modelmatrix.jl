@@ -6,7 +6,6 @@ using StatsModels
 using StatsBase
 using DataFrames
 using Missings
-using Compat
 
 # for testing while DataFrames still exports these:
 import StatsModels: @formula, Formula, ModelMatrix, ModelFrame, DummyCoding, EffectsCoding, HelmertCoding, ContrastsCoding, setcontrasts!, coefnames

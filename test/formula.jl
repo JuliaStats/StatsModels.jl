@@ -3,7 +3,6 @@ module TestFormula
 using Compat
 using Compat.Test
 using StatsModels
-using Compat
 
 # TODO:
 # - grouped variables in formulas with interactions
