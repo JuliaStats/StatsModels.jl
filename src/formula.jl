@@ -27,7 +27,7 @@ macro formula(ex)
     return Expr(:call, :Formula, lhs, rhs)
 end
 
-Base.:(==)(f1::Formula, f2::Formula) = all(getfield(f1, f)==getfield(f2, f) for f in fieldnames(f1))
+Base.:(==)(f1::Formula, f2::Formula) = all(getfield(f1, f)==getfield(f2, f) for f in fieldnames(typeof(f1)))
 
 """
 Representation of parsed `Formula`
@@ -48,7 +48,7 @@ mutable struct Terms
     intercept::Bool       # is there an intercept column in the model matrix?
 end
 
-Base.:(==)(t1::Terms, t2::Terms) = all(getfield(t1, f)==getfield(t2, f) for f in fieldnames(t1))
+Base.:(==)(t1::Terms, t2::Terms) = all(getfield(t1, f)==getfield(t2, f) for f in fieldnames(typeof(t1)))
 
 function Base.show(io::IO, f::Formula)
     print(io, "Formula: ", f.lhs === nothing ? "" : f.lhs, " ~ ", f.rhs)
@@ -109,7 +109,7 @@ function distribute!(ex::Expr)
             typeof(e)==Expr && e.head == :call && e.args[1] == distributing_op
 
         ## find first distributing subex
-        first_distributing_subex = findfirst(equalto(ex.args), is_distributing_subex)
+        first_distributing_subex = findfirst(equalto(is_distributing_subex), ex.args)
         if first_distributing_subex != 0
             ## remove distributing subexpression from args
             subex = splice!(ex.args, first_distributing_subex)
