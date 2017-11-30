@@ -142,7 +142,7 @@ _droplevels!(x::AbstractCategoricalArray) = droplevels!(x)
 function ModelFrame(trms::Terms, d::AbstractDataFrame;
                     contrasts::Dict = Dict())
     df, msng = missing_omit(DataFrame(map(x -> d[x], trms.eterms)))
-    names!(df, convert(Vector{Symbol}, map(string, trms.eterms)))
+    names!(df, Symbol.(string.(trms.eterms)))
 
     evaledContrasts = evalcontrasts(df, contrasts)
 
