@@ -17,7 +17,8 @@
 
 macro delegate(source, targets)
     typename = esc(source.args[1])
-    fieldname = esc(Expr(:quote, source.args[2].args[1]))
+    sourceargs2 = source.args[2]
+    fieldname = Expr(:quote, isa(sourceargs2, QuoteNode) ? sourceargs2.value : sourceargs2.args[1])
     funcnames = targets.args
     n = length(funcnames)
     result = quote begin end end
