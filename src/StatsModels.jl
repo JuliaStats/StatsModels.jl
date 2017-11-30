@@ -8,7 +8,6 @@ using StatsBase
 using Missings
 using CategoricalArrays
 
-
 export @formula,
        Formula,
        ModelFrame,

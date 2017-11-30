@@ -5,7 +5,6 @@ using Compat.Test
 using DataFrames
 using StatsBase
 using StatsModels
-using Missings
 
 using StatsModels: ContrastsMatrix
 

@@ -9,7 +9,7 @@ Convert a `ModelFrame` into a numeric matrix suitable for modeling
 ```julia
 ModelMatrix(mf::ModelFrame)
 # Specify the type of the resulting matrix (default Matrix{Float64})
-ModelMatrix{T}(mf::ModelFrame) where T<: AbstractFloatMatrix
+ModelMatrix{T <: AbstractFloatMatrix}(mf::ModelFrame)
 ```
 
 """
@@ -44,7 +44,7 @@ modelmat_cols(::Type{T}, v::AbstractVector) where {T<:AbstractFloatMatrix} =
 # All non-real columns are considered as categorical
 # Could be made more efficient by directly storing the result into the model matrix
 """
-    modelmat_cols(::Type{<:AbstractFloatMatrix}, v::AbstractVector, contrast::ContrastsMatrix)
+    modelmat_cols(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix) where T<:AbstractFloatMatrix
 
 Construct `ModelMatrix` columns of type `T` based on specified contrasts, ensuring that
 levels align properly.
@@ -69,10 +69,10 @@ indexrows(m::SparseMatrixCSC, ind::AbstractVector{Int}) = m'[:, ind]'
 indexrows(m::AbstractMatrix, ind::AbstractVector{Int}) = m[ind, :]
 
 """
-    expandcols(trm::Vector{<:AbstractFloatMatrix})
+    expandcols{T}(trm::Vector{T}) where T<:AbstractFloatMatrix
 Create pairwise products of columns from a vector of matrices
 """
-function expandcols(trm::Vector{<:AbstractFloatMatrix})
+function expandcols(trm::Vector{T}) where T<:AbstractFloatMatrix
     if length(trm) == 1
         trm[1]
     else
@@ -166,9 +166,9 @@ function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractFloatMatrix
     for (i_term, term) in enumerate(terms.terms)
         term_cols = T[]
         ## Pull out the eval terms, and the non-redundancy flags for this term
-        ff = Compat.view(factors, :, i_term)
-        eterms = Compat.view(terms.eterms, ff)
-        non_redundants = Compat.view(terms.is_non_redundant, ff, i_term)
+        ff = view(factors, :, i_term)
+        eterms = view(terms.eterms, ff)
+        non_redundants = view(terms.is_non_redundant, ff, i_term)
         ## Get cols for each eval term (either previously generated, or generating
         ## and storing as necessary)
         for (et, nr) in zip(eterms, non_redundants)
