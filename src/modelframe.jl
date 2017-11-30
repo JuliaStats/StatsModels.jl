@@ -223,7 +223,7 @@ end
 Returns a vector of coefficient names constructed from the Terms
 member and the types of the evaluation columns.
 """
-function coefnames(mf::ModelFrame)
+function StatsBase.coefnames(mf::ModelFrame)
     terms = droprandomeffects(dropresponse!(mf.terms))
 
     ## strategy mirrors ModelMatrx constructor:

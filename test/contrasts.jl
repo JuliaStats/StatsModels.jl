@@ -5,7 +5,7 @@ using Compat.Test
 
 using StatsModels: ContrastsMatrix
 
-d = DataFrame(x = CategoricalVector{Union{Missing, Symbol}}([:a, :b, :c, :a, :a, :b]))
+d = DataFrame(x = CategoricalVector{Union{Missing, Symbol}}([:b, :a, :c, :a, :a, :b]))
 
 mf = ModelFrame(Formula(nothing, :x), d)
 
@@ -34,8 +34,8 @@ end
 
 
 # Dummy coded contrasts by default:
-@test ModelMatrix(mf).m == [1  0  0
-                            1  1  0
+@test ModelMatrix(mf).m == [1  1  0
+                            1  0  0
                             1  0  1
                             1  0  0
                             1  0  0
@@ -47,8 +47,8 @@ setcontrasts!(mf, x = DummyCoding())
 @test ModelMatrix(mf).m == mmm
 
 setcontrasts!(mf, x = EffectsCoding())
-@test ModelMatrix(mf).m == [1 -1 -1
-                            1  1  0
+@test ModelMatrix(mf).m == [1  1  0
+                            1 -1 -1
                             1  0  1
                             1 -1 -1
                             1 -1 -1
@@ -57,8 +57,8 @@ setcontrasts!(mf, x = EffectsCoding())
 
 # change base level of contrast
 setcontrasts!(mf, x = EffectsCoding(base = :b))
-@test ModelMatrix(mf).m == [1  1  0
-                            1 -1 -1
+@test ModelMatrix(mf).m == [1 -1 -1
+                            1  1  0
                             1  0  1
                             1  1  0
                             1  1  0
@@ -67,8 +67,8 @@ setcontrasts!(mf, x = EffectsCoding(base = :b))
 
 # change levels of contrast
 setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a]))
-@test ModelMatrix(mf).m == [1  0  1
-                            1  1  0
+@test ModelMatrix(mf).m == [1  1  0
+                            1  0  1
                             1 -1 -1
                             1  0  1
                             1  0  1
@@ -78,8 +78,8 @@ setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a]))
 
 # change levels and base level of contrast
 setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a], base = :a))
-@test ModelMatrix(mf).m == [1 -1 -1
-                            1  0  1
+@test ModelMatrix(mf).m == [1  0  1
+                            1 -1 -1
                             1  1  0
                             1 -1 -1
                             1 -1 -1
@@ -88,8 +88,8 @@ setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a], base = :a))
 
 # Helmert coded contrasts
 setcontrasts!(mf, x = HelmertCoding())
-@test ModelMatrix(mf).m == [1 -1 -1
-                            1  1 -1
+@test ModelMatrix(mf).m == [1  1 -1
+                            1 -1 -1
                             1  0  2
                             1 -1 -1
                             1 -1 -1
@@ -102,8 +102,8 @@ setcontrasts!(mf, x = HelmertCoding())
 # Missing data is handled gracefully, dropping columns when a level is lost
 d[3, :x] = missing
 mf_missing = ModelFrame(Formula(nothing, :x), d, contrasts = Dict(:x => EffectsCoding()))
-@test ModelMatrix(mf_missing).m == [1 -1
-                                    1  1
+@test ModelMatrix(mf_missing).m == [1  1
+                                    1 -1
                                     1 -1
                                     1 -1
                                     1  1]
@@ -122,8 +122,8 @@ contrasts = [0  1
              -1 -.5
              1  -.5]
 setcontrasts!(mf, x = ContrastsCoding(contrasts))
-@test ModelMatrix(mf).m == [1  0  1
-                            1 -1 -.5
+@test ModelMatrix(mf).m == [1 -1 -.5
+                            1  0  1
                             1  1 -.5
                             1  0  1
                             1  0  1
