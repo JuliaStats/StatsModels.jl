@@ -8,8 +8,6 @@ using StatsBase
 using Missings
 using CategoricalArrays
 
-import StatsBase: coefnames
-
 export @formula,
        Formula,
        ModelFrame,
