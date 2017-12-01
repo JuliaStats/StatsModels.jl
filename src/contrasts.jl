@@ -27,7 +27,7 @@ generated (during `ModelFrame` construction).
 For `C <: AbstractContrast`:
 
 ```julia
-C()                                     # levels are inferred later 
+C()                                     # levels are inferred later
 C(levels = ::Vector{Any})               # levels checked against data later
 C(base = ::Any)                         # specify base level
 C(levels = ::Vector{Any}, base = ::Any) # specify levels and base
@@ -49,7 +49,7 @@ C(levels = ::Vector{Any}, base = ::Any) # specify levels and base
 
 * [`DummyCoding`](@ref) - Code each non-base level as a 0-1 indicator column.
 * [`EffectsCoding`](@ref) - Code each non-base level as 1, and base as -1.
-* [`HelmertCoding`](@ref) - Code each non-base level as the difference from the 
+* [`HelmertCoding`](@ref) - Code each non-base level as the difference from the
   mean of the lower levels
 * [`ContrastsCoding`](@ref) - Manually specify contrasts matrix
 
@@ -114,7 +114,6 @@ for the base level (which defaults to the first level).
 # Constructors
 
 ```julia
-ContrastsMatrix{C <: AbstractContrasts}(contrasts::C, levels::AbstractVector)
 ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
 ContrastsMatrix(contrasts_matrix::ContrastsMatrix, levels::AbstractVector)
 ```
@@ -128,13 +127,13 @@ ContrastsMatrix(contrasts_matrix::ContrastsMatrix, levels::AbstractVector)
   constructing a model matrix from a `ModelFrame` using different data.
 
 """
-function ContrastsMatrix(contrasts::C, levels::AbstractVector) where C <: AbstractContrasts
+function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
 
     # if levels are defined on contrasts, use those, validating that they line up.
     # what does that mean? either:
     #
     # 1. contrasts.levels == levels (best case)
-    # 2. data levels missing from contrast: would generate empty/undefined rows. 
+    # 2. data levels missing from contrast: would generate empty/undefined rows.
     #    better to filter data frame first
     # 3. contrast levels missing from data: would have empty columns, generate a
     #    rank-deficient model matrix.
@@ -159,11 +158,11 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector) where C <: Abstra
         throw(ArgumentError("only one level found: $(c_levels[1]) (need at least two to " *
                             "compute contrasts)."))
     end
-    
+
     # find index of base level. use contrasts.base, then default (1).
     baseind = isnull(contrasts.base) ?
               1 :
-              findfirst(c_levels, get(contrasts.base))
+              findfirst(equalto(get(contrasts.base)), c_levels)
     if baseind < 1
         throw(ArgumentError("base level $(get(contrasts.base)) not found in levels " *
                             "$c_levels."))
@@ -176,7 +175,7 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector) where C <: Abstra
     ContrastsMatrix(mat, tnames, c_levels, contrasts)
 end
 
-ContrastsMatrix(c::Type{C}, levels::AbstractVector) where {C <: AbstractContrasts} =
+ContrastsMatrix(c::Type{<:AbstractContrasts}, levels::AbstractVector) =
     throw(ArgumentError("contrast types must be instantiated (use $c() instead of $c)"))
 
 # given an existing ContrastsMatrix, check that all passed levels are present
@@ -215,7 +214,7 @@ for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
         ## constructor with optional keyword arguments, defaulting to Nullables
         $contrastType(;
                       base=Nullable{Any}(),
-                      levels=Nullable{Vector}()) = 
+                      levels=Nullable{Vector}()) =
                           $contrastType(nullify(base),
                                         nullify(levels))
     end
@@ -248,7 +247,7 @@ mutable struct FullDummyCoding <: AbstractContrasts
 # Dummy contrasts have no base level (since all levels produce a column)
 end
 
-ContrastsMatrix(C::FullDummyCoding, levels::Vector{T}) where {T} =
+ContrastsMatrix(C::FullDummyCoding, levels::AbstractVector) =
     ContrastsMatrix(eye(Float64, length(levels)), levels, levels, C)
 
 "Promote contrasts matrix to full rank version"
@@ -360,7 +359,7 @@ function contrasts_matrix(C::HelmertCoding, baseind, n)
     mat = mat[[baseind; 1:(baseind-1); (baseind+1):end], :]
     return mat
 end
-    
+
 """
     ContrastsCoding(mat::Matrix[, base[, levels]])
 
@@ -386,7 +385,7 @@ check_contrasts_size(mat::Matrix, n_lev) =
                         "Expected $((n_lev, n_lev-1)), got $(size(mat))"))
 
 ## constructor with optional keyword arguments, defaulting to Nullables
-ContrastsCoding(mat::Matrix; base=Nullable{Any}(), levels=Nullable{Vector}()) = 
+ContrastsCoding(mat::Matrix; base=Nullable{Any}(), levels=Nullable{Vector}()) =
     ContrastsCoding(mat, nullify(base), nullify(levels))
 
 function contrasts_matrix(C::ContrastsCoding, baseind, n)

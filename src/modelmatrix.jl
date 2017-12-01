@@ -44,7 +44,7 @@ modelmat_cols(::Type{T}, v::AbstractVector) where {T<:AbstractFloatMatrix} =
 # All non-real columns are considered as categorical
 # Could be made more efficient by directly storing the result into the model matrix
 """
-    modelmat_cols{T<:AbstractFloatMatrix}(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix)
+    modelmat_cols(::Type{T}, v::AbstractVector, contrast::ContrastsMatrix) where T<:AbstractFloatMatrix
 
 Construct `ModelMatrix` columns of type `T` based on specified contrasts, ensuring that
 levels align properly.
@@ -60,16 +60,16 @@ function modelmat_cols(::Type{T},
     ## are the same by constructing a re-indexing vector. Indexing into
     ## reindex with v.refs will give the corresponding row number of the
     ## contrast matrix
-    reindex = [findfirst(contrast.levels, l) for l in CategoricalArrays.index(v.pool)]
+    reindex = [findfirst(equalto(l), contrast.levels) for l in CategoricalArrays.index(v.pool)]
     contrastmatrix = convert(T, contrast.matrix)
     return indexrows(contrastmatrix, reindex[v.refs])
 end
 
-indexrows(m::SparseMatrixCSC, ind::Vector{Int}) = m'[:, ind]'
-indexrows(m::AbstractMatrix, ind::Vector{Int}) = m[ind, :]
+indexrows(m::SparseMatrixCSC, ind::AbstractVector{Int}) = m'[:, ind]'
+indexrows(m::AbstractMatrix, ind::AbstractVector{Int}) = m[ind, :]
 
 """
-    expandcols{T<:AbstractFloatMatrix}(trm::Vector{T})
+    expandcols{T}(trm::Vector{T}) where T<:AbstractFloatMatrix
 Create pairwise products of columns from a vector of matrices
 """
 function expandcols(trm::Vector{T}) where T<:AbstractFloatMatrix
@@ -78,7 +78,7 @@ function expandcols(trm::Vector{T}) where T<:AbstractFloatMatrix
     else
         a = trm[1]
         b = expandcols(trm[2 : end])
-        reduce(hcat, [broadcast(*, a, Compat.view(b, :, j)) for j in 1 : size(b, 2)])
+        reduce(hcat, [broadcast(*, a, view(b, :, j)) for j in 1 : size(b, 2)])
     end
 end
 
@@ -123,7 +123,7 @@ function dropresponse!(trms::Terms)
 end
 
 """
-    ModelMatrix{T<:AbstractFloatMatrix}(mf::ModelFrame)
+    ModelMatrix{T}(mf::ModelFrame) where T<:AbstractFloatMatrix
 Create a `ModelMatrix` of type `T` (default `Matrix{Float64}`) from the
 `terms` and `df` members of `mf`.
 
@@ -166,9 +166,9 @@ function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractFloatMatrix
     for (i_term, term) in enumerate(terms.terms)
         term_cols = T[]
         ## Pull out the eval terms, and the non-redundancy flags for this term
-        ff = Compat.view(factors, :, i_term)
-        eterms = Compat.view(terms.eterms, ff)
-        non_redundants = Compat.view(terms.is_non_redundant, ff, i_term)
+        ff = view(factors, :, i_term)
+        eterms = view(terms.eterms, ff)
+        non_redundants = view(terms.is_non_redundant, ff, i_term)
         ## Get cols for each eval term (either previously generated, or generating
         ## and storing as necessary)
         for (et, nr) in zip(eterms, non_redundants)

@@ -85,7 +85,7 @@ function check_non_redundancy!(trms::Terms, df::AbstractDataFrame)
                 dropped = trms.factors[:,i_term]
                 dropped[i_eterm] = 0
 
-                if findfirst(encountered_columns, dropped) == 0
+                if dropped ∉ encountered_columns
                     trms.is_non_redundant[i_eterm, i_term] = true
                     push!(encountered_columns, dropped)
                 end
@@ -94,7 +94,7 @@ function check_non_redundancy!(trms::Terms, df::AbstractDataFrame)
         end
         ## once we've checked all the eterms in this term, add it to the list
         ## of encountered terms/columns
-        push!(encountered_columns, Compat.view(trms.factors, :, i_term))
+        push!(encountered_columns, view(trms.factors, :, i_term))
     end
 
     return trms.is_non_redundant
@@ -142,7 +142,7 @@ _droplevels!(x::AbstractCategoricalArray) = droplevels!(x)
 function ModelFrame(trms::Terms, d::AbstractDataFrame;
                     contrasts::Dict = Dict())
     df, msng = missing_omit(DataFrame(map(x -> d[x], trms.eterms)))
-    names!(df, convert(Vector{Symbol}, map(string, trms.eterms)))
+    names!(df, Symbol.(string.(trms.eterms)))
 
     evaledContrasts = evalcontrasts(df, contrasts)
 
@@ -228,7 +228,7 @@ function StatsBase.coefnames(mf::ModelFrame)
 
     ## strategy mirrors ModelMatrx constructor:
     eterm_names = Dict{Tuple{Symbol,Bool}, Vector{String}}()
-    term_names = Vector{String}[]
+    term_names = Vector{Vector{String}}()
 
     if terms.intercept
         push!(term_names, String["(Intercept)"])
@@ -239,11 +239,11 @@ function StatsBase.coefnames(mf::ModelFrame)
     for (i_term, term) in enumerate(terms.terms)
 
         ## names for columns for eval terms
-        names = Vector{String}[]
+        names = Vector{Vector{String}}()
 
-        ff = Compat.view(factors, :, i_term)
-        eterms = Compat.view(terms.eterms, ff)
-        non_redundants = Compat.view(terms.is_non_redundant, ff, i_term)
+        ff = view(factors, :, i_term)
+        eterms = view(terms.eterms, ff)
+        non_redundants = view(terms.is_non_redundant, ff, i_term)
 
         for (et, nr) in zip(eterms, non_redundants)
             if !haskey(eterm_names, (et, nr))

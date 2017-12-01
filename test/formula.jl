@@ -1,8 +1,8 @@
 module TestFormula
 
-using Base.Test
 using StatsModels
 using Compat
+using Compat.Test
 
 # TODO:
 # - grouped variables in formulas with interactions
