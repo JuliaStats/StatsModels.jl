@@ -140,7 +140,9 @@ _droplevels!(x::Any) = x
 _droplevels!(x::AbstractCategoricalArray) = droplevels!(x)
 
 function ModelFrame(trms::Terms, d::AbstractDataFrame;
-                    contrasts::Dict = Dict())
+                    contrasts::Dict = Dict(), intercept::Bool = true)
+    trms = Terms((getfield(trms, fieldname) for fieldname in fieldnames(trms))...)
+    intercept || (trms.intercept = false)
     df, msng = missing_omit(DataFrame(map(x -> d[x], trms.eterms)))
     names!(df, Symbol.(string.(trms.eterms)))
 

@@ -45,12 +45,15 @@ struct DataFrameRegressionModel{M,T} <: RegressionModel
     mm::ModelMatrix{T}
 end
 
+# Overload this function for a specific model type, according to whether it requires an intercept
+has_intercept(::Any) = true
+
 for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
                                  (:RegressionModel, DataFrameRegressionModel))
     @eval begin
         function StatsBase.fit(::Type{T}, f::Formula, df::AbstractDataFrame,
                                args...; contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
-            mf = ModelFrame(f, df, contrasts=contrasts)
+            mf = ModelFrame(f, df, contrasts=contrasts, intercept=has_intercept(T))
             mm = ModelMatrix(mf)
             y = model_response(mf)
             $dfmodeltype(fit(T, mm.m, y, args...; kwargs...), mf, mm)
