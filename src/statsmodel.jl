@@ -46,13 +46,16 @@ struct DataFrameRegressionModel{M,T} <: RegressionModel
 end
 
 """
-    supports_intercept(::Any)
+    supports_intercept(::Type)
 
-Defines whether a given model supports intercept. Returns `true`. To specify that a model `T` does not support an intercept, overload this function for the corresponding type: `supports_intercept(::Type{T}) = false`
+Define whether a given model supports intercept. Return `true` by default. To specify 
+that a model type `T` does not support an intercept, overload this function for the 
+corresponding type: `supports_intercept(::Type{T}) = false`
 
-Models that do not support intercept will be fit without one: the intercept term will be removed even if explicitly provided by the user.
+Models that do not support an intercept will be fitted without one: the intercept term 
+will be removed even if explicitly provided by the user.
 """
-supports_intercept(::Any) = true
+supports_intercept(::Type) = true
 
 for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
                                  (:RegressionModel, DataFrameRegressionModel))
