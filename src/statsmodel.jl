@@ -45,15 +45,23 @@ struct DataFrameRegressionModel{M,T} <: RegressionModel
     mm::ModelMatrix{T}
 end
 
-# Overload this function for a specific model type, according to whether it requires an intercept
-has_intercept(::Any) = true
+"""
+    supports_intercept(::Any)
+
+Defines whether a given model supports intercept. Returns `true`. To specify that a model `T` does not support an intercept, overload this function for the corresponding type: `supports_intercept(::Type{T}) = false`
+
+Models that do not support intercept will be fit without one: the intercept term will be removed even if explicitly provided by the user.
+"""
+supports_intercept(::Any) = true
 
 for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
                                  (:RegressionModel, DataFrameRegressionModel))
     @eval begin
         function StatsBase.fit(::Type{T}, f::Formula, df::AbstractDataFrame,
                                args...; contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
-            mf = ModelFrame(f, df, contrasts=contrasts, intercept=has_intercept(T))
+            trms = Terms(f)
+            supports_intercept(T) || (trms.intercept = false)
+            mf = ModelFrame(trms, df, contrasts=contrasts)
             mm = ModelMatrix(mf)
             y = model_response(mf)
             $dfmodeltype(fit(T, mm.m, y, args...; kwargs...), mf, mm)
