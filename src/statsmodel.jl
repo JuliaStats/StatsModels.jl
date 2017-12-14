@@ -46,16 +46,17 @@ struct DataFrameRegressionModel{M,T} <: RegressionModel
 end
 
 """
-    supports_intercept(::Type)
+    drop_intercept(::Type)
 
-Define whether a given model supports intercept. Return `true` by default. To specify 
-that a model type `T` does not support an intercept, overload this function for the 
-corresponding type: `supports_intercept(::Type{T}) = false`
+Define whether a given model automatically drops the intercept. Return `false` by default. 
+To specify that a model type `T` drops the intercept, overload this function for the 
+corresponding type: `drop_intercept(::Type{T}) = true`
 
-Models that do not support an intercept will be fitted without one: the intercept term 
-will be removed even if explicitly provided by the user.
+Models that drop the intercept will be fitted without one: the intercept term will be 
+removed even if explicitly provided by the user. Categorical variables will be expanded 
+in the rank-reduced form (contrasts for `n` levels will only produce `n-1` columns).
 """
-supports_intercept(::Type) = true
+drop_intercept(::Type) = false
 
 for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
                                  (:RegressionModel, DataFrameRegressionModel))
@@ -63,8 +64,9 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
         function StatsBase.fit(::Type{T}, f::Formula, df::AbstractDataFrame,
                                args...; contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
             trms = Terms(f)
-            supports_intercept(T) || (trms.intercept = false)
+            drop_intercept(T) && (trms.intercept = true)
             mf = ModelFrame(trms, df, contrasts=contrasts)
+            drop_intercept(T) && (mf.terms.intercept = false)
             mm = ModelMatrix(mf)
             y = model_response(mf)
             $dfmodeltype(fit(T, mm.m, y, args...; kwargs...), mf, mm)

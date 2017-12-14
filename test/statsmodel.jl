@@ -96,7 +96,7 @@ struct DummyModNoIntercept <: RegressionModel
     y::Vector
 end
 
-StatsModels.supports_intercept(::Type{DummyModNoIntercept}) = false
+StatsModels.drop_intercept(::Type{DummyModNoIntercept}) = true
 
 ## dumb fit method: just copy the x and y input over
 StatsBase.fit(::Type{DummyModNoIntercept}, x::Matrix, y::Vector) =
@@ -116,6 +116,14 @@ m2 = fit(DummyModNoIntercept, f2, d)
 ct1 = coeftable(m1)
 ct2 = coeftable(m2)
 @test ct1.rownms == ct2.rownms == ["x1", "x2", "x1 & x2"]
+
+f1 = @formula(y ~ 1 + x1p)
+f2 = @formula(y ~ 0 + x1p)
+m1 = fit(DummyModNoIntercept, f1, d)
+m2 = fit(DummyModNoIntercept, f2, d)
+ct1 = coeftable(m1)
+ct2 = coeftable(m2)
+@test ct1.rownms == ct2.rownms == ["x1p: 6", "x1p: 7", "x1p: 8"]
 
 ## Another dummy model type to test fall-through show method
 struct DummyModTwo <: RegressionModel
