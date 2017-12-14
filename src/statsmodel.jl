@@ -45,12 +45,28 @@ struct DataFrameRegressionModel{M,T} <: RegressionModel
     mm::ModelMatrix{T}
 end
 
+"""
+    drop_intercept(::Type)
+
+Define whether a given model automatically drops the intercept. Return `false` by default. 
+To specify that a model type `T` drops the intercept, overload this function for the 
+corresponding type: `drop_intercept(::Type{T}) = true`
+
+Models that drop the intercept will be fitted without one: the intercept term will be 
+removed even if explicitly provided by the user. Categorical variables will be expanded 
+in the rank-reduced form (contrasts for `n` levels will only produce `n-1` columns).
+"""
+drop_intercept(::Type) = false
+
 for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
                                  (:RegressionModel, DataFrameRegressionModel))
     @eval begin
         function StatsBase.fit(::Type{T}, f::Formula, df::AbstractDataFrame,
                                args...; contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
-            mf = ModelFrame(f, df, contrasts=contrasts)
+            trms = Terms(f)
+            drop_intercept(T) && (trms.intercept = true)
+            mf = ModelFrame(trms, df, contrasts=contrasts)
+            drop_intercept(T) && (mf.terms.intercept = false)
             mm = ModelMatrix(mf)
             y = model_response(mf)
             $dfmodeltype(fit(T, mm.m, y, args...; kwargs...), mf, mm)
