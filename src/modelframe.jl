@@ -177,7 +177,7 @@ Extract the response column, if present.  `DataVector` or
 """
 function StatsBase.model_response(mf::ModelFrame)
     if mf.terms.response
-        convert(Array, mf.df[mf.terms.eterms[1]])
+        Missings.disallowmissing(convert(Array, mf.df[mf.terms.eterms[1]]))
     else
         error("Model formula one-sided")
     end
