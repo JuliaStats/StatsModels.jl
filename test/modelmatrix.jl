@@ -27,9 +27,8 @@ x3 = [13.:16;]
 x4 = [17.:20;]
 f = @formula(y ~ x1 + x2)
 mf = ModelFrame(f, d)
-## @test mm.response_colnames == ["y"] # nope: no response_colnames
 @test coefnames(mf) == ["(Intercept)","x1","x2"]
-## @test model_response(mf) == transpose([1. 2 3 4]) # fails: Int64 vs. Float64
+@test model_response(mf) == [1:4;]
 mm = ModelMatrix(mf)
 smm = ModelMatrix{sparsetype}(mf)
 @test mm.m[:,1] == ones(4)
