@@ -109,8 +109,8 @@ function distribute!(ex::Expr)
             typeof(e)==Expr && e.head == :call && e.args[1] == distributing_op
 
         ## find first distributing subex
-        first_distributing_subex = findfirst(is_distributing_subex, ex.args)
-        if first_distributing_subex != 0
+        first_distributing_subex = Compat.findfirst(is_distributing_subex, ex.args)
+        if first_distributing_subex !== nothing
             ## remove distributing subexpression from args
             subex = splice!(ex.args, first_distributing_subex)
 
