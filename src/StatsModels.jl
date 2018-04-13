@@ -5,6 +5,7 @@ module StatsModels
 using Compat
 using DataFrames
 using StatsBase
+using Nullables
 
 export @formula,
        Formula,
