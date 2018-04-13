@@ -9,7 +9,7 @@ using Compat.Test
 # for testing while DataFrames still exports these:
 import StatsModels: @formula, Formula, ModelMatrix, ModelFrame, DummyCoding, EffectsCoding, HelmertCoding, ContrastsCoding, setcontrasts!, coefnames
 
-
+using Compat.SparseArrays
 ## Tests for constructing ModelFrame and ModelMatrix
 
 sparsetype = SparseMatrixCSC{Float64,Int}

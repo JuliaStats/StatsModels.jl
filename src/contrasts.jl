@@ -162,8 +162,8 @@ function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
     # find index of base level. use contrasts.base, then default (1).
     baseind = isnull(contrasts.base) ?
               1 :
-              findfirst(equalto(get(contrasts.base)), c_levels)
-    if baseind < 1
+              Compat.findfirst(equalto(get(contrasts.base)), c_levels)
+    if baseind === nothing
         throw(ArgumentError("base level $(get(contrasts.base)) not found in levels " *
                             "$c_levels."))
     end

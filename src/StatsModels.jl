@@ -6,6 +6,8 @@ using Compat
 using DataFrames
 using StatsBase
 using Nullables
+using Compat.SparseArrays
+using Compat.LinearAlgebra
 
 export @formula,
        Formula,

@@ -62,7 +62,7 @@ function modelmat_cols(::Type{T},
     ## contrast matrix
     reindex = [findfirst(equalto(l), contrast.levels) for l in CategoricalArrays.index(v.pool)]
     contrastmatrix = convert(T, contrast.matrix)
-    return indexrows(contrastmatrix, reindex[v.refs])
+    return indexrows(contrastmatrix, Vector{Int}(reindex[v.refs]))
 end
 
 indexrows(m::SparseMatrixCSC, ind::AbstractVector{Int}) = m'[:, ind]'
