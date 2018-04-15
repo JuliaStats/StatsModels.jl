@@ -137,7 +137,7 @@ function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
     #    better to filter data frame first
     # 3. contrast levels missing from data: would have empty columns, generate a
     #    rank-deficient model matrix.
-    c_levels = get(contrasts.levels, levels)
+    c_levels = contrasts.levels === nothing ? levels : contrasts.levels
     if eltype(c_levels) != eltype(levels)
         throw(ArgumentError("mismatching levels types: got $(eltype(levels)), expected " *
                             "$(eltype(c_levels)) based on contrasts levels."))
@@ -160,11 +160,11 @@ function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
     end
 
     # find index of base level. use contrasts.base, then default (1).
-    baseind = isnull(contrasts.base) ?
+    baseind = contrasts.base === nothing ?
               1 :
-              Compat.findfirst(isequal(get(contrasts.base)), c_levels)
+              Compat.findfirst(isequal(contrasts.base), c_levels)
     if baseind === nothing
-        throw(ArgumentError("base level $(get(contrasts.base)) not found in levels " *
+        throw(ArgumentError("base level $(contrasts.base) not found in levels " *
                             "$c_levels."))
     end
 
@@ -199,24 +199,17 @@ function termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Intege
     levels[not_base]
 end
 
-nullify(x::Nullable) = x
-nullify(x) = Nullable(x)
-
 # Making a contrast type T only requires that there be a method for
 # contrasts_matrix(T,  baseind, n) and optionally termnames(T, levels, baseind)
 # The rest is boilerplate.
 for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
     @eval begin
         mutable struct $contrastType <: AbstractContrasts
-            base::Nullable{Any}
-            levels::Nullable{Vector}
+            base::Any
+            levels::Union{Vector,Compat.Nothing}
         end
-        ## constructor with optional keyword arguments, defaulting to Nullables
-        $contrastType(;
-                      base=Nullable{Any}(),
-                      levels=Nullable{Vector}()) =
-                          $contrastType(nullify(base),
-                                        nullify(levels))
+        ## constructor with optional keyword arguments, defaulting to nothing
+        $contrastType(; base=nothing, levels=nothing) = $contrastType(base, levels)
     end
 end
 
@@ -369,12 +362,12 @@ must be a k by k-1 Matrix.
 """
 mutable struct ContrastsCoding <: AbstractContrasts
     mat::Matrix
-    base::Nullable{Any}
-    levels::Nullable{Vector}
+    base::Any
+    levels::Union{Vector,Compat.Nothing}
 
     function ContrastsCoding(mat, base, levels)
-        if !isnull(levels)
-            check_contrasts_size(mat, length(get(levels)))
+        if levels !== nothing
+            check_contrasts_size(mat, length(levels))
         end
         new(mat, base, levels)
     end
@@ -385,9 +378,9 @@ check_contrasts_size(mat::Matrix, n_lev) =
     throw(ArgumentError("contrasts matrix wrong size for $n_lev levels. " *
                         "Expected $((n_lev, n_lev-1)), got $(size(mat))"))
 
-## constructor with optional keyword arguments, defaulting to Nullables
-ContrastsCoding(mat::Matrix; base=Nullable{Any}(), levels=Nullable{Vector}()) =
-    ContrastsCoding(mat, nullify(base), nullify(levels))
+## constructor with optional keyword arguments, defaulting to nothing
+ContrastsCoding(mat::Matrix; base=nothing, levels=nothing) =
+    ContrastsCoding(mat, base, levels)
 
 function contrasts_matrix(C::ContrastsCoding, baseind, n)
     check_contrasts_size(C.mat, n)
