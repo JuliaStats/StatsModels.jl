@@ -1,14 +1,13 @@
 using Compat
-using StatsModels
-using Test
+using Compat.Test
+using Compat.LinearAlgebra
+using Compat.SparseArrays
 
+using StatsModels
 using DataFrames
 using StatsBase
 
 using StatsModels: ContrastsMatrix
-
-using Compat.LinearAlgebra
-using Compat.SparseArrays
 
 my_tests = ["formula.jl",
             "modelmatrix.jl",
