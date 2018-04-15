@@ -51,7 +51,7 @@ end
 Base.:(==)(t1::Terms, t2::Terms) = all(getfield(t1, f)==getfield(t2, f) for f in fieldnames(typeof(t1)))
 
 function Base.show(io::IO, f::Formula)
-    print(io, "Formula: ", f.lhs === nothing ? "" : f.lhs, " ~ ", f.rhs)
+    print(io, "Formula: ", coalesce(f.lhs, ""), " ~ ", f.rhs)
 end
 
 # special operators in formulas

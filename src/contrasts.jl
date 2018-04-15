@@ -137,7 +137,7 @@ function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
     #    better to filter data frame first
     # 3. contrast levels missing from data: would have empty columns, generate a
     #    rank-deficient model matrix.
-    c_levels = contrasts.levels === nothing ? levels : contrasts.levels
+    c_levels = coalesce(contrasts.levels, levels)
     if eltype(c_levels) != eltype(levels)
         throw(ArgumentError("mismatching levels types: got $(eltype(levels)), expected " *
                             "$(eltype(c_levels)) based on contrasts levels."))
@@ -206,7 +206,7 @@ for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
     @eval begin
         mutable struct $contrastType <: AbstractContrasts
             base::Any
-            levels::Union{Vector,Compat.Nothing}
+            levels::Union{Vector,Nothing}
         end
         ## constructor with optional keyword arguments, defaulting to nothing
         $contrastType(; base=nothing, levels=nothing) = $contrastType(base, levels)
@@ -363,7 +363,7 @@ must be a k by k-1 Matrix.
 mutable struct ContrastsCoding <: AbstractContrasts
     mat::Matrix
     base::Any
-    levels::Union{Vector,Compat.Nothing}
+    levels::Union{Vector,Nothing}
 
     function ContrastsCoding(mat, base, levels)
         if levels !== nothing
