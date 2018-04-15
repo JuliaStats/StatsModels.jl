@@ -7,6 +7,19 @@ struct DummyMod <: RegressionModel
     y::Vector
 end
 
+StatsBase.predict(mod::DummyMod) = mod.x * mod.beta
+StatsBase.predict(mod::DummyMod, newX::Matrix) = newX * mod.beta
+## dumb fit method: just copy the x and y input over
+StatsBase.fit(::Type{DummyMod}, x::Matrix, y::Vector) =
+    DummyMod(collect(1:size(x, 2)), x, y)
+StatsBase.model_response(mod::DummyMod) = mod.y
+## dumb coeftable: just prints the "beta" values
+StatsBase.coeftable(mod::DummyMod) =
+    CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
+              ["'beta' value"],
+              ["" for n in 1:size(mod.x,2)],
+              0)
+
 # A dummy RegressionModel type that does not support intercept
 struct DummyModNoIntercept <: RegressionModel
     beta::Vector{Float64}
@@ -14,23 +27,28 @@ struct DummyModNoIntercept <: RegressionModel
     y::Vector
 end
 
+StatsModels.drop_intercept(::Type{DummyModNoIntercept}) = true
+
+## dumb fit method: just copy the x and y input over
+StatsBase.fit(::Type{DummyModNoIntercept}, x::Matrix, y::Vector) =
+    DummyModNoIntercept(collect(1:size(x, 2)), x, y)
+StatsBase.model_response(mod::DummyModNoIntercept) = mod.y
+## dumb coeftable: just prints the "beta" values
+StatsBase.coeftable(mod::DummyModNoIntercept) =
+    CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
+              ["'beta' value"],
+              ["" for n in 1:size(mod.x,2)],
+              0)
+
 ## Another dummy model type to test fall-through show method
 struct DummyModTwo <: RegressionModel
     msg::String
 end
 
-@testset "stat model types" begin
+StatsBase.fit(::Type{DummyModTwo}, ::Matrix, ::Vector) = DummyModTwo("hello!")
+Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
-    ## dumb fit method: just copy the x and y input over
-    StatsBase.fit(::Type{DummyMod}, x::Matrix, y::Vector) =
-        DummyMod(collect(1:size(x, 2)), x, y)
-    StatsBase.model_response(mod::DummyMod) = mod.y
-    ## dumb coeftable: just prints the "beta" values
-    StatsBase.coeftable(mod::DummyMod) =
-        CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
-                  ["'beta' value"],
-                  ["" for n in 1:size(mod.x,2)],
-                  0)
+@testset "stat model types" begin
 
     ## Test fitting
     d = DataFrame()
@@ -46,11 +64,9 @@ end
 
     ## test prediction method
     ## vanilla
-    StatsBase.predict(mod::DummyMod) = mod.x * mod.beta
     @test predict(m) == [ ones(size(d,1)) Array(d[:x1]) Array(d[:x2]) Array(d[:x1]).*Array(d[:x2]) ] * collect(1:4)
 
     ## new data from matrix
-    StatsBase.predict(mod::DummyMod, newX::Matrix) = newX * mod.beta
     mm = ModelMatrix(ModelFrame(f, d))
     @test predict(m, mm.m) == mm.m * collect(1:4)
 
@@ -95,18 +111,6 @@ end
     @test_throws Exception fit(DummyMod, f3, d, contrasts = Dict(:x1p => EffectsCoding(),
                                                                  :x2p => 1))
 
-    StatsModels.drop_intercept(::Type{DummyModNoIntercept}) = true
-
-    ## dumb fit method: just copy the x and y input over
-    StatsBase.fit(::Type{DummyModNoIntercept}, x::Matrix, y::Vector) =
-        DummyModNoIntercept(collect(1:size(x, 2)), x, y)
-    StatsBase.model_response(mod::DummyModNoIntercept) = mod.y
-    ## dumb coeftable: just prints the "beta" values
-    StatsBase.coeftable(mod::DummyModNoIntercept) =
-        CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
-                  ["'beta' value"],
-                  ["" for n in 1:size(mod.x,2)],
-                  0)
 
     f1 = @formula(y ~ 1 + x1 * x2)
     f2 = @formula(y ~ 0 + x1 * x2)
@@ -123,9 +127,6 @@ end
     ct1 = coeftable(m1)
     ct2 = coeftable(m2)
     @test ct1.rownms == ct2.rownms == ["x1p: 6", "x1p: 7", "x1p: 8"]
-
-    StatsBase.fit(::Type{DummyModTwo}, ::Matrix, ::Vector) = DummyModTwo("hello!")
-    Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     m2 = fit(DummyModTwo, f, d)
     show(io, m2)
