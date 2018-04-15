@@ -28,7 +28,7 @@ function modelmat_cols(::Type{T}, name::Symbol, mf::ModelFrame; non_redundant::B
     if haskey(mf.contrasts, name)
         modelmat_cols(T, mf.df[name],
                       non_redundant ?
-                      ContrastsMatrix{FullDummyCoding}(mf.contrasts[name]) :
+                      convert(ContrastsMatrix{FullDummyCoding}, mf.contrasts[name]) :
                       mf.contrasts[name])
     else
         modelmat_cols(T, mf.df[name])
@@ -60,7 +60,8 @@ function modelmat_cols(::Type{T},
     ## are the same by constructing a re-indexing vector. Indexing into
     ## reindex with v.refs will give the corresponding row number of the
     ## contrast matrix
-    reindex = [findfirst(equalto(l), contrast.levels) for l in CategoricalArrays.index(v.pool)]
+    # reindex = [findfirst(isequal(l), contrast.levels) for l in CategoricalArrays.index(v.pool)]
+    reindex = indexin(CategoricalArrays.index(v.pool), contrast.levels)
     contrastmatrix = convert(T, contrast.matrix)
     return indexrows(contrastmatrix, Vector{Int}(reindex[v.refs]))
 end
@@ -93,7 +94,7 @@ function droprandomeffects(trms::Terms)
     if !any(retrms)  # return trms unchanged
         trms
     elseif all(retrms) && !trms.response   # return an empty Terms object
-        Terms(Any[],Any[],Array{Bool}((0,0)),Array{Bool}((0,0)), Int[], false, trms.intercept)
+        Terms(Any[],Any[],zeros(Bool,0,0),zeros(Bool,0,0), Int[], false, trms.intercept)
     else
         # the rows of `trms.factors` correspond to `eterms`, the columns to `terms`
         # After dropping random-effects terms we drop any eterms whose rows are all false
@@ -114,7 +115,7 @@ of `trms.factors` if `trms.response` is true.
 function dropresponse!(trms::Terms)
     if trms.response
         ckeep = 2:size(trms.factors, 2)
-        rkeep = vec(any(trms.factors[:, ckeep], 2))
+        rkeep = vec(any(trms.factors[:, ckeep], dims=2))
         Terms(trms.terms, trms.eterms[rkeep], trms.factors[rkeep, ckeep],
               trms.is_non_redundant[rkeep, ckeep], trms.order[ckeep], false, trms.intercept)
     else

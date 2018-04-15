@@ -12,7 +12,7 @@
 ## The rhs of a formula can be 1
 
 mutable struct Formula
-    lhs::Union{Symbol, Expr, Void}
+    lhs::Union{Symbol, Expr, Nothing}
     rhs::Union{Symbol, Expr, Integer}
 end
 
@@ -191,8 +191,8 @@ function Terms(f::Formula)
     etrms = map(evt, tt)
     haslhs = f.lhs != nothing
     if haslhs
-        unshift!(etrms, Any[f.lhs])
-        unshift!(oo, 1)
+        pushfirst!(etrms, Any[f.lhs])
+        pushfirst!(oo, 1)
     end
     ev = unique(vcat(etrms...))
     sets = [Set(x) for x in etrms]
@@ -240,7 +240,7 @@ dropterm(f::Formula, trm::Union{Number, Symbol, Expr}) = dropterm!(copy(f), trm)
 
 function dropterm!(f::Formula, trm::Union{Number, Symbol, Expr})
     rhs = f.rhs
-    if !(Meta.isexpr(rhs, :call) && rhs.args[1] == :+ && (tpos = findlast(rhs.args, trm)) > 0)
+    if !(Meta.isexpr(rhs, :call) && rhs.args[1] == :+ && (tpos = Compat.findlast(isequal(trm), rhs.args)) !== nothing)
         throw(ArgumentError("$trm is not a summand of '$(f.rhs)'"))
     end
     if isa(trm, Number)

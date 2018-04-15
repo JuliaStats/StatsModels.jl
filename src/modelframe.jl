@@ -197,7 +197,7 @@ function termnames(term::Symbol, mf::ModelFrame; non_redundant::Bool = false)
     if haskey(mf.contrasts, term)
         termnames(term, mf.df[term],
                   non_redundant ?
-                  ContrastsMatrix{FullDummyCoding}(mf.contrasts[term]) :
+                  convert(ContrastsMatrix{FullDummyCoding}, mf.contrasts[term]) :
                   mf.contrasts[term])
     else
         termnames(term, mf.df[term])

@@ -162,7 +162,7 @@ function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
     # find index of base level. use contrasts.base, then default (1).
     baseind = isnull(contrasts.base) ?
               1 :
-              Compat.findfirst(equalto(get(contrasts.base)), c_levels)
+              Compat.findfirst(isequal(get(contrasts.base)), c_levels)
     if baseind === nothing
         throw(ArgumentError("base level $(get(contrasts.base)) not found in levels " *
                             "$c_levels."))
@@ -248,7 +248,7 @@ mutable struct FullDummyCoding <: AbstractContrasts
 end
 
 ContrastsMatrix(C::FullDummyCoding, levels::AbstractVector) =
-    ContrastsMatrix(eye(Float64, length(levels)), levels, levels, C)
+    ContrastsMatrix(Matrix(1.0I, length(levels), length(levels)), levels, levels, C)
 
 "Promote contrasts matrix to full rank version"
 Base.convert(::Type{ContrastsMatrix{FullDummyCoding}}, C::ContrastsMatrix) =
@@ -279,7 +279,8 @@ julia> StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b", "c", "d"]).matrix
 """
 DummyCoding
 
-contrasts_matrix(C::DummyCoding, baseind, n) = eye(n)[:, [1:(baseind-1); (baseind+1):n]]
+contrasts_matrix(C::DummyCoding, baseind, n) =
+    Matrix(1.0I, n, n)[:, [1:(baseind-1); (baseind+1):n]]
 
 
 """
@@ -318,7 +319,7 @@ EffectsCoding
 
 function contrasts_matrix(C::EffectsCoding, baseind, n)
     not_base = [1:(baseind-1); (baseind+1):n]
-    mat = eye(n)[:, not_base]
+    mat = Matrix(1.0I, n, n)[:, not_base]
     mat[baseind, :] = -1
     return mat
 end
