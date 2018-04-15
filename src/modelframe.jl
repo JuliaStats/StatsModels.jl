@@ -162,10 +162,10 @@ ModelFrame(ex::Expr, d::AbstractDataFrame; kwargs...) = ModelFrame(Formula(ex), 
 Modify the contrast coding system of a ModelFrame in place.
 """
 function setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
-    new_contrasts = Dict([ Pair(col, ContrastsMatrix(contr, _unique(mf.df[col])))
-                      for (col, contr) in filter((k,v)->haskey(mf.df, k), new_contrasts) ])
-
-    mf.contrasts = merge(mf.contrasts, new_contrasts)
+    for (col, contr) in new_contrasts
+        haskey(mf.df, col) || continue
+        mf.contrasts[col] = ContrastsMatrix(contr, _unique(mf.df[col]))
+    end
     return mf
 end
 setcontrasts!(mf::ModelFrame; kwargs...) = setcontrasts!(mf, Dict(kwargs))
