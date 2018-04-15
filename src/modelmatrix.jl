@@ -60,10 +60,9 @@ function modelmat_cols(::Type{T},
     ## are the same by constructing a re-indexing vector. Indexing into
     ## reindex with v.refs will give the corresponding row number of the
     ## contrast matrix
-    # reindex = [findfirst(isequal(l), contrast.levels) for l in CategoricalArrays.index(v.pool)]
     reindex = indexin(CategoricalArrays.index(v.pool), contrast.levels)
     contrastmatrix = convert(T, contrast.matrix)
-    return indexrows(contrastmatrix, Vector{Int}(reindex[v.refs]))
+    return indexrows(contrastmatrix, convert(Vector{Int}, reindex[v.refs]))
 end
 
 indexrows(m::SparseMatrixCSC, ind::AbstractVector{Int}) = m'[:, ind]'
