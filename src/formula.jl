@@ -28,17 +28,11 @@ macro formula(ex)
     try
         @argcheck is_call(ex, :~) "expected formula separator ~, got $(ex.head)"
         @argcheck length(ex.args) == 3 "malformed expression in formula $ex"
-        # if !is_call(ex, :~)
-        #     return :(throw(ArgumentError("expected formula separator ~, got $(ex.head)")))
-        # elseif length(ex.args) != 3
-        #     return :(throw(ArgumentError("malformed expression in formula $ex")))
-        # else
-            ex_orig = Meta.quot(copy(ex))
-            sort_terms!(parse!(ex))
-            lhs = Meta.quot(ex.args[2])
-            rhs = Meta.quot(ex.args[3])
-            return Expr(:call, :Formula, ex_orig, Meta.quot(ex), lhs, rhs)
-        # end
+        ex_orig = Meta.quot(copy(ex))
+        sort_terms!(parse!(ex))
+        lhs = Meta.quot(ex.args[2])
+        rhs = Meta.quot(ex.args[3])
+        return Expr(:call, :Formula, ex_orig, Meta.quot(ex), lhs, rhs)
     catch e
         return :(throw($e))
     end
