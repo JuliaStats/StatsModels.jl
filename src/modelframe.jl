@@ -102,9 +102,9 @@ end
 
 const DEFAULT_CONTRASTS = DummyCoding
 
-_unique(x::AbstractCategoricalArray) = unique(x)
+_unique(x::AbstractCategoricalArray) = sort!(unique(x))
 _unique(x::AbstractCategoricalArray{T}) where {T>:Missing} =
-    convert(Array{Missings.T(T)}, filter!(!ismissing, unique(x)))
+    convert(Array{Missings.T(T)}, filter!(!ismissing, sort!(unique(x))))
 
 function _unique(x::AbstractArray{T}) where T
     levs = T >: Missing ?
