@@ -102,9 +102,10 @@ end
 
 const DEFAULT_CONTRASTS = DummyCoding
 
-_unique(x::AbstractCategoricalArray) = sort!(unique(x))
+# get unique values, honoring levels order
+_unique(x::AbstractCategoricalArray) = intersect(levels(x), unique(x))
 _unique(x::AbstractCategoricalArray{T}) where {T>:Missing} =
-    convert(Array{Missings.T(T)}, filter!(!ismissing, sort!(unique(x))))
+    convert(Array{Missings.T(T)}, filter!(!ismissing, intersect(levels(x), unique(x))))
 
 function _unique(x::AbstractArray{T}) where T
     levs = T >: Missing ?
