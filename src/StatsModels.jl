@@ -8,6 +8,7 @@ using DataFrames
 using StatsBase
 using Compat.SparseArrays
 using Compat.LinearAlgebra
+using Compat: @debug
 
 export @formula,
        Formula,
