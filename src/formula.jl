@@ -224,7 +224,7 @@ function degree(ex::Expr)
         length(ex.args) - 1
     elseif ex.args[1] == :|
         # put ranef terms at end
-        Inf
+        typemax(Int)
     else
         # arbitrary functions are treated as main effect terms
         1
