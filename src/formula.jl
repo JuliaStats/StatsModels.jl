@@ -40,7 +40,6 @@ macro formula(ex)
             return Expr(:call, :Formula, ex_orig, Meta.quot(ex), lhs, rhs)
         # end
     catch e
-        @show dump(e)
         return :(throw($e))
     end
 end
