@@ -3,6 +3,7 @@ __precompile__(true)
 module StatsModels
 
 using Compat
+using ArgCheck
 using DataFrames
 using StatsBase
 using Compat.SparseArrays

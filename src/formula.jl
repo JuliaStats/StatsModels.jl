@@ -11,20 +11,38 @@
 ## The lhs of a one-sided formula is 'nothing'
 ## The rhs of a formula can be 1
 
+is_call(ex::Expr) = Meta.isexpr(ex, :call)
+is_call(ex::Expr, op::Symbol) = Meta.isexpr(ex, :call) && ex.args[1] == op
+is_call(::Any) = false
+is_call(::Any, ::Any) = false
+check_call(ex) = is_call(ex) || throw(ArgumentError("non-call expression encountered: $ex"))
+
 mutable struct Formula
+    ex_orig::Expr
+    ex::Expr
     lhs::Union{Symbol, Expr, Nothing}
     rhs::Union{Symbol, Expr, Integer}
 end
 
 macro formula(ex)
-    if (ex.head === :macrocall && ex.args[1] === Symbol("@~")) || (ex.head === :call && ex.args[1] === :(~))
-        length(ex.args) == 3 || error("malformed expression in formula")
-        lhs = Base.Meta.quot(ex.args[2])
-        rhs = Base.Meta.quot(ex.args[3])
-    else
-        return :(error($("expected formula separator ~, got $(ex.head)")))
+    try
+        @argcheck is_call(ex, :~) "expected formula separator ~, got $(ex.head)"
+        @argcheck length(ex.args) == 3 "malformed expression in formula $ex"
+        # if !is_call(ex, :~)
+        #     return :(throw(ArgumentError("expected formula separator ~, got $(ex.head)")))
+        # elseif length(ex.args) != 3
+        #     return :(throw(ArgumentError("malformed expression in formula $ex")))
+        # else
+            ex_orig = Meta.quot(copy(ex))
+            sort_terms!(parse!(ex))
+            lhs = Meta.quot(ex.args[2])
+            rhs = Meta.quot(ex.args[3])
+            return Expr(:call, :Formula, ex_orig, Meta.quot(ex), lhs, rhs)
+        # end
+    catch e
+        @show dump(e)
+        return :(throw($e))
     end
-    return Expr(:call, :Formula, lhs, rhs)
 end
 
 Base.:(==)(f1::Formula, f2::Formula) = all(getfield(f1, f)==getfield(f2, f) for f in fieldnames(typeof(f1)))
@@ -54,136 +72,194 @@ function Base.show(io::IO, f::Formula)
     print(io, "Formula: ", coalesce(f.lhs, ""), " ~ ", f.rhs)
 end
 
-# special operators in formulas
-const specials = Set([:+, :-, :*, :/, :&, :|, :^])
 
-function dospecials(ex::Expr)
-    if ex.head != :call error("Non-call expression encountered") end
-    a1 = ex.args[1]
-    if !(a1 in specials) return ex end
-    excp = copy(ex)
-    excp.args = vcat(a1,map(dospecials, ex.args[2:end]))
-    if a1 == :-
-        a2, a3 = excp.args[2:3]
-        a3 == 1 || error("invalid expression $ex; subtraction only supported for -1")
-        return :($a2 + -1)
-    elseif a1 == :*
-        aa = excp.args
-        a2 = aa[2]
-        a3 = aa[3]
-        if length(aa) > 3
-            excp.args = vcat(a1, aa[3:end])
-            a3 = dospecials(excp)
-        end
-        ## this order of expansion gives the R-style ordering of interaction
-        ## terms (after sorting in increasing interaction order) for higher-
-        ## order interaction terms (e.g. x1 * x2 * x3 should expand to x1 +
-        ## x2 + x3 + x1&x2 + x1&x3 + x2&x3 + x1&x2&x3)
-        :($a2 + $a2 & $a3 + $a3)
-    else
-        excp
-    end
+"""
+    abstract type FormulaRewrite end
+
+Formula parsing is expressed as a bunch of expression re-writes, each of which
+is a subtype of `FormulaRewrite`.  There are two methods that dispatch on these
+types: `applies(ex, child_idx, rule::Type{<:FormulaRewrite})` checks whether the
+re-write `rule` needs to be applied at argument `child_idx` of expression `ex`,
+and `rewrite!(ex, child_idx, rule::Type{<:FormulaRewrite})` re-writes `ex`
+according to `rule` at position `child_idx`, and returns the next `child_idx`
+that needs to be checked.
+"""
+abstract type FormulaRewrite end
+
+"""
+    struct Star <: FormulaRewrite end
+
+Expand `a*b` to `a + b + a&b` (`*(a,b)` to `+(a,b,&(a,b))`).  Applies
+recursively to multiple `*` arguments, so needs a clean-up pass (from
+distributive/associative).
+"""
+struct Star <: FormulaRewrite end
+applies(ex::Expr, child_idx::Int, ::Type{Star}) = is_call(ex.args[child_idx], :*)
+expand_star(a, b) = Expr(:call, :+, a, b, Expr(:call, :&, a, b))
+function rewrite!(ex::Expr, child_idx::Int, ::Type{Star})
+    child = ex.args[child_idx]
+    @debug "  expand star: $ex -> "
+    child.args = reduce(expand_star, child.args[2:end]).args
+    @debug "               $ex"
+    child_idx
 end
-dospecials(a::Any) = a
 
-## Distribution of & over +
-const distributive = Dict(:& => :+)
+"""
+    struct AssociativeRule <: FormulaRewrite end
 
-distribute(ex::Expr) = distribute!(copy(ex))
-distribute(a::Any) = a
-## apply distributive property in-place
-function distribute!(ex::Expr)
-    if ex.head != :call error("Non-call expression encountered") end
-    [distribute!(a) for a in ex.args[2:end]]
-    ## check that top-level can be distributed
-    a1 = ex.args[1]
-    if a1 in keys(distributive)
+Apply associative rule: if in an expression headed by an associative operator
+(`+,&,*`) and the sub-expression `child_idx` is headed by the same operator,
+splice that child's children into it's location.
+"""
+struct AssociativeRule <: FormulaRewrite end
+const ASSOCIATIVE = Set([:+, :&, :*])
+applies(ex::Expr, child_idx::Int, ::Type{AssociativeRule}) =
+    is_call(ex) &&
+    is_call(ex.args[child_idx]) &&
+    ex.args[1] in ASSOCIATIVE &&
+    ex.args[1] == ex.args[child_idx].args[1]
+function rewrite!(ex::Expr, child_idx::Int, ::Type{AssociativeRule})
+    @debug "    associative: $ex -> "
+    splice!(ex.args, child_idx, ex.args[child_idx].args[2:end])
+    @debug "                 $ex"
+    child_idx
+end
 
-        ## which op is being DISTRIBUTED (e.g. &, *)?
-        distributed_op = a1
-        ## which op is doing the distributing (e.g. +)?
-        distributing_op = distributive[a1]
 
-        ## detect distributing sub-expression (first arg is, e.g. :+)
-        is_distributing_subex(e) =
-            typeof(e)==Expr && e.head == :call && e.args[1] == distributing_op
+"""
+    struct Distributive <: FormulaRewrite end
 
-        ## find first distributing subex
-        first_distributing_subex = Compat.findfirst(is_distributing_subex, ex.args)
-        if first_distributing_subex !== nothing
-            ## remove distributing subexpression from args
-            subex = splice!(ex.args, first_distributing_subex)
+Distributive propery: `&(a..., +(b...), c...)` to `+(&(a..., b_i, c...)_i...)`.
+Replace outer call (:&) with inner call (:+), whose arguments are copies of the
+outer call, one for each argument of the inner call.  For the ith new child, the
+original inner call is replaced with the ith argument of the inner call.
+"""
+struct Distributive <: FormulaRewrite end
+const DISTRIBUTIVE = Set([:& => :+])
+applies(ex::Expr, child_idx::Int, ::Type{Distributive}) =
+    is_call(ex) &&
+    is_call(ex.args[child_idx]) &&
+    (ex.args[1] => ex.args[child_idx].args[1]) in DISTRIBUTIVE
+function rewrite!(ex::Expr, child_idx::Int, ::Type{Distributive})
+    @debug "    distributive: $ex -> "
+    new_args = deepcopy(ex.args[child_idx].args)
+    for i in 2:length(new_args)
+        new_child = deepcopy(ex)
+        new_child.args[child_idx] = new_args[i]
+        new_args[i] = new_child
+    end
+    ex.args = new_args
+    @debug "                  $ex"
+    # TODO: is it really necessary to re-check _every_argument after this?
+    2
+end
 
-            newargs = Any[distributing_op]
-            ## generate one new sub-expression, which calls the distributed operation
-            ## (e.g. &) on each of the distributing sub-expression's arguments, plus
-            ## the non-distributed arguments of the original expression.
-            for a in subex.args[2:end]
-                new_subex = copy(ex)
-                push!(new_subex.args, a)
-                ## need to recurse here, in case there are any other
-                ## distributing operations in the sub expression
-                distribute!(new_subex)
-                push!(newargs, new_subex)
-            end
-            ex.args = newargs
-        end
+struct Subtraction <: FormulaRewrite end
+applies(ex::Expr, child_idx::Int, ::Type{Subtraction}) =
+    is_call(ex.args[child_idx], :-)
+function rewrite!(ex::Expr, child_idx::Int, ::Type{Subtraction})
+    child = ex.args[child_idx]
+    @argcheck child.args[3] == 1 "Can only subtract 1, got $child"
+    child.args[1] = :+
+    child.args[3] = -1
+    child_idx
+end
+
+# default re-write is a no-op (go to next child)
+rewrite!(ex::Expr, child_idx::Int, ::Nothing) = child_idx+1
+
+# like `findfirst` but returns the first element where predicate is true, or
+# nothing
+function filterfirst(f::Function, a::AbstractArray)
+    idx = findfirst(f, a)
+    idx === nothing ? nothing : a[idx]
+end
+
+
+parse!(x) = parse!(x, [Subtraction, Star, AssociativeRule, Distributive])
+parse!(x, rewrites) = x
+function parse!(i::Integer, rewrites)
+    @argcheck i ∈ [-1, 0, 1] "invalid integer term $i (only -1, 0, and 1 allowed)"
+    i
+end
+function parse!(ex::Expr, rewrites::Vector)
+    @debug "parsing $ex"
+    check_call(ex)
+    # iterate over children, checking for special rules
+    child_idx = 2
+    while child_idx <= length(ex.args)
+        @debug "  ($(ex.args[1])) i=$child_idx: $(ex.args[child_idx])"
+        # depth first: parse each child first
+        parse!(ex.args[child_idx], rewrites)
+        # find first rewrite rule that applies
+        rule = filterfirst(r->applies(ex, child_idx, r), rewrites)
+        # re-write according to that rule and update the child to position rewrite next
+        child_idx = rewrite!(ex, child_idx, rule)
+    end
+    @debug "done: $ex"
+    ex
+end
+
+# Base.copy(x::Nothing) = x
+# Base.copy(x::Symbol) = x
+
+function sort_terms!(ex::Expr)
+    check_call(ex)
+    if ex.args[1] ∈ ASSOCIATIVE
+        sort!(view(ex.args, 2:length(ex.args)), by=degree)
+    else
+        # recursively sort children
+        sort_terms!.(ex.args)
     end
     ex
 end
-distribute!(a::Any) = a
+sort_terms!(x) = x
 
-const associative = Set([:+,:*,:&])       # associative special operators
-
-## If the expression is a call to the function s return its arguments
-## Otherwise return the expression
-function ex_or_args(ex::Expr,s::Symbol)
-    if ex.head != :call error("Non-call expression encountered") end
-    if ex.args[1] == s
-        ## recurse in case there are more :calls of s below
-        return vcat(map(x -> ex_or_args(x, s), ex.args[2:end])...)
+degree(i::Integer) = 0
+degree(::Symbol) = 1
+# degree(s::Union{Symbol, ContinuousTerm, CategoricalTerm}) = 1
+function degree(ex::Expr)
+    check_call(ex)
+    if ex.args[1] == :&
+        length(ex.args) - 1
+    elseif ex.args[1] == :|
+        # put ranef terms at end
+        Inf
     else
-        ## not a :call to s, return condensed version of ex
-        return condense(ex)
+        # arbitrary functions are treated as main effect terms
+        1
     end
 end
-ex_or_args(a,s::Symbol) = a
 
-## Condense calls like :(+(a,+(b,c))) to :(+(a,b,c))
-function condense(ex::Expr)
-    if ex.head != :call error("Non-call expression encountered") end
-    a1 = ex.args[1]
-    if !(a1 in associative) return ex end
-    excp = copy(ex)
-    excp.args = vcat(a1, map(x->ex_or_args(x,a1), ex.args[2:end])...)
-    excp
-end
-condense(a::Any) = a
+
+################################################################################
+
+
 
 ## always return an ARRAY of terms
-getterms(ex::Expr) = (ex.head == :call && ex.args[1] == :+) ? ex.args[2:end] : Expr[ex]
+getterms(ex::Expr) = is_call(ex, :+) ? ex.args[2:end] : Expr[ex]
 getterms(a::Any) = Any[a]
 
-ord(ex::Expr) = (ex.head == :call && ex.args[1] == :&) ? length(ex.args)-1 : 1
-ord(a::Any) = 1
+# ord(ex::Expr) = (ex.head == :call && ex.args[1] == :&) ? length(ex.args)-1 : 1
+# ord(a::Any) = 1
 
 const nonevaluation = Set([:&,:|])        # operators constructed from other evaluations
 ## evaluation terms - the (filtered) arguments for :& and :|, otherwise the term itself
 function evt(ex::Expr)
-    if ex.head != :call error("Non-call expression encountered") end
+    check_call(ex)
     if !(ex.args[1] in nonevaluation) return ex end
     filter(x->!isa(x,Number), vcat(map(getterms, ex.args[2:end])...))
 end
 evt(a) = Any[a]
 
 function Terms(f::Formula)
-    rhs = condense(distribute(dospecials(f.rhs)))
+    rhs = f.rhs
     tt = unique(getterms(rhs))
     filter!(t -> t != 1, tt)                          # drop any explicit 1's
     noint = BitArray(map(t -> t == 0 || t == -1, tt)) # should also handle :(-(expr,1))
     tt = tt[map(!, noint)]
-    oo = Int[ord(t) for t in tt]     # orders of interaction terms
-    if !issorted(oo)                 # sort terms by increasing order
+    oo = Int[degree(t) for t in tt] # orders of interaction terms
+    if !issorted(oo)                # sort terms by increasing order
         pp = sortperm(oo)
         tt = tt[pp]
         oo = oo[pp]
@@ -214,12 +290,13 @@ function Formula(t::Terms)
         push!(rhs.args,1)
     end
     append!(rhs.args,t.terms)
-    Formula(lhs,rhs)
+    ex = :($lhs ~ $rhs)
+    Formula(ex, ex, lhs,rhs)
 end
 
 function Base.copy(f::Formula)
     lhs = isa(f.lhs, Symbol) ? f.lhs : copy(f.lhs)
-    return Formula(lhs, copy(f.rhs))
+    return Formula(copy(f.ex_orig), copy(f.ex), lhs, copy(f.rhs))
 end
 
 """
@@ -240,7 +317,7 @@ dropterm(f::Formula, trm::Union{Number, Symbol, Expr}) = dropterm!(copy(f), trm)
 
 function dropterm!(f::Formula, trm::Union{Number, Symbol, Expr})
     rhs = f.rhs
-    if !(Meta.isexpr(rhs, :call) && rhs.args[1] == :+ && (tpos = Compat.findlast(isequal(trm), rhs.args)) !== nothing)
+    if !(is_call(rhs, :+) && (tpos = Compat.findlast(isequal(trm), rhs.args)) !== nothing)
         throw(ArgumentError("$trm is not a summand of '$(f.rhs)'"))
     end
     if isa(trm, Number)

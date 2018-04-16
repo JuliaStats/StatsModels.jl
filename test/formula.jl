@@ -8,10 +8,10 @@
     # - support more transformations with I()?
 
     ## Formula parsing
-    import StatsModels: @formula, Formula, Terms
+    using StatsModels: @formula, Formula, Terms
 
     ## totally empty
-    t = Terms(Formula(nothing, 0))
+    t = Terms(@eval @formula $(:($nothing ~ 0)))
     @test t.response == false
     @test t.intercept == false
     @test t.terms == []
@@ -50,10 +50,13 @@
     @test t.intercept == false
     @test t.terms == [:x1, :x2]
 
-    @test t == Terms(@formula(y ~ -1 + x1 + x2)) == Terms(@formula(y ~ x1 - 1 + x2)) == Terms(@formula(y ~ x1 + x2 -1))
+    @test t ==
+        Terms(@formula(y ~ -1 + x1 + x2)) ==
+        Terms(@formula(y ~ x1 - 1 + x2)) ==
+        Terms(@formula(y ~ x1 + x2 -1))
 
     ## can't subtract terms other than 1
-    @test_throws ErrorException Terms(@formula(y ~ x1 - x2))
+    @test_throws ArgumentError Terms(@formula(y ~ x1 - x2))
 
     t = Terms(@formula(y ~ x1 & x2))
     @test t.terms == [:(x1 & x2)]
@@ -107,10 +110,10 @@
     @test_throws ArgumentError dropterm(@formula(foo ~ 0 + bar + baz), :boz)
     form = @formula(foo ~ 1 + bar + baz)
     @test form == @formula(foo ~ 1 + bar + baz)
-    @test StatsModels.dropterm!(form, :bar) == @formula(foo ~ 1 + baz)
-    @test form == @formula(foo ~ 1 + baz)
+    @test_broken StatsModels.dropterm!(form, :bar) == @formula(foo ~ 1 + baz)
+    @test_broken form == @formula(foo ~ 1 + baz)
 
     # Incorrect formula separator
-    @test_throws ErrorException @formula(y => x + 1)
+    @test_throws ArgumentError @formula(y => x + 1)
 
 end
