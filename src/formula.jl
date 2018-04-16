@@ -164,7 +164,7 @@ rewrite!(ex::Expr, child_idx::Int, ::Nothing) = child_idx+1
 # like `findfirst` but returns the first element where predicate is true, or
 # nothing
 function filterfirst(f::Function, a::AbstractArray)
-    idx = findfirst(f, a)
+    idx = Compat.findfirst(f, a)
     idx === nothing ? nothing : a[idx]
 end
 
