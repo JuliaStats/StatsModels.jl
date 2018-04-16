@@ -141,7 +141,7 @@ _droplevels!(x::AbstractCategoricalArray) = droplevels!(x)
 
 function ModelFrame(trms::Terms, d::AbstractDataFrame;
                     contrasts::Dict = Dict())
-    df, msng = missing_omit(DataFrame(map(x -> d[x], trms.eterms), trms.eterms))
+    df, msng = missing_omit(DataFrame(map(x -> d[x], trms.eterms), Symbol.(trms.eterms)))
     names!(df, Symbol.(string.(trms.eterms)))
 
     evaledContrasts = evalcontrasts(df, contrasts)
@@ -162,10 +162,10 @@ ModelFrame(ex::Expr, d::AbstractDataFrame; kwargs...) = ModelFrame(Formula(ex), 
 Modify the contrast coding system of a ModelFrame in place.
 """
 function setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
-    new_contrasts = Dict([ Pair(col, ContrastsMatrix(contr, _unique(mf.df[col])))
-                      for (col, contr) in filter((k,v)->haskey(mf.df, k), new_contrasts) ])
-
-    mf.contrasts = merge(mf.contrasts, new_contrasts)
+    for (col, contr) in new_contrasts
+        haskey(mf.df, col) || continue
+        mf.contrasts[col] = ContrastsMatrix(contr, _unique(mf.df[col]))
+    end
     return mf
 end
 setcontrasts!(mf::ModelFrame; kwargs...) = setcontrasts!(mf, Dict(kwargs))
@@ -197,7 +197,7 @@ function termnames(term::Symbol, mf::ModelFrame; non_redundant::Bool = false)
     if haskey(mf.contrasts, term)
         termnames(term, mf.df[term],
                   non_redundant ?
-                  ContrastsMatrix{FullDummyCoding}(mf.contrasts[term]) :
+                  convert(ContrastsMatrix{FullDummyCoding}, mf.contrasts[term]) :
                   mf.contrasts[term])
     else
         termnames(term, mf.df[term])

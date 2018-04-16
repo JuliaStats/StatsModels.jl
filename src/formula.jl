@@ -12,7 +12,7 @@
 ## The rhs of a formula can be 1
 
 mutable struct Formula
-    lhs::Union{Symbol, Expr, Void}
+    lhs::Union{Symbol, Expr, Nothing}
     rhs::Union{Symbol, Expr, Integer}
 end
 
@@ -51,7 +51,7 @@ end
 Base.:(==)(t1::Terms, t2::Terms) = all(getfield(t1, f)==getfield(t2, f) for f in fieldnames(typeof(t1)))
 
 function Base.show(io::IO, f::Formula)
-    print(io, "Formula: ", f.lhs === nothing ? "" : f.lhs, " ~ ", f.rhs)
+    print(io, "Formula: ", coalesce(f.lhs, ""), " ~ ", f.rhs)
 end
 
 # special operators in formulas
@@ -109,8 +109,8 @@ function distribute!(ex::Expr)
             typeof(e)==Expr && e.head == :call && e.args[1] == distributing_op
 
         ## find first distributing subex
-        first_distributing_subex = findfirst(is_distributing_subex, ex.args)
-        if first_distributing_subex != 0
+        first_distributing_subex = Compat.findfirst(is_distributing_subex, ex.args)
+        if first_distributing_subex !== nothing
             ## remove distributing subexpression from args
             subex = splice!(ex.args, first_distributing_subex)
 
@@ -191,8 +191,8 @@ function Terms(f::Formula)
     etrms = map(evt, tt)
     haslhs = f.lhs != nothing
     if haslhs
-        unshift!(etrms, Any[f.lhs])
-        unshift!(oo, 1)
+        pushfirst!(etrms, Any[f.lhs])
+        pushfirst!(oo, 1)
     end
     ev = unique(vcat(etrms...))
     sets = [Set(x) for x in etrms]
@@ -240,7 +240,7 @@ dropterm(f::Formula, trm::Union{Number, Symbol, Expr}) = dropterm!(copy(f), trm)
 
 function dropterm!(f::Formula, trm::Union{Number, Symbol, Expr})
     rhs = f.rhs
-    if !(Meta.isexpr(rhs, :call) && rhs.args[1] == :+ && (tpos = findlast(rhs.args, trm)) > 0)
+    if !(Meta.isexpr(rhs, :call) && rhs.args[1] == :+ && (tpos = Compat.findlast(isequal(trm), rhs.args)) !== nothing)
         throw(ArgumentError("$trm is not a summand of '$(f.rhs)'"))
     end
     if isa(trm, Number)

@@ -126,7 +126,7 @@ function Base.show(io::IO, model::DataFrameModels)
         println(io,"Coefficients:")
         show(io, ct)
     catch e
-        if isa(e, ErrorException) && contains(e.msg, "coeftable is not defined")
+        if isa(e, ErrorException) && occursin("coeftable is not defined", e.msg)
             show(io, model.model)
         else
             rethrow(e)

@@ -5,6 +5,8 @@ module StatsModels
 using Compat
 using DataFrames
 using StatsBase
+using Compat.SparseArrays
+using Compat.LinearAlgebra
 
 export @formula,
        Formula,
