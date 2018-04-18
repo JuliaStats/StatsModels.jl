@@ -231,8 +231,6 @@ function parse!(ex::Expr, rewrites::Vector)
     ex
 end
 
-# Base.copy(x::Nothing) = x
-# Base.copy(x::Symbol) = x
 
 function sort_terms!(ex::Expr)
     check_call(ex)
@@ -248,7 +246,6 @@ sort_terms!(x) = x
 
 degree(i::Integer) = 0
 degree(::Symbol) = 1
-# degree(s::Union{Symbol, ContinuousTerm, CategoricalTerm}) = 1
 function degree(ex::Expr)
     check_call(ex)
     if ex.args[1] == :&
@@ -270,9 +267,6 @@ end
 ## always return an ARRAY of terms
 getterms(ex::Expr) = is_call(ex, :+) ? ex.args[2:end] : Expr[ex]
 getterms(a::Any) = Any[a]
-
-# ord(ex::Expr) = (ex.head == :call && ex.args[1] == :&) ? length(ex.args)-1 : 1
-# ord(a::Any) = 1
 
 const nonevaluation = Set([:&,:|])        # operators constructed from other evaluations
 ## evaluation terms - the (filtered) arguments for :& and :|, otherwise the term itself
