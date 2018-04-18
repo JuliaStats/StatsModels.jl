@@ -96,12 +96,12 @@
                       :((&)(x1, x2, x3))]
     @test t.eterms == [:y, :x1, :x2, :x3]
 
-    ## Interactions with `1` reduce to main effect.  All fail at the moment.
+    ## Interactions with `1` reduce to main effect.
     t = Terms(@formula(y ~ 1 & x1))
-    @test_broken t.terms == [:x1]              # == [:(1 & x1)]
+    @test t.terms == [:x1]
 
     t = Terms(@formula(y ~ (1 + x1) & x2))
-    @test_broken t.terms == [:x2, :(x1&x2)]    # == [:(1 & x1)]
+    @test t.terms == [:x2, :(x1&x2)]
 
     ## PR #54 breaks formula-level equality because original (un-lowered)
     ## expression is kept on Formula struct.  but functional (RHS) equality

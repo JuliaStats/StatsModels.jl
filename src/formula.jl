@@ -147,6 +147,11 @@ function rewrite!(ex::Expr, child_idx::Int, ::Type{Distributive})
     2
 end
 
+"""
+    Subtraction <: FormulaRewrite
+
+Correct `x - 1` to `x + -1`
+"""
 struct Subtraction <: FormulaRewrite end
 applies(ex::Expr, child_idx::Int, ::Type{Subtraction}) =
     is_call(ex.args[child_idx], :-)
@@ -158,15 +163,36 @@ function rewrite!(ex::Expr, child_idx::Int, ::Type{Subtraction})
     child_idx
 end
 
+"""
+    And1 <: FormulaRewrite
+
+Remove numbers from interaction terms, so `1&x` becomes `&(x)` (which is later 
+cleaned up by `EmptyAnd`).
+"""
 struct And1 <: FormulaRewrite end
 applies(ex::Expr, child_idx::Int, ::Type{And1}) =
-    is_call(ex, :&) && ex.args[child_idx] == 1
+    is_call(ex, :&) && ex.args[child_idx] isa Number
 function rewrite!(ex::Expr, child_idx::Int, ::Type{And1})
     @debug "    &1: $ex ->"
     ex.args[child_idx] == 1 ||
         @warn "Number $(ex.args[child_idx]) removed from interaction term $ex"
     deleteat!(ex.args, child_idx)
     @debug "        $ex"
+    child_idx
+end
+
+"""
+    EmptyAnd <: FormulaRewrite
+
+Convert single-argument interactions to symbols: `&(x)` to `x` (cleanup after
+`And1`.
+"""
+struct EmptyAnd <: FormulaRewrite end
+applies(ex::Expr, child_idx::Int, ::Type{EmptyAnd}) =
+    is_call(ex.args[child_idx], :&) &&
+    length(ex.args[child_idx].args) == 2
+function rewrite!(ex::Expr, child_idx::Int, ::Type{EmptyAnd})
+    ex.args[child_idx] = ex.args[child_idx].args[2]
     child_idx
 end
 
@@ -181,7 +207,7 @@ function filterfirst(f::Function, a::AbstractArray)
 end
 
 
-parse!(x) = parse!(x, [And1, Subtraction, Star, AssociativeRule, Distributive])
+parse!(x) = parse!(x, [And1, EmptyAnd, Subtraction, Star, AssociativeRule, Distributive])
 parse!(x, rewrites) = x
 function parse!(i::Integer, rewrites)
     i ∈ [-1, 0, 1] || throw(ArgumentError("invalid integer term $i (only -1, 0, and 1 allowed)"))
