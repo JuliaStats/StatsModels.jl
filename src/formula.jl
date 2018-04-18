@@ -26,8 +26,8 @@ end
 
 macro formula(ex)
     try
-        @argcheck is_call(ex, :~) "expected formula separator ~, got $(ex.head)"
-        @argcheck length(ex.args) == 3 "malformed expression in formula $ex"
+        is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
+        length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
         ex_orig = Meta.quot(copy(ex))
         sort_terms!(parse!(ex))
         lhs = Meta.quot(ex.args[2])
@@ -152,7 +152,7 @@ applies(ex::Expr, child_idx::Int, ::Type{Subtraction}) =
     is_call(ex.args[child_idx], :-)
 function rewrite!(ex::Expr, child_idx::Int, ::Type{Subtraction})
     child = ex.args[child_idx]
-    @argcheck child.args[3] == 1 "Can only subtract 1, got $child"
+    child.args[3] == 1 || throw(ArgumentError("Can only subtract 1, got $child"))
     child.args[1] = :+
     child.args[3] = -1
     child_idx
@@ -172,7 +172,7 @@ end
 parse!(x) = parse!(x, [Subtraction, Star, AssociativeRule, Distributive])
 parse!(x, rewrites) = x
 function parse!(i::Integer, rewrites)
-    @argcheck i ∈ [-1, 0, 1] "invalid integer term $i (only -1, 0, and 1 allowed)"
+    i ∈ [-1, 0, 1] throw(ArgumentError("invalid integer term $i (only -1, 0, and 1 allowed)"))
     i
 end
 function parse!(ex::Expr, rewrites::Vector)
