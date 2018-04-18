@@ -106,23 +106,20 @@
     ## PR #54 breaks formula-level equality because original (un-lowered)
     ## expression is kept on Formula struct.  but functional (RHS) equality
     ## should be maintained
-    @test_broken dropterm(@formula(foo ~ 1 + bar + baz), :bar) == @formula(foo ~ 1 + baz)
-    @test dropterm(@formula(foo ~ 1 + bar + baz), :bar).rhs == @formula(foo ~ 1 + baz).rhs
+    using StatsModels: dropterm!
 
-    @test_broken dropterm(@formula(foo ~ 1 + bar + baz), 1) == @formula(foo ~ 0 + bar + baz)
-    @test dropterm(@formula(foo ~ 1 + bar + baz), 1).rhs == @formula(foo ~ 0 + bar + baz).rhs
+    @test Terms(dropterm(@formula(foo ~ 1 + bar + baz), :bar)) ==
+        Terms(@formula(foo ~ 1 + baz))
+    @test Terms(dropterm(@formula(foo ~ 1 + bar + baz), 1)) ==
+        Terms(@formula(foo ~ 0 + bar + baz))
 
     @test_throws ArgumentError dropterm(@formula(foo ~ 0 + bar + baz), 0)
     @test_throws ArgumentError dropterm(@formula(foo ~ 0 + bar + baz), :boz)
 
     form = @formula(foo ~ 1 + bar + baz)
     @test form == @formula(foo ~ 1 + bar + baz)
-
-    @test_broken StatsModels.dropterm!(form, :bar) == @formula(foo ~ 1 + baz)
-    @test StatsModels.dropterm!(form, :bar).rhs == @formula(foo ~ 1 + baz).rhs
-
-    @test_broken form == @formula(foo ~ 1 + baz)
-    @test form.rhs == @formula(foo ~ 1 + baz).rhs
+    @test Terms(dropterm!(form, :bar)) == Terms(@formula(foo ~ 1 + baz))
+    @test Terms(form) == Terms(@formula(foo ~ 1 + baz))
 
     # Incorrect formula separator
     @test_throws ArgumentError @formula(y => x + 1)
