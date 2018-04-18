@@ -165,7 +165,7 @@ function rewrite!(ex::Expr, child_idx::Int, ::Type{And1})
     @debug "    &1: $ex ->"
     ex.args[child_idx] == 1 ||
         @warn "Number $(ex.args[child_idx]) removed from interaction term $ex"
-    deleteat!(ex, child_idx)
+    deleteat!(ex.args, child_idx)
     @debug "        $ex"
     child_ex
 end
@@ -184,7 +184,7 @@ end
 parse!(x) = parse!(x, [And1, Subtraction, Star, AssociativeRule, Distributive])
 parse!(x, rewrites) = x
 function parse!(i::Integer, rewrites)
-    i ∈ [-1, 0, 1] throw(ArgumentError("invalid integer term $i (only -1, 0, and 1 allowed)"))
+    i ∈ [-1, 0, 1] || throw(ArgumentError("invalid integer term $i (only -1, 0, and 1 allowed)"))
     i
 end
 function parse!(ex::Expr, rewrites::Vector)

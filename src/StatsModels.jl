@@ -24,14 +24,10 @@ export @formula,
        dropterm,
        setcontrasts!
 
-map(include,
-    [
-        "contrasts.jl",
-        "formula.jl",
-        "modelframe.jl",
-        "modelmatrix.jl",
-        "statsmodel.jl"
-    ])
-
+include("contrasts.jl")
+include("formula.jl")
+include("modelframe.jl")
+include("modelmatrix.jl")
+include("statsmodel.jl")
 
 end # module StatsModels
