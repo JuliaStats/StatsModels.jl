@@ -81,12 +81,13 @@
     t = Terms(@formula(y ~ x1 & (x2 + x3)))
     @test t.terms == [:(x1&x2), :(x1&x3)]
 
-    ## FAILS: ordering of expanded interaction terms is wrong
-    ## (only has an observable effect when both terms are categorical and
-    ## produce multiple model matrix columns that are multiplied together...)
-    ##
-    ## t = Terms(@formula(y ~ (x2 + x3)) & x1)
-    ## @test t.terms == [:(x2&x1), :(x3&x1)]
+    ## ordering of interaction terms is preserved across distributive
+    t = Terms(@formula(y ~ (x2 + x3) & x1))
+    @test t.terms == [:(x2&x1), :(x3&x1)]
+
+    ## distributive with *
+    t = Terms(@formula(y ~ (a + b) * c))
+    @test t.terms == [:a, :b, :c, :(a&c), :(b&c)]
 
     ## three-way *
     t = Terms(@formula(y ~ x1 * x2 * x3))
@@ -96,22 +97,32 @@
     @test t.eterms == [:y, :x1, :x2, :x3]
 
     ## Interactions with `1` reduce to main effect.  All fail at the moment.
-    ## t = Terms(@formula(y ~ 1 & x1))
-    ## @test t.terms == [:x1]              # == [:(1 & x1)]
-    ## @test t.eterms == [:y, :x1]
+    t = Terms(@formula(y ~ 1 & x1))
+    @test_broken t.terms == [:x1]              # == [:(1 & x1)]
 
-    ## t = Terms(@formula(y ~ (1 + x1)) & x2)
-    ## @test t.terms == [:x2, :(x1&x2)]    # == [:(1 & x1)]
-    ## @test t.eterms == [:y, :x1, :x2]
+    t = Terms(@formula(y ~ (1 + x1) & x2))
+    @test_broken t.terms == [:x2, :(x1&x2)]    # == [:(1 & x1)]
 
+    ## PR #54 breaks formula-level equality because original (un-lowered)
+    ## expression is kept on Formula struct.  but functional (RHS) equality
+    ## should be maintained
     @test_broken dropterm(@formula(foo ~ 1 + bar + baz), :bar) == @formula(foo ~ 1 + baz)
+    @test dropterm(@formula(foo ~ 1 + bar + baz), :bar).rhs == @formula(foo ~ 1 + baz).rhs
+
     @test_broken dropterm(@formula(foo ~ 1 + bar + baz), 1) == @formula(foo ~ 0 + bar + baz)
+    @test dropterm(@formula(foo ~ 1 + bar + baz), 1).rhs == @formula(foo ~ 0 + bar + baz).rhs
+
     @test_throws ArgumentError dropterm(@formula(foo ~ 0 + bar + baz), 0)
     @test_throws ArgumentError dropterm(@formula(foo ~ 0 + bar + baz), :boz)
+
     form = @formula(foo ~ 1 + bar + baz)
     @test form == @formula(foo ~ 1 + bar + baz)
+
     @test_broken StatsModels.dropterm!(form, :bar) == @formula(foo ~ 1 + baz)
+    @test StatsModels.dropterm!(form, :bar).rhs == @formula(foo ~ 1 + baz).rhs
+
     @test_broken form == @formula(foo ~ 1 + baz)
+    @test form.rhs == @formula(foo ~ 1 + baz).rhs
 
     # Incorrect formula separator
     @test_throws ArgumentError @formula(y => x + 1)
