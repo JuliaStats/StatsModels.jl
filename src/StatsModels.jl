@@ -7,7 +7,7 @@ using DataFrames
 using StatsBase
 using Compat.SparseArrays
 using Compat.LinearAlgebra
-using Compat: @debug
+using Compat: @debug, @warn
 
 export @formula,
        Formula,

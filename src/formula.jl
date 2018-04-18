@@ -158,6 +158,18 @@ function rewrite!(ex::Expr, child_idx::Int, ::Type{Subtraction})
     child_idx
 end
 
+struct And1 <: FormulaRewrite end
+applies(ex::Expr, child_idx::Int, ::Type{And1}) =
+    is_call(ex, :&) && ex.args[child_idx] == 1
+function rewrite!(ex::Expr, child_idx::Int, ::Type{And1})
+    @debug "    &1: $ex ->"
+    ex.args[child_idx] == 1 ||
+        @warn "Number $(ex.args[child_idx]) removed from interaction term $ex"
+    deleteat!(ex, child_idx)
+    @debug "        $ex"
+    child_ex
+end
+
 # default re-write is a no-op (go to next child)
 rewrite!(ex::Expr, child_idx::Int, ::Nothing) = child_idx+1
 
@@ -169,7 +181,7 @@ function filterfirst(f::Function, a::AbstractArray)
 end
 
 
-parse!(x) = parse!(x, [Subtraction, Star, AssociativeRule, Distributive])
+parse!(x) = parse!(x, [And1, Subtraction, Star, AssociativeRule, Distributive])
 parse!(x, rewrites) = x
 function parse!(i::Integer, rewrites)
     i ∈ [-1, 0, 1] throw(ArgumentError("invalid integer term $i (only -1, 0, and 1 allowed)"))
