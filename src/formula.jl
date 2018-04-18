@@ -167,7 +167,7 @@ function rewrite!(ex::Expr, child_idx::Int, ::Type{And1})
         @warn "Number $(ex.args[child_idx]) removed from interaction term $ex"
     deleteat!(ex.args, child_idx)
     @debug "        $ex"
-    child_ex
+    child_idx
 end
 
 # default re-write is a no-op (go to next child)
