@@ -29,5 +29,6 @@ include("formula.jl")
 include("modelframe.jl")
 include("modelmatrix.jl")
 include("statsmodel.jl")
+include("deprecated.jl")
 
 end # module StatsModels

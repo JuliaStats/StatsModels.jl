@@ -12,7 +12,8 @@ using StatsModels: ContrastsMatrix
 my_tests = ["formula.jl",
             "modelmatrix.jl",
             "statsmodel.jl",
-            "contrasts.jl"]
+            "contrasts.jl",
+            "deprecated.jl"]
 
 @testset "StatsModels" begin
     for tf in my_tests
