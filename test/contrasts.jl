@@ -2,7 +2,7 @@
 
     d = DataFrame(x = CategoricalVector{Union{Missing, Symbol}}([:b, :a, :c, :a, :a, :b]))
 
-    mf = ModelFrame(Formula(nothing, :x), d)
+    mf = ModelFrame(@eval(@formula($(:($nothing~x)))), d)
 
     ## testing equality of ContrastsMatrix
     should_equal = [ContrastsMatrix(DummyCoding(), [:a, :b, :c]),
@@ -96,7 +96,8 @@
 
     # Missing data is handled gracefully, dropping columns when a level is lost
     d[3, :x] = missing
-    mf_missing = ModelFrame(Formula(nothing, :x), d, contrasts = Dict(:x => EffectsCoding()))
+    mf_missing = ModelFrame(@eval(@formula($(:($nothing ~ x)))), d,
+                            contrasts = Dict(:x => EffectsCoding()))
     @test ModelMatrix(mf_missing).m == [1  1
                                         1 -1
                                         1 -1
