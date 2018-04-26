@@ -58,7 +58,7 @@ effects, all two-way interactions, and the three way interaction `a&b&c`:
 
 ```jldoctest
 julia> Formula(StatsModels.Terms(@formula(y ~ 1 + a*b*c)))
-Formula: y ~ 1 + a + b + c + a & b + a & c + b & c + &(a,b,c)
+Formula: y ~ 1 + a + b + c + a & b + a & c + b & c + &(a, b, c)
 ```
 
 Both the `*` and the `&` operators act like multiplication, and are distributive
@@ -66,18 +66,46 @@ over addition:
 
 ```jldoctest
 julia> Formula(StatsModels.Terms(@formula(y ~ 1 + (a+b) & c)))
-Formula: y ~ 1 + c & a + c & b
+Formula: y ~ 1 + a & c + b & c
 
 julia> Formula(StatsModels.Terms(@formula(y ~ 1 + (a+b) * c)))
-Formula: y ~ 1 + a + b + c + c & a + c & b
+Formula: y ~ 1 + a + b + c + a & c + b & c
 ```
 
-You may be wondering why formulas in Julia require a macro, while in R they appear "bare."
-R supports nonstandard evaluation, allowing the formula to remain an unevaluated object
-while its terms are parsed out. Julia uses a much more standard evaluation mechanism,
-making this impossible using normal expressions. However, unlike R, Julia provides macros to
-explicitly indicate when code itself will be manipulated before it's evaluated. By constructing
-a formula using a macro, we're able to provide convenient, R-like syntax and semantics.
+### Technical details
+
+You may be wondering why formulas in Julia require a macro, while in R they
+appear "bare."  R supports nonstandard evaluation, allowing the formula to
+remain an unevaluated object while its terms are parsed out. Julia uses a much
+more standard evaluation mechanism, making this impossible using normal
+expressions. However, unlike R, Julia provides macros to explicitly indicate
+when code itself will be manipulated before it's evaluated. By constructing a
+formula using a macro, we're able to provide convenient, R-like syntax and
+semantics.
+
+The formula syntactic transformations are applied _at parse time_ when using the
+`@formula` macro.  You can see this with using `@macroexpand`:
+
+```jldoctest
+@macroexpand @formula y ~ 1 + (a+b)*c
+:((StatsModels.Formula)($(Expr(:copyast, :($(QuoteNode(:(y ~ 1 + (a + b) * c)))))), $(Expr(:copyast, :($(QuoteNode(:(y ~ 1 + a + b + c + a & c + b & c)))))), :y, $(Expr(:copyast, :($(QuoteNode(:(1 + a + b + c + a & c + b & c))))))))
+```
+Or more legibly
+```julia
+:((StatsModels.Formula)($(Expr(:copyast, :($(QuoteNode(:(y ~ 1 + (a + b) * c)))))),
+                        $(Expr(:copyast, :($(QuoteNode(:(y ~ 1 + a + b + c + a & c + b & c)))))),
+                        :y,
+                        $(Expr(:copyast, :($(QuoteNode(:(1 + a + b + c + a & c + b & c))))))))
+```
+
+The `@formula` macro re-writes the formula expression `y ~ 1 + (a+b)*c` as a
+call to the `Formula` constructor.  The arguments of the constructor correspond
+to the fields of the `Formula` struct, which are, in order:
+
+* `ex_orig`: the original expression `:(y ~ 1+(a+b)*c)`
+* `ex`: the parsed expression `:(y ~ 1+a+b+a&c+b&c)`
+* `lhs`: the left-hand side `:y`
+* `rhs`: the right-hand side `:(1+a+b+a&c+b&c)`
 
 ```@docs
 Formula
