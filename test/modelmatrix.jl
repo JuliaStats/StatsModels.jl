@@ -395,7 +395,7 @@
     mf = ModelFrame(@formula(y ~ 0 + x), df)
     X = ModelMatrix(mf).m
     X[1] = 0.0
-    @test mf.df[1, :x] === 1.0
+    @test mf.dt[1, :x] === 1.0
 
     # Ensure string columns are supported
     df1 = DataFrame(A = 1:4, B = categorical(["M", "F", "F", "M"]))

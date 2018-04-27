@@ -61,7 +61,9 @@ drop_intercept(::Type) = false
 for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
                                  (:RegressionModel, DataFrameRegressionModel))
     @eval begin
-        function StatsBase.fit(::Type{T}, f::Formula, df::AbstractDataFrame,
+        StatsBase.fit(t::Type{T}, f::Formula, d, args...; kwargs...) where T<:$modeltype =
+            fit(t, f, Data.stream!(d, Data.Table), args...; kwargs...)
+        function StatsBase.fit(::Type{T}, f::Formula, df::Data.Table,
                                args...; contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
             trms = Terms(f)
             drop_intercept(T) && (trms.intercept = true)
@@ -90,7 +92,9 @@ StatsBase.r2(mm::DataFrameRegressionModel, variant::Symbol) = r2(mm.model, varia
 StatsBase.adjr2(mm::DataFrameRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
 
 # Predict function that takes data frame as predictor instead of matrix
-function StatsBase.predict(mm::DataFrameRegressionModel, df::AbstractDataFrame; kwargs...)
+StatsBase.predict(mm::DataFrameRegressionModel, d; kwargs...) =
+    predict(mm, Data.stream!(d, Data.Table); kwargs...)
+function StatsBase.predict(mm::DataFrameRegressionModel, df::Data.Table; kwargs...)
     # copy terms, removing outcome if present (ModelFrame will complain if a
     # term is not found in the DataFrame and we don't want to remove elements with missing y)
     newTerms = dropresponse!(mm.mf.terms)

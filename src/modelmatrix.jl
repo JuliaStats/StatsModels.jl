@@ -26,12 +26,12 @@ Base.size(mm::ModelMatrix, dim...) = size(mm.m, dim...)
 ## construct model matrix columns from model frame + name (checks for contrasts)
 function modelmat_cols(::Type{T}, name::Symbol, mf::ModelFrame; non_redundant::Bool = false) where T<:AbstractFloatMatrix
     if haskey(mf.contrasts, name)
-        modelmat_cols(T, mf.df[name],
+        modelmat_cols(T, mf.dt[name],
                       non_redundant ?
                       convert(ContrastsMatrix{FullDummyCoding}, mf.contrasts[name]) :
                       mf.contrasts[name])
     else
-        modelmat_cols(T, mf.df[name])
+        modelmat_cols(T, mf.dt[name])
     end
 end
 
@@ -140,13 +140,13 @@ Mixed-effects models include "random-effects" terms which are ignored when
 creating the model matrix.
 """
 function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractFloatMatrix
-    dfrm = mf.df
+    dfrm = mf.dt
     terms = droprandomeffects(dropresponse!(mf.terms))
 
     blocks = T[]
     assign = Int[]
     if terms.intercept
-        push!(blocks, ones(size(dfrm, 1), 1))  # columns of 1's is first block
+        push!(blocks, ones(_size(dfrm, 1), 1))  # columns of 1's is first block
         push!(assign, 0)                       # this block corresponds to term zero
     end
 
@@ -185,7 +185,7 @@ function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractFloatMatrix
         error("Could not construct model matrix. Resulting matrix has 0 columns.")
     end
 
-    I = size(dfrm, 1)
+    I = _size(dfrm, 1)
     J = mapreduce(x -> size(x, 2), +, blocks)
     X = similar(blocks[1], I, J)
     i = 1

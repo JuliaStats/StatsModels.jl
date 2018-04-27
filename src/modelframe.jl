@@ -47,7 +47,7 @@ julia> mf = ModelFrame(y ~ 1 + x, df)
 
 """
 mutable struct ModelFrame
-    df::AbstractDataFrame
+    dt::Data.Table
     terms::Terms
     msng::BitArray
     ## mapping from df keys to contrasts matrices
@@ -67,7 +67,7 @@ is_categorical(::AbstractArray) = true
 ##
 ## This modifies the Terms, setting `trms.is_non_redundant = true` for all non-
 ## redundant evaluation terms.
-function check_non_redundancy!(trms::Terms, df::AbstractDataFrame)
+function check_non_redundancy!(trms::Terms, d::Data.Table)
 
     (n_eterms, n_terms) = size(trms.factors)
 
@@ -81,7 +81,7 @@ function check_non_redundancy!(trms::Terms, df::AbstractDataFrame)
         for i_eterm in 1:n_eterms
             ## only need to check eterms that are included and can be promoted
             ## (e.g., categorical variables that expand to multiple mm columns)
-            if Bool(trms.factors[i_eterm, i_term]) && is_categorical(df[trms.eterms[i_eterm]])
+            if Bool(trms.factors[i_eterm, i_term]) && is_categorical(d[trms.eterms[i_eterm]])
                 dropped = trms.factors[:,i_term]
                 dropped[i_eterm] = 0
 
@@ -119,9 +119,9 @@ end
 ## Combine actual DF columns and contrast types if necessary to compute the
 ## actual contrasts matrices, levels, and term names (using DummyCoding
 ## as the default)
-function evalcontrasts(df::AbstractDataFrame, contrasts::Dict = Dict())
+function evalcontrasts(d::Data.Table, contrasts::Dict = Dict())
     evaledContrasts = Dict()
-    for (term, col) in eachcol(df)
+    for (term, col) in zip(fieldnames(d), d)
         is_categorical(col) || continue
         evaledContrasts[term] = ContrastsMatrix(haskey(contrasts, term) ?
                                                 contrasts[term] :
@@ -131,31 +131,67 @@ function evalcontrasts(df::AbstractDataFrame, contrasts::Dict = Dict())
     return evaledContrasts
 end
 
+
+## copied from DataFrames:
+function _nonmissing!(res, col)
+    # workaround until JuliaLang/julia#21256 is fixed
+    eltype(col) >: Missing || return
+    
+    @inbounds for (i, el) in enumerate(col)
+        res[i] &= !ismissing(el)
+    end
+end
+
+function _nonmissing!(res, col::CategoricalArray{>: Missing})
+    for (i, el) in enumerate(col.refs)
+        res[i] &= el > 0
+    end
+end
+
+# handle some inconsistencies between how named tuples are constructed
+if isdefined(Core, :NamedTuple)
+    _select(d::Data.Table, cols::NTuple{N,Symbol} where N) = NamedTuple{cols}(d)
+    _filter(d::T, rows) where T<:Data.Table = T(([col[rows] for col in d]...))
+else
+    _select(d::Data.Table, cols::NTuple{N,Symbol} where N) = d[cols]
+    _filter(d::T, rows) where T<:Data.Table = T([col[rows] for col in d]...)
+end
+
+_size(d::Data.Table) = size(Data.schema(d))
+_size(d::Data.Table, dim::Int) = size(Data.schema(d), dim)
+
 ## Default NULL handler.  Others can be added as keyword arguments
-function missing_omit(df::DataFrame)
-    cc = completecases(df)
-    df[cc,:], cc
+function missing_omit(d::T) where T<:Data.Table
+    nonmissings = trues(_size(d, 1))
+    for col in d
+        _nonmissing!(nonmissings, col)
+    end
+    _filter(d, nonmissings), nonmissings
 end
 
 _droplevels!(x::Any) = x
 _droplevels!(x::AbstractCategoricalArray) = droplevels!(x)
 
-function ModelFrame(trms::Terms, d::AbstractDataFrame;
+function ModelFrame(trms::Terms, d::Data.Table;
                     contrasts::Dict = Dict())
-    df, msng = missing_omit(DataFrame(map(x -> d[x], trms.eterms), Symbol.(trms.eterms)))
-    names!(df, Symbol.(string.(trms.eterms)))
+    d, msng = missing_omit(_select(d, (Symbol.(trms.eterms)...)))
 
-    evaledContrasts = evalcontrasts(df, contrasts)
+    evaledContrasts = evalcontrasts(d, contrasts)
 
     ## Check for non-redundant terms, modifying terms in place
-    check_non_redundancy!(trms, df)
+    check_non_redundancy!(trms, d)
 
-    ModelFrame(df, trms, msng, evaledContrasts)
+    ModelFrame(d, trms, msng, evaledContrasts)
 end
 
-ModelFrame(df::AbstractDataFrame, term::Terms, msng::BitArray) = ModelFrame(df, term, msng, evalcontrasts(df))
-ModelFrame(f::Formula, d::AbstractDataFrame; kwargs...) = ModelFrame(Terms(f), d; kwargs...)
-ModelFrame(ex::Expr, d::AbstractDataFrame; kwargs...) = ModelFrame(Formula(ex), d; kwargs...)
+ModelFrame(f::Formula, d; kwargs...) = ModelFrame(Terms(f), d; kwargs...)
+ModelFrame(ex::Expr, d; kwargs...) = ModelFrame(Formula(ex), d; kwargs...)
+ModelFrame(t::Terms, d; kwargs...) = ModelFrame(t, Data.stream!(d, Data.Table); kwargs...)
+
+## TODO: remove thes untested constructors?
+ModelFrame(d, term::Terms, msng::BitArray) = ModelFrame(Data.stream!(d, Data.Table), term, msng)
+ModelFrame(df::Data.Table, term::Terms, msng::BitArray) = ModelFrame(df, term, msng, evalcontrasts(df)) 
+
 
 """
     setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
@@ -164,8 +200,8 @@ Modify the contrast coding system of a ModelFrame in place.
 """
 function setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
     for (col, contr) in new_contrasts
-        haskey(mf.df, col) || continue
-        mf.contrasts[col] = ContrastsMatrix(contr, _unique(mf.df[col]))
+        haskey(mf.dt, col) || continue
+        mf.contrasts[col] = ContrastsMatrix(contr, _unique(mf.dt[col]))
     end
     return mf
 end
@@ -178,7 +214,7 @@ Extract the response column, if present.  `DataVector` or
 """
 function StatsBase.model_response(mf::ModelFrame)
     if mf.terms.response
-        _response = mf.df[mf.terms.eterms[1]]
+        _response = mf.dt[mf.terms.eterms[1]]
         T = Missings.T(eltype(_response))
         convert(Array{T}, _response)
     else
@@ -196,12 +232,12 @@ is not categorical, a one-element vector is returned.
 termnames(term::Symbol, col) = [string(term)]
 function termnames(term::Symbol, mf::ModelFrame; non_redundant::Bool = false)
     if haskey(mf.contrasts, term)
-        termnames(term, mf.df[term],
+        termnames(term, mf.dt[term],
                   non_redundant ?
                   convert(ContrastsMatrix{FullDummyCoding}, mf.contrasts[term]) :
                   mf.contrasts[term])
     else
-        termnames(term, mf.df[term])
+        termnames(term, mf.dt[term])
     end
 end
 
