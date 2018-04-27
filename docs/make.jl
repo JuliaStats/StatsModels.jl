@@ -11,6 +11,7 @@ makedocs(
 )
 
 deploydocs(
+    julia = "nightly",
     repo = "github.com/JuliaStats/StatsModels.jl.git",
     target = "build",
     deps = nothing,
