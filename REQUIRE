@@ -1,4 +1,4 @@
 julia 0.6
-DataStreams
+DataStreams 0.3.0
 StatsBase 0.20.1
 Compat 0.63
