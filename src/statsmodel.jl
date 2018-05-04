@@ -80,7 +80,7 @@ const DataFrameModels = Union{DataFrameStatisticalModel, DataFrameRegressionMode
                                  StatsBase.deviance, StatsBase.nulldeviance,
                                  StatsBase.loglikelihood, StatsBase.nullloglikelihood,
                                  StatsBase.dof, StatsBase.dof_residual, StatsBase.nobs,
-                                 StatsBase.stderr, StatsBase.vcov]
+                                 StatsBase.stderror, StatsBase.vcov]
 @delegate DataFrameRegressionModel.model [StatsBase.residuals, StatsBase.model_response,
                                           StatsBase.predict, StatsBase.predict!]
 # Need to define these manually because of ambiguity using @delegate
