@@ -103,7 +103,7 @@ function StatsBase.predict(mm::DataFrameRegressionModel, df::AbstractDataFrame; 
     return(out)
 end
 
-
+StatsBase.coefnames(model::DataFrameModels) = coefnames(model.mf)
 
 # coeftable implementation
 function StatsBase.coeftable(model::DataFrameModels)
