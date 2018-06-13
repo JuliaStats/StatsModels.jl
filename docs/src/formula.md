@@ -72,6 +72,54 @@ julia> Formula(StatsModels.Terms(@formula(y ~ 1 + (a+b) * c)))
 Formula: y ~ 1 + a + b + c + a & c + b & c
 ```
 
+### Constructing a formula programmatically
+
+Because a `Formula` is created at compile time with the `@formula` macro,
+creating one programmatically means dipping into Julia's
+[metaprogramming](https://docs.julialang.org/en/latest/manual/metaprogramming/)
+facilities.
+
+Let's say you have a variable `lhs`:
+
+```jldoctest
+julia> lhs = :y
+:y
+```
+
+and you want to create a formula whose left-hand side is the _value_ of `lhs`,
+as in
+
+```jldoctest
+julia> @formula(y ~ 1 + x)
+Formula: y ~ 1 + x
+```
+
+Simply using the Julia interpolation syntax `@formula($lhs ~ 1 + x)` won't work,
+because `@formula` runs _at compile time_, before anything about the value of
+`lhs` is known.  Instead, you need to construct and evaluate the _correct call_
+to `@formula`.  The most concise way to do this is with `@eval`:
+
+```jldoctest
+julia> @eval @formula($lhs ~ 1 + x)
+Formula: y ~ 1 + x
+```
+
+The `@eval` macro does two very different things in a single, convenient step:
+
+1. Generate a _quoted expression_ using `$`-interpolation to insert the run-time
+   value of `lhs` into the call to the `@formula` macro.
+2. Evaluate this expression using `eval`.
+
+An equivalent but slightly more verbose way of doing the same thing is:
+
+```jldoctest
+julia> formula_ex = :(@formula($lhs ~ 1 + x))
+:(@formula y ~ 1 + x)
+
+julia> eval(formula_ex)
+Formula: y ~ 1 + x
+```
+
 ### Technical details
 
 You may be wondering why formulas in Julia require a macro, while in R they

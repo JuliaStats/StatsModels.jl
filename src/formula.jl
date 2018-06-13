@@ -17,6 +17,9 @@ is_call(::Any) = false
 is_call(::Any, ::Any) = false
 check_call(ex) = is_call(ex) || throw(ArgumentError("non-call expression encountered: $ex"))
 
+catch_dollar(ex::Expr) =
+    Meta.isexpr(ex, :$) && throw(ArgumentError("interpolation with \$ not supported in @formula.  Use @eval @formula(...) instead."))
+
 mutable struct Formula
     ex_orig::Expr
     ex::Expr
@@ -252,6 +255,7 @@ function parse!(i::Integer, rewrites)
 end
 function parse!(ex::Expr, rewrites::Vector)
     @debug "parsing $ex"
+    catch_dollar(ex)
     check_call(ex)
     # iterate over children, checking for special rules
     child_idx = 2
