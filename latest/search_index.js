@@ -41,6 +41,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "formula.html#Constructing-a-formula-programmatically-1",
+    "page": "Modeling tabular data",
+    "title": "Constructing a formula programmatically",
+    "category": "section",
+    "text": "Because a Formula is created at compile time with the @formula macro, creating one programmatically means dipping into Julia\'s metaprogramming facilities.Let\'s say you have a variable lhs:julia> lhs = :y\n:yand you want to create a formula whose left-hand side is the value of lhs, as injulia> @formula(y ~ 1 + x)\nFormula: y ~ 1 + xSimply using the Julia interpolation syntax @formula($lhs ~ 1 + x) won\'t work, because @formula runs at compile time, before anything about the value of lhs is known.  Instead, you need to construct and evaluate the correct call to @formula.  The most concise way to do this is with @eval:julia> @eval @formula($lhs ~ 1 + x)\nFormula: y ~ 1 + xThe @eval macro does two very different things in a single, convenient step:Generate a quoted expression using $-interpolation to insert the run-time value of lhs into the call to the @formula macro.\nEvaluate this expression using eval.An equivalent but slightly more verbose way of doing the same thing is:julia> formula_ex = :(@formula($lhs ~ 1 + x))\n:(@formula y ~ 1 + x)\n\njulia> eval(formula_ex)\nFormula: y ~ 1 + x"
+},
+
+{
     "location": "formula.html#StatsModels.Formula",
     "page": "Modeling tabular data",
     "title": "StatsModels.Formula",
