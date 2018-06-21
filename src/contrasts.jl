@@ -137,7 +137,7 @@ function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
     #    better to filter data frame first
     # 3. contrast levels missing from data: would have empty columns, generate a
     #    rank-deficient model matrix.
-    c_levels = coalesce(contrasts.levels, levels)
+    c_levels = something(contrasts.levels, levels)
     if eltype(c_levels) != eltype(levels)
         throw(ArgumentError("mismatching levels types: got $(eltype(levels)), expected " *
                             "$(eltype(c_levels)) based on contrasts levels."))
