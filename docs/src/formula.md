@@ -135,7 +135,7 @@ The formula syntactic transformations are applied _at parse time_ when using the
 `@formula` macro.  You can see this with using `@macroexpand`:
 
 ```jldoctest
-@macroexpand @formula y ~ 1 + (a+b)*c
+julia> @macroexpand @formula y ~ 1 + (a+b)*c
 :((StatsModels.Formula)($(Expr(:copyast, :($(QuoteNode(:(y ~ 1 + (a + b) * c)))))), $(Expr(:copyast, :($(QuoteNode(:(y ~ 1 + a + b + c + a & c + b & c)))))), :y, $(Expr(:copyast, :($(QuoteNode(:(1 + a + b + c + a & c + b & c))))))))
 ```
 Or more legibly
