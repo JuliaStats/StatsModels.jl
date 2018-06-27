@@ -124,4 +124,11 @@
     # Incorrect formula separator
     @test_throws ArgumentError @formula(y => x + 1)
 
+    # copying formulas
+    f = @formula(foo ~ 1 + bar)
+    @test f == copy(f)
+
+    f = @formula(foo ~ bar)
+    @test f == copy(f)
+
 end

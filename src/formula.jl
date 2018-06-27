@@ -206,7 +206,7 @@ end
 """
     And1 <: FormulaRewrite
 
-Remove numbers from interaction terms, so `1&x` becomes `&(x)` (which is later 
+Remove numbers from interaction terms, so `1&x` becomes `&(x)` (which is later
 cleaned up by `EmptyAnd`).
 """
 struct And1 <: FormulaRewrite end
@@ -362,7 +362,8 @@ end
 
 function Base.copy(f::Formula)
     lhs = isa(f.lhs, Symbol) ? f.lhs : copy(f.lhs)
-    return Formula(copy(f.ex_orig), copy(f.ex), lhs, copy(f.rhs))
+    rhs = isa(f.rhs, Symbol) ? f.rhs : copy(f.rhs)
+    return Formula(copy(f.ex_orig), copy(f.ex), lhs, rhs)
 end
 
 """
