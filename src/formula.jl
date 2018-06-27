@@ -360,10 +360,11 @@ function Formula(t::Terms)
     Formula(ex, ex, lhs,rhs)
 end
 
+copyside(s) = copy(s)
+copyside(s::Symbol) = s
+
 function Base.copy(f::Formula)
-    lhs = isa(f.lhs, Symbol) ? f.lhs : copy(f.lhs)
-    rhs = isa(f.rhs, Symbol) ? f.rhs : copy(f.rhs)
-    return Formula(copy(f.ex_orig), copy(f.ex), lhs, rhs)
+    return Formula(copy(f.ex_orig), copy(f.ex), copyside(f.lhs), copyside(f.rhs))
 end
 
 """
