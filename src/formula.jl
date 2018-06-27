@@ -206,7 +206,7 @@ end
 """
     And1 <: FormulaRewrite
 
-Remove numbers from interaction terms, so `1&x` becomes `&(x)` (which is later
+Remove numbers from interaction terms, so `1&x` becomes `&(x)` (which is later 
 cleaned up by `EmptyAnd`).
 """
 struct And1 <: FormulaRewrite end
