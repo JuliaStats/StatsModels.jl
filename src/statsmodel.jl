@@ -99,7 +99,7 @@ function StatsBase.predict(mm::DataFrameRegressionModel, df::AbstractDataFrame; 
     newX = ModelMatrix(mf).m
     yp = predict(mm, newX; kwargs...)
     out = missings(eltype(yp), size(df, 1))
-    out[mf.msng] = yp
+    out[mf.nonmissing] = yp
     return(out)
 end
 

@@ -17,8 +17,8 @@ ModelFrame(f::Formula, df::AbstractDataFrame; contrasts::Dict = Dict())
 ModelFrame(ex::Expr, d::AbstractDataFrame; contrasts::Dict = Dict())
 ModelFrame(terms::Terms, df::AbstractDataFrame; contrasts::Dict = Dict())
 # Inner constructors:
-ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray)
-ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray, contrasts::Dict{Symbol, ContrastsMatrix})
+ModelFrame(df::AbstractDataFrame, terms::Terms, nonmissing::BitArray)
+ModelFrame(df::AbstractDataFrame, terms::Terms, nonmissing::BitArray, contrasts::Dict{Symbol, ContrastsMatrix})
 ```
 
 # Arguments
@@ -35,21 +35,21 @@ ModelFrame(df::AbstractDataFrame, terms::Terms, missing::BitArray, contrasts::Di
   constructor, they must be [`ContrastsMatrix`](@ref)es.
 * `ex::Expr`: An expression which will be converted into a `Formula`.
 * `terms::Terms`: For inner constructor, the parsed `Terms` from the `Formula`.
-* `missing::BitArray`: For inner constructor, indicates whether each row of `df`
-  contains any missing data.
+* `nonmissing::BitArray`: For inner constructor, indicates whether each row of `df`
+  contains no missing data.
 
 # Examples
 
 ```julia
-julia> df = DataFrame(x = 1:4, y = 5:9)
-julia> mf = ModelFrame(y ~ 1 + x, df)
+julia> df = DataFrame(x = 1:4, y = 5:8)
+julia> mf = ModelFrame(@formula(y ~ 1 + x), df)
 ```
 
 """
 mutable struct ModelFrame
     df::AbstractDataFrame
     terms::Terms
-    msng::BitArray
+    nonmissing::BitArray
     ## mapping from df keys to contrasts matrices
     contrasts::Dict{Symbol, ContrastsMatrix}
 end
@@ -142,7 +142,7 @@ _droplevels!(x::AbstractCategoricalArray) = droplevels!(x)
 
 function ModelFrame(trms::Terms, d::AbstractDataFrame;
                     contrasts::Dict = Dict())
-    df, msng = missing_omit(DataFrame(map(x -> d[x], trms.eterms), Symbol.(trms.eterms)))
+    df, nonmissing = missing_omit(DataFrame(map(x -> d[x], trms.eterms), Symbol.(trms.eterms)))
     names!(df, Symbol.(string.(trms.eterms)))
 
     evaledContrasts = evalcontrasts(df, contrasts)
@@ -150,10 +150,10 @@ function ModelFrame(trms::Terms, d::AbstractDataFrame;
     ## Check for non-redundant terms, modifying terms in place
     check_non_redundancy!(trms, df)
 
-    ModelFrame(df, trms, msng, evaledContrasts)
+    ModelFrame(df, trms, nonmissing, evaledContrasts)
 end
 
-ModelFrame(df::AbstractDataFrame, term::Terms, msng::BitArray) = ModelFrame(df, term, msng, evalcontrasts(df))
+ModelFrame(df::AbstractDataFrame, term::Terms, nonmissing::BitArray) = ModelFrame(df, term, nonmissing, evalcontrasts(df))
 ModelFrame(f::Formula, d::AbstractDataFrame; kwargs...) = ModelFrame(Terms(f), d; kwargs...)
 ModelFrame(ex::Expr, d::AbstractDataFrame; kwargs...) = ModelFrame(Formula(ex), d; kwargs...)
 
