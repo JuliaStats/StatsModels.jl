@@ -35,8 +35,8 @@ ModelFrame(df::AbstractDataFrame, terms::Terms, nonmissing::BitArray, contrasts:
   constructor, they must be [`ContrastsMatrix`](@ref)es.
 * `ex::Expr`: An expression which will be converted into a `Formula`.
 * `terms::Terms`: For inner constructor, the parsed `Terms` from the `Formula`.
-* `nonmissing::BitArray`: For inner constructor, indicates whether each row of `df`
-  contains no missing data.
+* `nonmissing::BitArray`: For inner constructor, indicates the rows of `df` that
+  contain no missing data.
 
 # Examples
 
