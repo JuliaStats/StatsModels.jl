@@ -257,5 +257,5 @@ function StatsBase.coefnames(mf::ModelFrame)
         push!(term_names, expandtermnames(names))
     end
 
-    reduce(vcat, Vector{String}(), term_names)
+    reduce(vcat, term_names, init=Vector{String}())
 end
