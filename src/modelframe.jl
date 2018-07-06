@@ -111,7 +111,7 @@ function _unique(x::AbstractArray{T}) where T
     levs = T >: Missing ?
            convert(Array{Missings.T(T)}, filter!(!ismissing, unique(x))) :
            unique(x)
-    try; sort!(levs); end
+    try; sort!(levs); catch; end
     return levs
 end
 
@@ -257,5 +257,5 @@ function StatsBase.coefnames(mf::ModelFrame)
         push!(term_names, expandtermnames(names))
     end
 
-    reduce(vcat, Vector{String}(), term_names)
+    reduce(vcat, term_names, init=Vector{String}())
 end

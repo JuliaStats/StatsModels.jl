@@ -313,7 +313,7 @@ EffectsCoding
 function contrasts_matrix(C::EffectsCoding, baseind, n)
     not_base = [1:(baseind-1); (baseind+1):n]
     mat = Matrix(1.0I, n, n)[:, not_base]
-    mat[baseind, :] = -1
+    mat[baseind, :] .= -1
     return mat
 end
 
@@ -345,7 +345,7 @@ HelmertCoding
 function contrasts_matrix(C::HelmertCoding, baseind, n)
     mat = zeros(n, n-1)
     for i in 1:n-1
-        mat[1:i, i] = -1
+        mat[1:i, i] .= -1
         mat[i+1, i] = i
     end
 
