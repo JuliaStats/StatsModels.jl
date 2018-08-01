@@ -247,6 +247,15 @@ function filterfirst(f::Function, a::AbstractArray)
 end
 
 const SPECIALS = Set([:+, :&, :*, :~])
+"""
+    is_special(s)
+    is_special(::Val{s}) where s
+
+Return `true` if arguments to calls to `s` should be treated as `Term`s, and
+`false` as normal julia code.  `is_special(s::Symbol)` falls back to
+`is_special(::Val{s})`, so to treat calls to `myfun` as special formula syntax
+define `is_special(::Val{:myfun}) = true`.
+"""
 is_special(s::Symbol) = s ∈ SPECIALS || is_special(Val(s))
 is_special(s) = false
 
