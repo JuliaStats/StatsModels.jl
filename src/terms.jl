@@ -53,13 +53,24 @@ function nt_anon(ex::Expr)
 end
 
 replace_symbols!(x, replaced, tup::Symbol) = x
+
 function replace_symbols!(x::Symbol, replaced, tup::Symbol)
     push!(replaced, x)
     Expr(:., tup, Meta.quot(x))
 end
+
 function replace_symbols!(ex::Expr, replaced, tup::Symbol)
     if is_call(ex)
         ex.args[2:end] .= [replace_symbols!(x, replaced, tup) for x in ex.args[2:end]]
     end
     ex
 end
+
+const TermOrTuple = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
+
+Base.:~(lhs::TermOrTuple, rhs::TermOrTuple) = FormulaTerm(lhs, rhs)
+
+Base.:&(terms::AbstractTerm...) = InteractionTerm(terms)
+Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
+
+Base.:+(terms::AbstractTerm...) = terms
