@@ -246,6 +246,10 @@ function filterfirst(f::Function, a::AbstractArray)
     idx === nothing ? nothing : a[idx]
 end
 
+const SPECIALS = Set([:+, :&, :*, :~])
+is_special(s::Symbol) = s ∈ SPECIALS || is_special(Val(s))
+is_special(s) = false
+
 
 parse!(x) = parse!(x, [And1, EmptyAnd, Subtraction, Star, AssociativeRule, Distributive])
 parse!(x, rewrites) = x
@@ -257,19 +261,24 @@ function parse!(ex::Expr, rewrites::Vector)
     @debug "parsing $ex"
     catch_dollar(ex)
     check_call(ex)
-    # iterate over children, checking for special rules
-    child_idx = 2
-    while child_idx <= length(ex.args)
-        @debug "  ($(ex.args[1])) i=$child_idx: $(ex.args[child_idx])"
-        # depth first: parse each child first
-        parse!(ex.args[child_idx], rewrites)
-        # find first rewrite rule that applies
-        rule = filterfirst(r->applies(ex, child_idx, r), rewrites)
-        # re-write according to that rule and update the child to position rewrite next
-        child_idx = rewrite!(ex, child_idx, rule)
+    # if not a "special call", then create an anonymous function, and don't recurse
+    if is_special(ex.args[1])
+        # iterate over children, checking for special rules
+        child_idx = 2
+        while child_idx <= length(ex.args)
+            @debug "  ($(ex.args[1])) i=$child_idx: $(ex.args[child_idx])"
+            # depth first: parse each child first
+            parse!(ex.args[child_idx], rewrites)
+            # find first rewrite rule that applies
+            rule = filterfirst(r->applies(ex, child_idx, r), rewrites)
+            # re-write according to that rule and update the child to position rewrite next
+            child_idx = rewrite!(ex, child_idx, rule)
+        end
+        @debug "done: $ex"
+        ex
+    else
+        
     end
-    @debug "done: $ex"
-    ex
 end
 
 
