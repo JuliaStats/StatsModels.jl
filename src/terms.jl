@@ -20,7 +20,7 @@ struct InteractionTerm{Ts} <: AbstractTerm
     terms::Ts
 end
 
-struct InterceptTerm <: AbstractTerm end
+struct InterceptTerm{HasIntercept} <: AbstractTerm end
 
 # Typed terms
 struct ContinuousTerm <: AbstractTerm

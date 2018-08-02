@@ -65,17 +65,9 @@ The rules that are applied are
 * Single-argument `&` calls are stripped, so `&(x)` becomes the main effect `x`.
 """
 macro formula(ex)
-    try
-        is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
-        length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
-        ex_orig = Meta.quot(copy(ex))
-        sort_terms!(parse!(ex))
-        lhs = Meta.quot(ex.args[2])
-        rhs = Meta.quot(ex.args[3])
-        return Expr(:call, :Formula, ex_orig, Meta.quot(ex), lhs, rhs)
-    catch e
-        return :(throw($e))
-    end
+    is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
+    length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
+    ex |> parse! |> sort_terms! |> terms!
 end
 
 Base.:(==)(f1::Formula, f2::Formula) = all(getfield(f1, f)==getfield(f2, f) for f in fieldnames(typeof(f1)))
@@ -285,10 +277,20 @@ function parse!(ex::Expr, rewrites::Vector)
         end
         @debug "done: $ex"
         ex
+    end
+end
+
+# generate Term expressions for symbols and FormulaTerms for non-special calls
+terms!(s::Symbol) = :(Term($(Meta.quot(s))))
+terms!(i::Integer) = :(InterceptTerm{$(i==1)}())
+function terms!(ex::Expr)
+    if is_special(ex.args[1])
+        ex.args[2:end] .= terms!.(ex.args[2:end])
     else
         @debug "  generating anonymous function for $ex"
         nt_anon!(ex)
     end
+    return ex
 end
 
 
