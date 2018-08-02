@@ -25,8 +25,8 @@ export @formula,
        setcontrasts!
 
 include("contrasts.jl")
-include("formula.jl")
 include("terms.jl")
+include("formula.jl")
 include("modelframe.jl")
 include("modelmatrix.jl")
 include("statsmodel.jl")

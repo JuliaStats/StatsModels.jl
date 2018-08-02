@@ -43,13 +43,15 @@ end
 
 
 # create an anonymous function from an Expr, replacing the arguments with
-function nt_anon(ex::Expr)
+function nt_anon!(ex::Expr)
     check_call(ex)
     replaced = Vector{Symbol}()
     tup_sym = gensym()
     nt_ex = Expr(:(->), tup_sym, replace_symbols!(copy(ex), replaced, tup_sym))
     f_orig = ex.args[1]
-    Expr(:call, :(FunctionTerm), nt_ex, esc(f_orig), esc(Meta.quot(ex)))
+    ex_orig = deepcopy(ex)
+    ex.args = [:(StatsModels.FunctionTerm), nt_ex, esc(f_orig), Meta.quot(ex_orig)]
+    ex
 end
 
 replace_symbols!(x, replaced, tup::Symbol) = x

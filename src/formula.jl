@@ -286,7 +286,8 @@ function parse!(ex::Expr, rewrites::Vector)
         @debug "done: $ex"
         ex
     else
-        
+        @debug "  generating anonymous function for $ex"
+        nt_anon!(ex)
     end
 end
 
