@@ -103,8 +103,21 @@ terms(t::NTuple{N, AbstractTerm}) where N = mapreduce(terms, union, t)
 needs_schema(t::Term) = true
 needs_schema(t) = false
 
-# handle hints
-schema(f::FormulaTerm, dt::Data.Table) = [t => schema(t, dt) for t in terms(f) if needs_schema(t)]
+# handle hints:
+function schema(f::FormulaTerm, dt::Data.Table, hints::Dict{Symbol,Any})
+    ts = terms(f)
+    sch = Dict{Any,Any}()
+    for t in filter(needs_schema, ts)
+        if t.sym ∈ keys(hints)
+            sch[t] = schema(t, dt, hints[t.sym])
+        else
+            sch[t] = schema(t, dt)
+        end
+    end
+    return sch
+end
+
+schema(f::FormulaTerm, dt::Data.Table) = schema(f, dt, Dict{Symbol,Any}())
 
 schema(t::Term, dt::Data.Table) = schema(t, dt[t.sym])
 
