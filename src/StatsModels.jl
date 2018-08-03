@@ -1,9 +1,11 @@
-__precompile__(true)
+__precompile__(false)
 
 module StatsModels
 
 using Compat
 using DataFrames
+using DataStreams
+using OnlineStats
 using StatsBase
 using Compat.SparseArrays
 using Compat.LinearAlgebra
