@@ -143,3 +143,24 @@ function schema(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
     contrmat = ContrastsMatrix(contrasts, collect(keys(counts.stats[1])))
     CategoricalTerm(t.sym, counts, contrmat)
 end
+
+# TODO: add methods for schema(::Continuous/CategoricalTerm) (to re-set/validate schema)
+
+
+
+# now to _set_ the schema in formula...most straightforward way is to just look
+# up each term in the schema and replace it (calculating width of interaction
+# terms and things like that) but we want to handle the rank correcting stuff
+# too.  maybe that's best thought of as a kind of re-write rule?  or as a
+# special kind of schema/wrapper type?  then if it's just a dict, the "vanilla"
+# version is available...
+#
+# so what does that wrapper look like?  holds onto the terms that have been seen
+# so far, checks against that...
+
+apply_schema(t, schema) = t
+apply_schema(terms::NTuple{N,AbstractTerm}, schema) where N = apply_schema.(terms, schema)
+apply_schema(t::Term, schema) = schema[t]
+apply_schema(ft::FormulaTerm, schema) = FormulaTerm(apply_schema(ft.lhs, schema),
+                                                    apply_schema(ft.rhs, schema))
+apply_schema(it::InteractionTerm, schema) = InteractionTerm(apply_schema.(it.terms, schema))
