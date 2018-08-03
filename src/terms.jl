@@ -1,39 +1,48 @@
 abstract type AbstractTerm end
 
+Base.show(io::IO, terms::NTuple{N, AbstractTerm}) where N = print(io, join(terms, " + "))
+
 # "lazy" or deferred term for data with unknown type etc.
 struct Term <: AbstractTerm
     sym::Symbol
 end
+Base.show(io::IO, t::Term) = print(io, "$(t.sym)")
 
 struct FormulaTerm{L,R} <: AbstractTerm
     lhs::L
     rhs::R
 end
+Base.show(io::IO, t::FormulaTerm) = print(io, "$(t.lhs) ~ $(t.rhs)")
 
 struct FunctionTerm{Forig,Fanon} <: AbstractTerm
     forig::Forig
     fanon::Fanon
     exorig::Expr
 end
+Base.show(io::IO, t::FunctionTerm) = print(io, ":($(t.exorig))")
 
 struct InteractionTerm{Ts} <: AbstractTerm
     terms::Ts
 end
+Base.show(io::IO, it::InteractionTerm) = print(io, join(it.terms, "&"))
 
 # TODO: ConstantTerm?
 struct InterceptTerm{HasIntercept} <: AbstractTerm end
+Base.show(io::IO, t::InterceptTerm{T}) where T = print(io, T ? "1" : "0")
 
 # Typed terms
 struct ContinuousTerm <: AbstractTerm
     sym::Symbol
     series::Series
 end
+Base.show(io::IO, t::ContinuousTerm) = print(io, "$(t.sym) (continuous)")
 
 struct CategoricalTerm{C,T,N} <: AbstractTerm
     sym::Symbol
     series::Series
     contrasts::ContrastsMatrix{C,T}
 end
+Base.show(io::IO, t::CategoricalTerm) = print(io, "$(t.sym) (categorical)")
 
 # constructor that computes the width based on the contrasts matrix
 CategoricalTerm(sym::Symbol, counts::Series, contrasts::ContrastsMatrix{C,T}) where {C,T} =
