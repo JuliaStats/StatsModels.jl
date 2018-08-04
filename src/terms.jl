@@ -14,11 +14,14 @@ struct FormulaTerm{L,R} <: AbstractTerm
 end
 Base.show(io::IO, t::FormulaTerm) = print(io, "$(t.lhs) ~ $(t.rhs)")
 
-struct FunctionTerm{Forig,Fanon} <: AbstractTerm
+struct FunctionTerm{Forig,Fanon,Names} <: AbstractTerm
     forig::Forig
     fanon::Fanon
+    names::NTuple{N,Symbol} where N
     exorig::Expr
 end
+FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol}, exorig::Expr) where {Fo,Fa,N}  =
+    FunctionTerm{Fo, Fa, names}(forig, fanon, names, exorig)
 Base.show(io::IO, t::FunctionTerm) = print(io, ":($(t.exorig))")
 
 struct InteractionTerm{Ts} <: AbstractTerm
@@ -67,23 +70,16 @@ end
 # symbols we've seen and make them the arguments of the anon function.
 function nt_anon!(ex::Expr)
     check_call(ex)
-    replaced = Vector{Symbol}()
-    tup_sym = gensym()
-    nt_ex = Expr(:(->), tup_sym, replace_symbols!(copy(ex), replaced, tup_sym))
-    f_orig = ex.args[1]
-    ex_orig = deepcopy(ex)
-    ex.args = [:(StatsModels.FunctionTerm), nt_ex, esc(f_orig), Meta.quot(ex_orig)]
-    ex
-end
-
-function nt_anon2!(ex::Expr)
-    check_call(ex)
     symbols = extract_symbols(ex)
     symbols_ex = Expr(:tuple, symbols...)
-    nt_ex = Expr(:(->), symbols_ex, ex)
+    f_anon_ex = Expr(:(->), symbols_ex, copy(ex))
     f_orig = ex.args[1]
     ex_orig = deepcopy(ex)
-    ex.args = [:(StatsModels.FunctionTerm), nt_ex, symbols_ex, esc(f_orig), Meta.quot(ex_orig)]
+    ex.args = [:(StatsModels.FunctionTerm),
+               esc(f_orig),
+               f_anon_ex,
+               tuple(symbols...),
+               Meta.quot(ex_orig)]
     ex
 end
 
@@ -92,19 +88,8 @@ extract_symbols(x::Symbol) = [x]
 extract_symbols(ex::Expr) =
     is_call(ex) ? mapreduce(extract_symbols, union, ex.args[2:end]) : Symbol[]
 
-replace_symbols!(x, replaced, tup::Symbol) = x
-
-function replace_symbols!(x::Symbol, replaced, tup::Symbol)
-    push!(replaced, x)
-    Expr(:., tup, Meta.quot(x))
-end
-
-function replace_symbols!(ex::Expr, replaced, tup::Symbol)
-    if is_call(ex)
-        ex.args[2:end] .= [replace_symbols!(x, replaced, tup) for x in ex.args[2:end]]
-    end
-    ex
-end
+################################################################################
+# operators on Terms that create new terms:
 
 const TermOrTuple = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 
