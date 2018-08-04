@@ -28,6 +28,7 @@ export @formula,
 
 include("contrasts.jl")
 include("terms.jl")
+include("schema.jl")
 include("formula.jl")
 include("modelframe.jl")
 include("modelmatrix.jl")

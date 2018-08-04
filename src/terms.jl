@@ -42,7 +42,7 @@ struct CategoricalTerm{C,T,N} <: AbstractTerm
     series::Series
     contrasts::ContrastsMatrix{C,T}
 end
-Base.show(io::IO, t::CategoricalTerm) = print(io, "$(t.sym) (categorical)")
+Base.show(io::IO, t::CategoricalTerm{C}) where C = print(io, "$(t.sym) (categorical: $C)")
 
 # constructor that computes the width based on the contrasts matrix
 CategoricalTerm(sym::Symbol, counts::Series, contrasts::ContrastsMatrix{C,T}) where {C,T} =
@@ -92,75 +92,3 @@ Base.:&(terms::AbstractTerm...) = InteractionTerm(terms)
 Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
 
 Base.:+(terms::AbstractTerm...) = terms
-
-
-
-################################################################################
-# Schemas for terms
-
-# step 1: extract all Term symbols
-# step 2: create empty Schema (Dict)
-# step 3: for each term, create schema entrybased on column from data store
-
-
-
-terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
-terms(t::InteractionTerm) = terms(t.terms)
-terms(t::AbstractTerm) = Set{Any}([t])
-terms(t::NTuple{N, AbstractTerm}) where N = mapreduce(terms, union, t)
-
-needs_schema(t::Term) = true
-needs_schema(t) = false
-
-# handle hints:
-function schema(f::FormulaTerm, dt::Data.Table, hints::Dict{Symbol,Any})
-    ts = terms(f)
-    sch = Dict{Any,Any}()
-    for t in filter(needs_schema, ts)
-        if t.sym ∈ keys(hints)
-            sch[t] = schema(t, dt, hints[t.sym])
-        else
-            sch[t] = schema(t, dt)
-        end
-    end
-    return sch
-end
-
-schema(f::FormulaTerm, dt::Data.Table) = schema(f, dt, Dict{Symbol,Any}())
-
-schema(t::Term, dt::Data.Table) = schema(t, dt[t.sym])
-
-schema(t::Term, xs::AbstractVector) = schema(t::Term, xs, ContinuousTerm)
-schema(t::Term, xs::AbstractVector, ::Type{ContinuousTerm}) =
-    ContinuousTerm(t.sym, fit!(Series(Variance()), xs))
-
-# default contrasts: dummy coding
-schema(t::Term, xs::CategoricalArray) = schema(t, xs, DummyCoding())
-schema(t::Term, xs::AbstractArray, ::Type{CategoricalTerm}) = schema(t, xs, DummyCoding())
-
-function schema(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
-    counts = fit!(Series(CountMap(eltype(xs))), xs)
-    contrmat = ContrastsMatrix(contrasts, collect(keys(counts.stats[1])))
-    CategoricalTerm(t.sym, counts, contrmat)
-end
-
-# TODO: add methods for schema(::Continuous/CategoricalTerm) (to re-set/validate schema)
-
-
-
-# now to _set_ the schema in formula...most straightforward way is to just look
-# up each term in the schema and replace it (calculating width of interaction
-# terms and things like that) but we want to handle the rank correcting stuff
-# too.  maybe that's best thought of as a kind of re-write rule?  or as a
-# special kind of schema/wrapper type?  then if it's just a dict, the "vanilla"
-# version is available...
-#
-# so what does that wrapper look like?  holds onto the terms that have been seen
-# so far, checks against that...
-
-apply_schema(t, schema) = t
-apply_schema(terms::NTuple{N,AbstractTerm}, schema) where N = apply_schema.(terms, schema)
-apply_schema(t::Term, schema) = schema[t]
-apply_schema(ft::FormulaTerm, schema) = FormulaTerm(apply_schema(ft.lhs, schema),
-                                                    apply_schema(ft.rhs, schema))
-apply_schema(it::InteractionTerm, schema) = InteractionTerm(apply_schema.(it.terms, schema))
