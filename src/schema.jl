@@ -16,7 +16,7 @@ needs_schema(t::Term) = true
 needs_schema(t) = false
 
 # handle hints:
-function schema(f::FormulaTerm, dt::Data.Table, hints::Dict{Symbol,Any})
+function schema(f::FormulaTerm, dt::Data.Table, hints::Dict{Symbol})
     ts = terms(f)
     sch = Dict{Any,Any}()
     for t in filter(needs_schema, ts)
@@ -32,6 +32,7 @@ end
 schema(f::FormulaTerm, dt::Data.Table) = schema(f, dt, Dict{Symbol,Any}())
 
 schema(t::Term, dt::Data.Table) = schema(t, dt[t.sym])
+schema(t::Term, dt::Data.Table, hint) = schema(t, dt[t.sym], hint)
 
 schema(t::Term, xs::AbstractVector) = schema(t::Term, xs, ContinuousTerm)
 schema(t::Term, xs::AbstractVector, ::Type{ContinuousTerm}) =
