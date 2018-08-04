@@ -99,3 +99,11 @@ Base.:&(terms::AbstractTerm...) = InteractionTerm(terms)
 Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
 
 Base.:+(terms::AbstractTerm...) = terms
+
+
+################################################################################
+# evaluating terms with data to generate model matrix entries
+
+# TODO: @generated to unroll the getfield stuff
+(ft::FunctionTerm{Fo,Fa,Names})(d::NamedTuple) where {Fo,Fa,Names} =
+    ft.fanon.(getfield.(d, Names)...)
