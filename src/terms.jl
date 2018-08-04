@@ -107,3 +107,7 @@ Base.:+(terms::AbstractTerm...) = terms
 # TODO: @generated to unroll the getfield stuff
 (ft::FunctionTerm{Fo,Fa,Names})(d::NamedTuple) where {Fo,Fa,Names} =
     ft.fanon.(getfield.(d, Names)...)
+
+(t::ContinuousTerm)(d::NamedTuple) = convert.(Float64, d[t.sym])
+
+(t::CategoricalTerm)(d::NamedTuple) = getindex(t.contrasts, d[t.sym], :)
