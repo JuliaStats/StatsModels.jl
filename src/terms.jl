@@ -59,6 +59,11 @@ end
 
 
 # create an anonymous function from an Expr, replacing the arguments with
+# references to fields of namedtuple argument
+#
+# ACTUALLY: might make more sense to create a _multi-argument_ anonymous
+# function, and let the FunctionTerm do teh conversion.  Then it's easier to
+# handle both columns and a single row.
 function nt_anon!(ex::Expr)
     check_call(ex)
     replaced = Vector{Symbol}()
