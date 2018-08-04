@@ -126,6 +126,8 @@ function apply_schema(t::CategoricalTerm, schema::FullRank, context)
     # repair:
     new_contrasts = ContrastsMatrix(FullDummyCoding(), t.contrasts.levels)
     t = CategoricalTerm(t.sym, t.series, new_contrasts)
+    @debug "  aliased term absent, repairing: $t"
+    t
 end
 
 drop_term(from, to) = symequal(from, to) ? InterceptTerm{true}() : from
