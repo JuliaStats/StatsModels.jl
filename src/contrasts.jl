@@ -87,6 +87,7 @@ mutable struct ContrastsMatrix{C <: AbstractContrasts, T}
     termnames::Vector{T}
     levels::Vector{T}
     contrasts::C
+    invindex::Dict{T,Int}
 end
 
 # only check equality of matrix, termnames, and levels, and that the type is the
@@ -172,7 +173,9 @@ function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
 
     mat = contrasts_matrix(contrasts, baseind, n)
 
-    ContrastsMatrix(mat, tnames, c_levels, contrasts)
+    invindex = Dict(v=>i for (i,v) in enumerate(c_levels))
+
+    ContrastsMatrix(mat, tnames, c_levels, contrasts, invindex)
 end
 
 ContrastsMatrix(c::Type{<:AbstractContrasts}, levels::AbstractVector) =
@@ -198,6 +201,9 @@ function termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Intege
     not_base = [1:(baseind-1); (baseind+1):length(levels)]
     levels[not_base]
 end
+
+Base.getindex(contrasts::ContrastsMatrix{C,T}, rowinds, colinds) where {C,T} =
+    getindex(contrasts.matrix, getindex.(Ref(contrasts.invindex), rowinds), colinds)
 
 # Making a contrast type T only requires that there be a method for
 # contrasts_matrix(T,  baseind, n) and optionally termnames(T, levels, baseind)
