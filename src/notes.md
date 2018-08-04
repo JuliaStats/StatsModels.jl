@@ -1,3 +1,46 @@
+# Current status
+
+`@formula` applies syntax re-writes and then re-writes symbols as `Term(s)` and
+any non-`is_special` calls to `FunctionTerm`, with the first argument being the
+highest level call and later arguments giving 
+
+- anonymous function which takes one arg for every symbol in the original
+  expression
+- the names of the symbols for the arguments
+- the original (quoted) expression that the term was generated from.
+
+At this point, regular dispatch takes over: `+` captures a tuple of `Term`
+arguments, `&(::Vararg{AbstractTerm})` an `InteractionTerm`, etc.  **This is the
+main point of extension**: any call to `myfun` in the formula expression will
+get `AbstractTerm` arguments if `is_special(Val(myfun)) == true`.
+
+At the highest level, `~` creates a `FormulaTerm`, which just captures a (tuple
+of) terms for the left and right-hand-sides.  From this, you create a schema
+from a data source with `schema(::FormulaTerm, ::Data.Table)`, which is just a
+`Dict` mapping variables `Term(var)`s to continuous/categorical terms.  "Hints"
+can be provided (a la [JuliaDB.ML](http://juliadb.org/latest/manual/ml.html)),
+in the form of
+
+- A `AbstractContrasts` subtype
+- `ContinuousTerm` or `CategoricalTerm` (with `DummyCoding` being the default
+  contrasts).
+  
+Then, the schema is _applied_ to the formula with `apply_schema(f, schema)`,
+which replaces `Term`s with `Continuous`/`CategoricalTerm`s.  Optinally, if the
+schema is wrapped in a `FullRank` struct, `apply_schema` will check to see
+whether categorical terms need to be promoted to `FullDummyCoding` in order to
+generate a full-rank model matrix.
+
+Finally, individual terms can be _called_ with a named tuple of data (either a
+single row, or a "table" which is a named tuple of vectors) to convert that data
+into model-friendly format.
+
+# Left to do
+
+## Interface with actual models
+
+## Interaction terms
+
 # Goals
 
 ## Backend-agnostic
@@ -176,3 +219,4 @@ Symbols (or EvalTerms?) → typed terms
 
 
 ## 
+
