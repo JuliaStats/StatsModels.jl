@@ -63,7 +63,8 @@ end
 #
 # ACTUALLY: might make more sense to create a _multi-argument_ anonymous
 # function, and let the FunctionTerm do teh conversion.  Then it's easier to
-# handle both columns and a single row.
+# handle both columns and a single row.  To do that, need to keep track of the
+# symbols we've seen and make them the arguments of the anon function.
 function nt_anon!(ex::Expr)
     check_call(ex)
     replaced = Vector{Symbol}()
@@ -74,6 +75,22 @@ function nt_anon!(ex::Expr)
     ex.args = [:(StatsModels.FunctionTerm), nt_ex, esc(f_orig), Meta.quot(ex_orig)]
     ex
 end
+
+function nt_anon2!(ex::Expr)
+    check_call(ex)
+    symbols = extract_symbols(ex)
+    symbols_ex = Expr(:tuple, symbols...)
+    nt_ex = Expr(:(->), symbols_ex, ex)
+    f_orig = ex.args[1]
+    ex_orig = deepcopy(ex)
+    ex.args = [:(StatsModels.FunctionTerm), nt_ex, symbols_ex, esc(f_orig), Meta.quot(ex_orig)]
+    ex
+end
+
+extract_symbols(x) = Symbol[]
+extract_symbols(x::Symbol) = [x]
+extract_symbols(ex::Expr) =
+    is_call(ex) ? mapreduce(extract_symbols, union, ex.args[2:end]) : Symbol[]
 
 replace_symbols!(x, replaced, tup::Symbol) = x
 
