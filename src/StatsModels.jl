@@ -27,13 +27,18 @@ export @formula,
        setcontrasts!,
 
     AbstractTerm,
+    TermOrTerms,
     Term,
     ContinuousTerm,
     CategoricalTerm,
     InteractionTerm,
+    FormulaTerm,
+    InterceptTerm,
 
+    
     schema,
     apply_schema,
+    width,
     model_cols
 
 include("contrasts.jl")

@@ -1,12 +1,18 @@
 abstract type AbstractTerm end
+const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 
 Base.show(io::IO, terms::NTuple{N, AbstractTerm}) where N = print(io, join(terms, " + "))
+width(::T) where T<:AbstractTerm =
+    throw(ArgumentError("terms of type $T have undefined width"))
 
 # "lazy" or deferred term for data with unknown type etc.
 struct Term <: AbstractTerm
     sym::Symbol
 end
 Base.show(io::IO, t::Term) = print(io, "$(t.sym)")
+width(::Term) =
+    throw(ArgumentError("Un-typed Terms have undefined width.  " *
+                        "Did you forget to apply_schema?"))
 
 struct FormulaTerm{L,R} <: AbstractTerm
     lhs::L
@@ -23,6 +29,7 @@ end
 FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol}, exorig::Expr) where {Fo,Fa,N}  =
     FunctionTerm{Fo, Fa, names}(forig, fanon, names, exorig)
 Base.show(io::IO, t::FunctionTerm) = print(io, ":($(t.exorig))")
+width(::FunctionTerm) = 1
 
 struct InteractionTerm{Ts} <: AbstractTerm
     terms::Ts
@@ -32,6 +39,7 @@ Base.show(io::IO, it::InteractionTerm) = print(io, join(it.terms, "&"))
 # TODO: ConstantTerm?
 struct InterceptTerm{HasIntercept} <: AbstractTerm end
 Base.show(io::IO, t::InterceptTerm{T}) where T = print(io, T ? "1" : "0")
+width(::InterceptTerm{H}) where H = H ? 1 : 0
 
 # Typed terms
 struct ContinuousTerm <: AbstractTerm
@@ -39,6 +47,7 @@ struct ContinuousTerm <: AbstractTerm
     series::Series
 end
 Base.show(io::IO, t::ContinuousTerm) = print(io, "$(t.sym) (continuous)")
+width(::ContinuousTerm) = 1
 
 struct CategoricalTerm{C,T,N} <: AbstractTerm
     sym::Symbol
@@ -46,6 +55,7 @@ struct CategoricalTerm{C,T,N} <: AbstractTerm
     contrasts::ContrastsMatrix{C,T}
 end
 Base.show(io::IO, t::CategoricalTerm{C}) where C = print(io, "$(t.sym) (categorical: $C)")
+width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 
 # constructor that computes the width based on the contrasts matrix
 CategoricalTerm(sym::Symbol, counts::Series, contrasts::ContrastsMatrix{C,T}) where {C,T} =
@@ -91,9 +101,8 @@ extract_symbols(ex::Expr) =
 ################################################################################
 # operators on Terms that create new terms:
 
-const TermOrTuple = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 
-Base.:~(lhs::TermOrTuple, rhs::TermOrTuple) = FormulaTerm(lhs, rhs)
+Base.:~(lhs::TermOrTerms, rhs::TermOrTerms) = FormulaTerm(lhs, rhs)
 
 Base.:&(terms::AbstractTerm...) = InteractionTerm(terms)
 Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
