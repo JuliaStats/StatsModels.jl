@@ -24,7 +24,17 @@ export @formula,
 
        coefnames,
        dropterm,
-       setcontrasts!
+       setcontrasts!,
+
+    AbstractTerm,
+    Term,
+    ContinuousTerm,
+    CategoricalTerm,
+    InteractionTerm,
+
+    schema,
+    apply_schema,
+    model_cols
 
 include("contrasts.jl")
 include("terms.jl")

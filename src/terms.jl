@@ -100,14 +100,38 @@ Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms
 
 Base.:+(terms::AbstractTerm...) = terms
 
-
 ################################################################################
 # evaluating terms with data to generate model matrix entries
 
 # TODO: @generated to unroll the getfield stuff
-(ft::FunctionTerm{Fo,Fa,Names})(d::NamedTuple) where {Fo,Fa,Names} =
+model_cols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
     ft.fanon.(getfield.(d, Names)...)
 
-(t::ContinuousTerm)(d::NamedTuple) = convert.(Float64, d[t.sym])
+model_cols(t::ContinuousTerm, d::NamedTuple) = convert.(Float64, d[t.sym])
 
-(t::CategoricalTerm)(d::NamedTuple) = getindex(t.contrasts, d[t.sym], :)
+model_cols(t::CategoricalTerm, d::NamedTuple) = getindex(t.contrasts, d[t.sym], :)
+
+
+# two options here: either special-case Data.Table (named tuple of vectors)
+# vs. vanilla NamedTuple, or reshape and use normal broadcasting
+model_cols(t::InteractionTerm, d::NamedTuple) =
+    kron((model_cols(term, d) for term in t.terms)...)
+
+function model_cols(t::InteractionTerm, d::Data.Table)
+    # need to know the number of rows to pre-allocate
+    rows = length(first(d))
+
+    term_mats = [model_cols(term, d) for term in t.terms]
+    output = Matrix{Float64}(undef, rows, prod(size.(term_mats, 2)))
+
+    for i in 1:rows
+        output[i, :] = kron((mat[i, :] for mat in term_mats)...)
+    end
+
+    output
+end
+
+model_cols(t::InterceptTerm{true}, d::NamedTuple) = ones(size(first(d)))
+
+model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where N =
+    hcat([model_cols(t, d) for t in ts]...)
