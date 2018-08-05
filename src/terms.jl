@@ -70,28 +70,55 @@ struct PredictorsTerm{Ts} <: AbstractTerm
     terms::Ts
 end
 
+"""
+    capture_call_ex!(ex::Expr)
 
-# create an anonymous function from an Expr, replacing the arguments with
-# references to fields of namedtuple argument
-#
-# ACTUALLY: might make more sense to create a _multi-argument_ anonymous
-# function, and let the FunctionTerm do teh conversion.  Then it's easier to
-# handle both columns and a single row.  To do that, need to keep track of the
-# symbols we've seen and make them the arguments of the anon function.
-function nt_anon!(ex::Expr)
+Capture a call to a function that is not part of the formula DSL.  This replaces
+`ex` with a call to [`capture_call`](@ref)
+"""
+function capture_call_ex!(ex::Expr)
     check_call(ex)
     symbols = extract_symbols(ex)
     symbols_ex = Expr(:tuple, symbols...)
     f_anon_ex = Expr(:(->), symbols_ex, copy(ex))
     f_orig = ex.args[1]
     ex_orig = deepcopy(ex)
-    ex.args = [:(StatsModels.FunctionTerm),
+    ex.args = [:(StatsModels.capture_call),
                esc(f_orig),
                f_anon_ex,
                tuple(symbols...),
                Meta.quot(ex_orig)]
     ex
 end
+
+"""
+    capture_call(call::Function, f_anon::Function, argnames::NTuple{N,Symbol}, ex_orig::Expr)
+
+When the [`@formula`](@ref) macro encounters a call to a function that's not 
+part of the DSL, it replaces the expression with a call to `capture_call` with 
+arguments: 
+
+* `call`: the original function that was called.
+* `f_anon`: an anonymous function that calls the original expression, replacing 
+  each symbol with one argument to the anonymous function
+* `argnames`: the symbols from the original expression corresponding to each 
+  argument of `f_anon`
+* `ex_orig`: the original (quoted) expression before [`capture_call_ex!`](@ref).
+
+The default behavior is to pass these arguments to the `FunctionTerm` constructor.
+This default behavior can be overridden by dispatching on `call`.  That is, to 
+change how calls to `myfun` in a formula are handled, add a method for 
+    
+    capture_call(::typeof(myfun), args...)
+
+Alternatively, you can register `myfun` as a "special" function via
+
+    StatsModels.is_special(Val(:myfun))
+
+In this case, calls to `myfun` in a formula will be passed through, with symbol
+arguments wrapped in `Term`s.
+"""
+capture_call(args...) = FunctionTerm(args...)
 
 extract_symbols(x) = Symbol[]
 extract_symbols(x::Symbol) = [x]

@@ -288,7 +288,7 @@ function terms!(ex::Expr)
         ex.args[2:end] .= terms!.(ex.args[2:end])
     else
         @debug "  generating anonymous function for $ex"
-        nt_anon!(ex)
+        capture_call_ex!(ex)
     end
     return ex
 end
