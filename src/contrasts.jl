@@ -101,6 +101,8 @@ Base.:(==)(a::ContrastsMatrix{C,T}, b::ContrastsMatrix{C,T}) where {C<:AbstractC
 Base.hash(a::ContrastsMatrix{C}, h::UInt) where {C} =
     hash(C, hash(a.matrix, hash(a.termnames, hash(a.levels, h))))
 
+invindex(levels::AbstractVector{T}) where T = Dict(x=>i for (i,x) in enumerate(levels))
+
 """
 An instantiation of a contrast coding system for particular levels
 
@@ -173,9 +175,7 @@ function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
 
     mat = contrasts_matrix(contrasts, baseind, n)
 
-    invindex = Dict(v=>i for (i,v) in enumerate(c_levels))
-
-    ContrastsMatrix(mat, tnames, c_levels, contrasts, invindex)
+    ContrastsMatrix(mat, tnames, c_levels, contrasts, invindex(c_levels))
 end
 
 ContrastsMatrix(c::Type{<:AbstractContrasts}, levels::AbstractVector) =
@@ -247,7 +247,8 @@ mutable struct FullDummyCoding <: AbstractContrasts
 end
 
 ContrastsMatrix(C::FullDummyCoding, levels::AbstractVector) =
-    ContrastsMatrix(Matrix(1.0I, length(levels), length(levels)), levels, levels, C)
+    ContrastsMatrix(Matrix(1.0I, length(levels), length(levels)), levels, levels, C,
+                    invindex(levels))
 
 "Promote contrasts matrix to full rank version"
 Base.convert(::Type{ContrastsMatrix{FullDummyCoding}}, C::ContrastsMatrix) =

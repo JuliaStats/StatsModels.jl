@@ -168,6 +168,7 @@ function model_cols(t::InteractionTerm, d::Data.Table)
 end
 
 model_cols(t::InterceptTerm{true}, d::NamedTuple) = ones(size(first(d)))
+model_cols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1), 0)
 
 model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where N =
     hcat([model_cols(t, d) for t in ts]...)
