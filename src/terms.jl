@@ -35,6 +35,7 @@ struct InteractionTerm{Ts} <: AbstractTerm
     terms::Ts
 end
 Base.show(io::IO, it::InteractionTerm) = print(io, join(it.terms, "&"))
+width(ts::InteractionTerm) = prod(width(t) for t in ts.terms)
 
 # TODO: ConstantTerm?
 struct InterceptTerm{HasIntercept} <: AbstractTerm end
