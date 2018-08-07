@@ -45,10 +45,10 @@ include("contrasts.jl")
 include("terms.jl")
 include("schema.jl")
 include("formula.jl")
-include("modelframe.jl")
-include("modelmatrix.jl")
-include("statsmodel.jl")
-include("deprecated.jl")
+include("modelframe2.jl")
+# include("modelmatrix.jl")
+# include("statsmodel.jl")
+# include("deprecated.jl")
 
 
 end # module StatsModels
