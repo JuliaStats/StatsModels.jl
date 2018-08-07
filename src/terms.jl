@@ -161,7 +161,7 @@ function model_cols(t::InteractionTerm, d::Data.Table)
     output = Matrix{Float64}(undef, rows, prod(size.(term_mats, 2)))
 
     for i in 1:rows
-        output[i, :] = kron((mat[i, :] for mat in term_mats)...)
+        output[i, :] = kron((view(mat, i, :) for mat in term_mats)...)
     end
 
     output
