@@ -55,7 +55,8 @@ struct CategoricalTerm{C,T,N} <: AbstractTerm
     series::Series
     contrasts::ContrastsMatrix{C,T}
 end
-Base.show(io::IO, t::CategoricalTerm{C}) where C = print(io, "$(t.sym) (categorical: $C)")
+Base.show(io::IO, t::CategoricalTerm{C,T,N}) where {C,T,N} =
+    print(io, "$(t.sym) (categorical($N): $C)")
 width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 
 # constructor that computes the width based on the contrasts matrix
@@ -174,6 +175,7 @@ model_cols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1)
 model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where N =
     hcat([model_cols(t, d) for t in ts]...)
 
+vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x
 vectorize(x) = [x]
 

@@ -39,7 +39,9 @@ export @formula,
     schema,
     apply_schema,
     width,
-    model_cols
+    model_cols,
+    model_matrix,
+    model_response
 
 include("contrasts.jl")
 include("terms.jl")

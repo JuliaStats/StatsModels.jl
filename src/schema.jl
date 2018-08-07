@@ -19,10 +19,14 @@ needs_schema(::FunctionTerm) = false
 needs_schema(t) = false
 
 schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:Data.Table} =
-    schema(Term.(fieldnames(D)), dt, hints)
+    schema(Term.(collect(fieldnames(D))), dt, hints)
+
+schema(data, hints=Dict{Symbol,Any}()) = schema(Data.stream!(data, Data.Table), hints)
+schema(ts::Vector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
+    schema(Data.stream!(data, Data.Table), hints)
 
 # handle hints:
-function schema(ts::Vector{AbstractTerm}, dt::Data.Table, hints::Dict{Symbol}) where N
+function schema(ts::Vector{<:AbstractTerm}, dt::Data.Table, hints::Dict{Symbol})
     sch = Dict{Any,Any}()
     for t in ts
         if t.sym ∈ keys(hints)
@@ -34,10 +38,10 @@ function schema(ts::Vector{AbstractTerm}, dt::Data.Table, hints::Dict{Symbol}) w
     return sch
 end
 
-schema(f::FormulaTerm, dt::Data.Table, hints::Dict{Symbol}) =
-    schema(filter(needs_schema, terms(f)), dt, hints)
+schema(f::FormulaTerm, data, hints::Dict{Symbol}) =
+    schema(filter(needs_schema, terms(f)), data, hints)
 
-schema(f::FormulaTerm, dt::Data.Table) = schema(f, dt, Dict{Symbol,Any}())
+schema(f::FormulaTerm, data) = schema(f, data, Dict{Symbol,Any}())
 
 schema(t::Term, dt::Data.Table) = schema(t, dt[t.sym])
 schema(t::Term, dt::Data.Table, hint) = schema(t, dt[t.sym], hint)
