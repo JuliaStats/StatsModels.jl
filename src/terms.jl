@@ -171,3 +171,17 @@ model_cols(t::InterceptTerm{true}, d::NamedTuple) = ones(size(first(d)))
 
 model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where N =
     hcat([model_cols(t, d) for t in ts]...)
+
+vectorize(x::AbstractVector) = x
+vectorize(x) = [x]
+
+termnames(::InterceptTerm{H}) where H = H ? "(Intercept)" : []
+termnames(t::ContinuousTerm) = string(t.sym)
+termnames(t::CategoricalTerm) = 
+    ["$(t.sym): $name" for name in t.contrasts.termnames]
+termnames(ts::NTuple{N,AbstractTerm}) where N = vcat(termnames.(ts)...)
+function termnames(t::InteractionTerm)
+    terms_names = vectorize.(termnames.(collect(t.terms)))
+    terms_names[2:end] = [" & " .* tns for tns in terms_names[2:end]]
+    kron(terms_names...)
+end
