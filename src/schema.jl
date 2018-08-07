@@ -10,7 +10,7 @@
 
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
-terms(t::AbstractTerm) = Set{Any}([t])
+terms(t::AbstractTerm) = [t]
 terms(t::NTuple{N, AbstractTerm}) where N = mapreduce(terms, union, t)
 
 needs_schema(t::AbstractTerm) = true
@@ -22,7 +22,7 @@ schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:Data.Table} =
     schema(Term.(fieldnames(D)), dt, hints)
 
 # handle hints:
-function schema(ts::NTuple{N,AbstractTerm}, dt::Data.Table, hints::Dict{Symbol}) where N
+function schema(ts::Vector{AbstractTerm}, dt::Data.Table, hints::Dict{Symbol}) where N
     sch = Dict{Any,Any}()
     for t in ts
         if t.sym ∈ keys(hints)
@@ -42,12 +42,12 @@ schema(f::FormulaTerm, dt::Data.Table) = schema(f, dt, Dict{Symbol,Any}())
 schema(t::Term, dt::Data.Table) = schema(t, dt[t.sym])
 schema(t::Term, dt::Data.Table, hint) = schema(t, dt[t.sym], hint)
 
-schema(t::Term, xs::AbstractVector) = schema(t::Term, xs, ContinuousTerm)
+schema(t::Term, xs::AbstractVector{<:Number}) = schema(t, xs, ContinuousTerm)
 schema(t::Term, xs::AbstractVector, ::Type{ContinuousTerm}) =
     ContinuousTerm(t.sym, fit!(Series(Variance()), xs))
 
 # default contrasts: dummy coding
-schema(t::Term, xs::CategoricalArray) = schema(t, xs, DummyCoding())
+schema(t::Term, xs::AbstractVector) = schema(t, xs, CategoricalTerm)
 schema(t::Term, xs::AbstractArray, ::Type{CategoricalTerm}) = schema(t, xs, DummyCoding())
 
 function schema(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
