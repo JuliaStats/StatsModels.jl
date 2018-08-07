@@ -5,21 +5,26 @@
 # step 2: create empty Schema (Dict)
 # step 3: for each term, create schema entrybased on column from data store
 
-
+# TODO: handle streaming (Data.RowTable) by iterating over rows and updating
+# schemas in place
 
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
 terms(t::AbstractTerm) = Set{Any}([t])
 terms(t::NTuple{N, AbstractTerm}) where N = mapreduce(terms, union, t)
 
-needs_schema(t::Term) = true
+needs_schema(t::AbstractTerm) = true
+needs_schema(::InterceptTerm) = false
+needs_schema(::FunctionTerm) = false
 needs_schema(t) = false
 
+schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:Data.Table} =
+    schema(Term.(fieldnames(D)), dt, hints)
+
 # handle hints:
-function schema(f::FormulaTerm, dt::Data.Table, hints::Dict{Symbol})
-    ts = terms(f)
+function schema(ts::NTuple{N,AbstractTerm}, dt::Data.Table, hints::Dict{Symbol}) where N
     sch = Dict{Any,Any}()
-    for t in filter(needs_schema, ts)
+    for t in ts
         if t.sym ∈ keys(hints)
             sch[t] = schema(t, dt, hints[t.sym])
         else
@@ -28,6 +33,9 @@ function schema(f::FormulaTerm, dt::Data.Table, hints::Dict{Symbol})
     end
     return sch
 end
+
+schema(f::FormulaTerm, dt::Data.Table, hints::Dict{Symbol}) =
+    schema(filter(needs_schema, terms(f)), dt, hints)
 
 schema(f::FormulaTerm, dt::Data.Table) = schema(f, dt, Dict{Symbol,Any}())
 
@@ -61,6 +69,9 @@ end
 #
 # so what does that wrapper look like?  holds onto the terms that have been seen
 # so far, checks against that...
+
+apply_schema(ft::FormulaTerm, data::Data.Table, args...) =
+    apply_schema(ft, schema(ft, data, args...))
 
 apply_schema(t, schema) = t
 apply_schema(terms::NTuple{N,AbstractTerm}, schema) where N = apply_schema.(terms, Ref(schema))
