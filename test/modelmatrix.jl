@@ -3,6 +3,8 @@
     # for testing while DataFrames still exports these:
     import StatsModels: @formula, Formula, ModelMatrix, ModelFrame, DummyCoding, EffectsCoding, HelmertCoding, ContrastsCoding, setcontrasts!, coefnames
 
+    using SparseArrays
+
     sparsetype = SparseMatrixCSC{Float64,Int}
 
     d = DataFrame()
@@ -16,7 +18,7 @@
     x2 = [9.:12;]
     x3 = [13.:16;]
     x4 = [17.:20;]
-    f = @formula(y ~ x1 + x2)
+    f = @formula(y ~ 1 + x1 + x2)
     mf = ModelFrame(f, d)
     @test coefnames(mf) == ["(Intercept)","x1","x2"]
     @test model_response(mf) == [1:4;]
@@ -32,7 +34,7 @@
     #test_group("expanding a nominal array into a design matrix of indicators for each dummy variable")
 
     d[:x1p] = CategoricalArray(d[:x1])
-    mf = ModelFrame(@formula(y ~ x1p), d)
+    mf = ModelFrame(@formula(y ~ 1 + x1p), d)
     mm = ModelMatrix(mf)
 
     @test mm.m[:,2] == [0, 1., 0, 0]
@@ -98,13 +100,13 @@
     #test_group("Creating a model matrix using full formulas: y => x1 + x2, etc")
 
     df = deepcopy(d)
-    f = @formula(y ~ x1 & x2)
+    f = @formula(y ~ 1 + x1 & x2)
     mf = ModelFrame(f, df)
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x1.*x2]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-    f = @formula(y ~ x1 * x2)
+    f = @formula(y ~ 1 + x1 * x2)
     mf = ModelFrame(f, df)
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x1 x2 x1.*x2]
@@ -112,7 +114,7 @@
 
     df[:x1] = CategoricalArray(x1)
     x1e = [[0, 1, 0, 0] [0, 0, 1, 0] [0, 0, 0, 1]]
-    f = @formula(y ~ x1 * x2)
+    f = @formula(y ~ 1 + x1 * x2)
     mf = ModelFrame(f, df)
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x1e x2 [0, 10, 0, 0] [0, 0, 11, 0] [0, 0, 0, 12]]
@@ -120,7 +122,7 @@
 
     # additional tests from Tom
     y = [1., 2, 3, 4]
-    mf = ModelFrame(@formula(y ~ x2), d)
+    mf = ModelFrame(@formula(y ~ 1 + x2), d)
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x2]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
@@ -129,12 +131,12 @@
     df = deepcopy(d)
     df[:x1] = CategoricalArray{Union{Missing, Float64}}(df[:x1])
 
-    f = @formula(y ~ x2 + x3 + x3*x2)
+    f = @formula(y ~ 1 + x2 + x3 + x3*x2)
     mm = ModelMatrix(ModelFrame(f, df))
     @test mm.m == [ones(4) x2 x3 x2.*x3]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x3*x2 + x2 + x3), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x3*x2 + x2 + x3), df))
     @test mm.m == [ones(4) x3 x2 x2.*x3]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x1 + x2 + x3 + x4), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x1 + x2 + x3 + x4), df))
     @test mm.m[:,2] == [0, 1., 0, 0]
     @test mm.m[:,3] == [0, 0, 1., 0]
     @test mm.m[:,4] == [0, 0, 0, 1.]
@@ -142,24 +144,24 @@
     @test mm.m[:,6] == x3
     @test mm.m[:,7] == x4
 
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x2 + x3 + x4), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x2 + x3 + x4), df))
     @test mm.m == [ones(4) x2 x3 x4]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x2 + x2), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x2 + x2), df))
     @test mm.m == [ones(4) x2]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x2*x3 + x2&x3), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x2*x3 + x2&x3), df))
     @test mm.m == [ones(4) x2 x3 x2.*x3]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x2*x3*x4), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x2*x3*x4), df))
     @test mm.m == [ones(4) x2 x3 x4 x2.*x3 x2.*x4 x3.*x4 x2.*x3.*x4]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x2&x3 + x2*x3), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x2&x3 + x2*x3), df))
     @test mm.m == [ones(4) x2 x3 x2.*x3]
 
-    f = @formula(y ~ x2 & x3 & x4)
+    f = @formula(y ~ 1 + x2 & x3 & x4)
     mf = ModelFrame(f, df)
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x2.*x3.*x4]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-    f = @formula(y ~ x1 & x2 & x3)
+    f = @formula(y ~ 1 + x1 & x2 & x3)
     mf = ModelFrame(f, df)
     mm = ModelMatrix(mf)
     @test mm.m[:, 2:end] == Matrix(Diagonal(x2.*x3))
@@ -207,23 +209,23 @@
 
     ## Distributive property of :& over :+
     df = deepcopy(d)
-    f = @formula(y ~ (x1+x2) & (x3+x4))
+    f = @formula(y ~ 1 + (x1+x2) & (x3+x4))
     mf = ModelFrame(f, df)
     mm = ModelMatrix(mf)
     @test mm.m == hcat(ones(4), x1.*x3, x1.*x4, x2.*x3, x2.*x4)
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
     ## Condensing nested :+ calls
-    f = @formula(y ~ x1 + (x2 + (x3 + x4)))
+    f = @formula(y ~ 1 + x1 + (x2 + (x3 + x4)))
     @test ModelMatrix(ModelFrame(f, df)).m == hcat(ones(4), x1, x2, x3, x4)
 
 
     ## Extra levels in categorical column
-    mf_full = ModelFrame(@formula(y ~ x1p), d)
+    mf_full = ModelFrame(@formula(y ~ 1 + x1p), d)
     mm_full = ModelMatrix(mf_full)
     @test size(mm_full) == (4,4)
 
-    mf_sub = ModelFrame(@formula(y ~ x1p), d[2:4, :])
+    mf_sub = ModelFrame(@formula(y ~ 1 + x1p), d[2:4, :])
     mm_sub = ModelMatrix(mf_sub)
     ## should have only three rows, and only three columns (intercept plus two
     ## levels of factor)
@@ -231,7 +233,7 @@
 
     ## Missing data
     d[:x1m] = [5, 6, missing, 7]
-    mf = ModelFrame(@formula(y ~ x1m), d)
+    mf = ModelFrame(@formula(y ~ 1 + x1m), d)
     mm = ModelMatrix(mf)
     @test mm.m[:, 2] == d[completecases(d), :x1m]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
@@ -243,9 +245,9 @@
 
     ## Promote non-redundant categorical terms to full rank
 
-    d = DataFrame(x = Compat.repeat([:a, :b], outer = 4),
-                  y = Compat.repeat([:c, :d], inner = 2, outer = 2),
-                  z = Compat.repeat([:e, :f], inner = 4))
+    d = DataFrame(x = repeat([:a, :b], outer = 4),
+                  y = repeat([:c, :d], inner = 2, outer = 2),
+                  z = repeat([:e, :f], inner = 4))
     [categorical!(d, name) for name in names(d)]
     cs = Dict([Pair(name, EffectsCoding()) for name in names(d)])
     d[:n] = 1.:8
