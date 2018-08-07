@@ -281,6 +281,7 @@ function parse!(ex::Expr, rewrites::Vector)
 end
 
 # generate Term expressions for symbols and FormulaTerms for non-special calls
+terms!(::Nothing) = :(nothing)
 terms!(s::Symbol) = :(Term($(Meta.quot(s))))
 terms!(i::Integer) = :(InterceptTerm{$(i==1)}())
 function terms!(ex::Expr)
