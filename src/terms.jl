@@ -141,6 +141,13 @@ Base.:+(terms::AbstractTerm...) = terms
 ################################################################################
 # evaluating terms with data to generate model matrix entries
 
+catdims(::Data.Table) = 2
+catdims(::NamedTuple) = 1
+
+model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where N =
+    cat([model_cols(t, d) for t in ts]..., dims=catdims(d))
+
+
 # TODO: @generated to unroll the getfield stuff
 model_cols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
     ft.fanon.(getfield.(d, Names)...)
@@ -172,8 +179,7 @@ end
 model_cols(t::InterceptTerm{true}, d::NamedTuple) = ones(size(first(d)))
 model_cols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1), 0)
 
-model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where N =
-    hcat([model_cols(t, d) for t in ts]...)
+model_cols(t::FormulaTerm, d::NamedTuple) = (model_cols(t.lhs,d), model_cols(t.rhs, d))
 
 vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x
@@ -183,6 +189,7 @@ termnames(::InterceptTerm{H}) where H = H ? "(Intercept)" : []
 termnames(t::ContinuousTerm) = string(t.sym)
 termnames(t::CategoricalTerm) = 
     ["$(t.sym): $name" for name in t.contrasts.termnames]
+termnames(t::FunctionTerm) = string(t.exorig)
 termnames(ts::NTuple{N,AbstractTerm}) where N = vcat(termnames.(ts)...)
 function termnames(t::InteractionTerm)
     terms_names = vectorize.(termnames.(collect(t.terms)))
