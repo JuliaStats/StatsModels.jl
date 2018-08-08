@@ -265,6 +265,7 @@ terms!(s::Symbol) = :(Term($(Meta.quot(s))))
 terms!(i::Integer) = :(InterceptTerm{$(i==1)}())
 function terms!(ex::Expr)
     if is_special(ex.args[1])
+        ex.args[1] = esc(ex.args[1])
         ex.args[2:end] .= terms!.(ex.args[2:end])
     else
         @debug "  generating anonymous function for $ex"
