@@ -233,10 +233,6 @@ is_special(s) = false
 
 parse!(x) = parse!(x, [And1, EmptyAnd, Subtraction, Star, AssociativeRule, Distributive])
 parse!(x, rewrites) = x
-function parse!(i::Integer, rewrites)
-    i ∈ [-1, 0, 1] || throw(ArgumentError("invalid integer term $i (only -1, 0, and 1 allowed)"))
-    i
-end
 function parse!(ex::Expr, rewrites::Vector)
     @debug "parsing $ex"
     catch_dollar(ex)
@@ -262,7 +258,7 @@ end
 # generate Term expressions for symbols and FormulaTerms for non-special calls
 terms!(::Nothing) = :(nothing)
 terms!(s::Symbol) = :(Term($(Meta.quot(s))))
-terms!(i::Integer) = :(InterceptTerm{$(i==1)}())
+terms!(n::Number) = :(ConstantTerm($n))
 function terms!(ex::Expr)
     if is_special(ex.args[1])
         ex.args[1] = esc(ex.args[1])

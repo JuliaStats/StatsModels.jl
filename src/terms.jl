@@ -14,6 +14,12 @@ width(::Term) =
     throw(ArgumentError("Un-typed Terms have undefined width.  " *
                         "Did you forget to apply_schema?"))
 
+struct ConstantTerm{T<:Number} <: AbstractTerm
+    n::T
+end
+Base.show(io::IO, t::ConstantTerm) = print(io, t.n)
+width(::ConstantTerm) = 1
+
 struct FormulaTerm{L,R} <: AbstractTerm
     lhs::L
     rhs::R

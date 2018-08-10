@@ -83,6 +83,11 @@ apply_schema(t::Term, schema) = schema[t]
 apply_schema(ft::FormulaTerm, schema) = FormulaTerm(apply_schema(ft.lhs, schema),
                                                     apply_schema(ft.rhs, schema))
 apply_schema(it::InteractionTerm, schema) = InteractionTerm(apply_schema(it.terms, schema))
+function apply_schema(t::ConstantTerm, schema)
+    t.n ∈ [-1, 0, 1] ||
+        throw(ArgumentError("can't create InterceptTerm from $(t.n) (only -1, 0, and 1 allowed)"))
+    InterceptTerm{t.n==1}()
+end
 
 
 mutable struct FullRank
