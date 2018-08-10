@@ -152,8 +152,11 @@ function apply_schema(t::CategoricalTerm, schema::FullRank, context)
 end
 
 drop_term(from, to) = symequal(from, to) ? InterceptTerm{true}() : from
+drop_term(from::FormulaTerm, to) = FormulaTerm(from.lhs, drop_term(from.rhs, to))
+drop_term(from::NTuple{N, AbstractTerm}, to) where N =
+    tuple((t for t = from if !symequal(t, to))...)
 function drop_term(from::InteractionTerm, t)
-    terms = tuple((tt for tt = from.terms if !symequal(tt, t))...)
+    terms = drop_term(from.terms, t)
     length(terms) > 1 ? InteractionTerm(terms) : terms[1]
 end
 

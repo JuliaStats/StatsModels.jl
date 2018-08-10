@@ -207,8 +207,12 @@ end
 ################################################################################
 # old Terms features:
 
-hasintercept(t::AbstractTerm) = InterceptTerm{true}() ∈ terms(t)
+hasintercept(t::AbstractTerm) = InterceptTerm{true}() ∈ terms(t) || ConstantTerm(1) ∈ terms(t)
 
 hasresponse(t) = false
 hasresponse(t::FormulaTerm{RHS, LHS}) where {RHS, LHS} = RHS !== nothing
 
+# convenience converters
+term(n::Number) = ConstantTerm(n)
+term(s::Symbol) = Term(s)
+term(args...) = term.(args)

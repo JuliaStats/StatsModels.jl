@@ -28,6 +28,7 @@ export @formula,
 
     AbstractTerm,
     TermOrTerms,
+    ConstantTerm,
     Term,
     ContinuousTerm,
     CategoricalTerm,
@@ -35,7 +36,8 @@ export @formula,
     FormulaTerm,
     InterceptTerm,
 
-    
+    term,
+    drop_term,
     schema,
     apply_schema,
     width,
