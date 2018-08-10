@@ -216,3 +216,4 @@ hasresponse(t::FormulaTerm{RHS, LHS}) where {RHS, LHS} = RHS !== nothing
 term(n::Number) = ConstantTerm(n)
 term(s::Symbol) = Term(s)
 term(args...) = term.(args)
+term(t::AbstractTerm) = t
