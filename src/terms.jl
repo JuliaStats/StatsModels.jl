@@ -202,3 +202,13 @@ function termnames(t::InteractionTerm)
     terms_names[2:end] = [" & " .* tns for tns in terms_names[2:end]]
     kron(terms_names...)
 end
+
+
+################################################################################
+# old Terms features:
+
+hasintercept(t::AbstractTerm) = InterceptTerm{true}() ∈ terms(t)
+
+hasresponse(t) = false
+hasresponse(t::FormulaTerm{RHS, LHS}) where {RHS, LHS} = RHS !== nothing
+
