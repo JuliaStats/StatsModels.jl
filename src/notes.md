@@ -37,9 +37,12 @@ into model-friendly format.
 
 # Left to do
 
-## Interface with actual models
-
-## Interaction terms
+* tests and rest of ModelFrame interface
+* Interface with actual models (just used ModelFrame still)
+* Example extension: mixed models (random effects)
+* Wrapping numbers in formula macro
+* kw arguments
+* use "sink type" in schema
 
 # Goals
 
