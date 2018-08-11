@@ -36,6 +36,7 @@ export @formula,
     InterceptTerm,
 
     term,
+    terms,
     drop_term,
     schema,
     apply_schema,
