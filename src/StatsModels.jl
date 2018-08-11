@@ -12,7 +12,6 @@ using Compat.LinearAlgebra
 using Compat: @debug, @warn
 
 export @formula,
-       Formula,
        ModelFrame,
        ModelMatrix,
 

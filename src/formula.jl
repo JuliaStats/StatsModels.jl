@@ -20,13 +20,6 @@ check_call(ex) = is_call(ex) || throw(ArgumentError("non-call expression encount
 catch_dollar(ex::Expr) =
     Meta.isexpr(ex, :$) && throw(ArgumentError("interpolation with \$ not supported in @formula.  Use @eval @formula(...) instead."))
 
-mutable struct Formula
-    ex_orig::Expr
-    ex::Expr
-    lhs::Union{Symbol, Expr, Nothing}
-    rhs::Union{Symbol, Expr, Integer}
-end
-
 """
     @formula(ex)
 
@@ -69,13 +62,6 @@ macro formula(ex)
     length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
     ex |> parse! |> sort_terms! |> terms!
 end
-
-Base.:(==)(f1::Formula, f2::Formula) = all(getfield(f1, f)==getfield(f2, f) for f in fieldnames(typeof(f1)))
-
-function Base.show(io::IO, f::Formula)
-    print(io, "Formula: ", something(f.lhs, ""), " ~ ", f.rhs)
-end
-
 
 """
     abstract type FormulaRewrite end
