@@ -14,7 +14,7 @@ terms(t::AbstractTerm) = [t]
 terms(t::NTuple{N, AbstractTerm}) where N = mapreduce(terms, union, t)
 
 needs_schema(t::AbstractTerm) = true
-needs_schema(::InterceptTerm) = false
+needs_schema(::ConstantTerm) = false
 needs_schema(::FunctionTerm) = false
 needs_schema(t) = false
 
@@ -110,6 +110,11 @@ apply_schema(t::FormulaTerm, schema::FullRank) =
 # to know whether to repair, need to know context a term appears in.  main
 # effects occur in "own" context.
 
+function apply_schema(t::ConstantTerm, schema::FullRank)
+    push!(schema.already, t)
+    apply_schema(t, schema.schema)
+end
+
 apply_schema(t::InterceptTerm, schema::FullRank) = (push!(schema.already, t); t)
 
 function apply_schema(t::Term, schema::FullRank)
@@ -134,7 +139,7 @@ apply_schema(t, schema::FullRank, context) = t
 # aliased by this term _if_ it were full rank.
 function apply_schema(t::CategoricalTerm, schema::FullRank, context)
     aliased = drop_term(context, t)
-    @debug "$t in context of $context: aliases $aliased"
+    @debug "$t in context of $context: aliases $aliased\n  seen already: $(schema.already)"
     for seen in schema.already
         if symequal(aliased, seen)
             @debug "  aliased term already present: $seen"
@@ -151,7 +156,7 @@ function apply_schema(t::CategoricalTerm, schema::FullRank, context)
     t
 end
 
-drop_term(from, to) = symequal(from, to) ? InterceptTerm{true}() : from
+drop_term(from, to) = symequal(from, to) ? ConstantTerm(1) : from
 drop_term(from::FormulaTerm, to) = FormulaTerm(from.lhs, drop_term(from.rhs, to))
 drop_term(from::NTuple{N, AbstractTerm}, to) where N =
     tuple((t for t = from if !symequal(t, to))...)
@@ -171,6 +176,7 @@ in and the other terms that have already been encountered.
 """
 termsyms(t::AbstractTerm) = Set()
 termsyms(t::InterceptTerm{true}) = Set([1])
+termsyms(t::ConstantTerm) = Set([t.n])
 termsyms(t::Union{Term, CategoricalTerm, ContinuousTerm}) = Set([t.sym])
 termsyms(t::InteractionTerm) = mapreduce(termsyms, union, t.terms)
 termsyms(t::FunctionTerm) = Set([t.exorig])
