@@ -5,9 +5,47 @@ mutable struct ModelFrame{D}
 end
 
 
-ModelFrame(f::FormulaTerm, schema, data::Data.Table) =
-    ModelFrame{typeof(data)}(apply_schema(f, schema), schema, data)
-ModelFrame(f::FormulaTerm, data::Data.Table) = ModelFrame(f, FullRank(schema(f, data)), data)
+
+## copied from DataFrames:
+function _nonmissing!(res, col)
+    # workaround until JuliaLang/julia#21256 is fixed
+    eltype(col) >: Missing || return
+    
+    @inbounds for (i, el) in enumerate(col)
+        res[i] &= !ismissing(el)
+    end
+end
+
+function _nonmissing!(res, col::CategoricalArray{>: Missing})
+    for (i, el) in enumerate(col.refs)
+        res[i] &= el > 0
+    end
+end
+
+_select(d::Data.Table, cols::NTuple{N,Symbol} where N) = NamedTuple{cols}(d)
+_filter(d::T, rows) where T<:Data.Table = T(([col[rows] for col in d]..., ))
+
+_size(d::Data.Table) = (length(first(d)), length(d))
+_size(d::Data.Table, dim::Int) = _size(d)[dim]
+
+## Default NULL handler.  Others can be added as keyword arguments
+function missing_omit(d::T) where T<:Data.Table
+    nonmissings = trues(_size(d, 1))
+    for col in d
+        _nonmissing!(nonmissings, col)
+    end
+    map(disallowmissing, _filter(d, nonmissings)), nonmissings
+end
+
+function ModelFrame(f::FormulaTerm, data::Data.Table)
+    term_syms = (filter(x->x isa Symbol, mapreduce(termsyms, union, terms(f)))...,)
+    data, _ = missing_omit(_select(data, term_syms))
+
+    sch = FullRank(schema(f, data))
+    f = apply_schema(f, sch)
+    
+    ModelFrame(f, sch, data)
+end
 ModelFrame(f::FormulaTerm, data) = ModelFrame(f, Data.stream!(data, Data.Table))
 
 model_matrix(mf::ModelFrame; data=mf.data) = model_cols(mf.f.rhs, data)

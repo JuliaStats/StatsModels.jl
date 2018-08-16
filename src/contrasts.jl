@@ -101,7 +101,7 @@ Base.:(==)(a::ContrastsMatrix{C,T}, b::ContrastsMatrix{C,T}) where {C<:AbstractC
 Base.hash(a::ContrastsMatrix{C}, h::UInt) where {C} =
     hash(C, hash(a.matrix, hash(a.termnames, hash(a.levels, h))))
 
-invindex(levels::AbstractVector{T}) where T = Dict(x=>i for (i,x) in enumerate(levels))
+invindex(levels::AbstractVector{T}) where T = Dict{T,Int}(x=>i for (i,x) in enumerate(levels))
 
 """
 An instantiation of a contrast coding system for particular levels
