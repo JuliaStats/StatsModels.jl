@@ -2,14 +2,13 @@ __precompile__(false)
 
 module StatsModels
 
-using Compat
 using DataFrames
 using DataStreams
 using OnlineStats
 using StatsBase
-using Compat.SparseArrays
-using Compat.LinearAlgebra
-using Compat: @debug, @warn
+using SparseArrays
+using LinearAlgebra
+using Missings
 
 export @formula,
        ModelFrame,
