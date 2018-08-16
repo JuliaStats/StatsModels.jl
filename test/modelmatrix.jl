@@ -13,7 +13,10 @@
     d[:x2] = [9:12;]
     d[:x3] = [13:16;]
     d[:x4] = [17:20;]
+    d[:x1p] = CategoricalArray(d[:x1])
 
+    d_orig = deepcopy(d)
+    
     x1 = [5.:8;]
     x2 = [9.:12;]
     x3 = [13.:16;]
@@ -33,7 +36,6 @@
 
     #test_group("expanding a nominal array into a design matrix of indicators for each dummy variable")
 
-    d[:x1p] = CategoricalArray(d[:x1])
     mf = ModelFrame(@formula(y ~ 1 + x1p), d)
     mm = ModelMatrix(mf)
 
@@ -45,7 +47,7 @@
 
     #test_group("Creating a model matrix using full formulas: y => x1 + x2, etc")
 
-    d = deepcopy(d)
+    d = deepcopy(d_orig)
     f = @formula(y ~ 1 + x1 & x2)
     mf = ModelFrame(f, d)
     mm = ModelMatrix(mf)
@@ -74,7 +76,7 @@
     @test mm.m == ModelMatrix{sparsetype}(mf).m
     ## @test model_response(mf) == y''     # fails: Int64 vs. Float64
 
-    d = deepcopy(d)
+    d = deepcopy(d_orig)
     d[:x1] = CategoricalArray{Union{Missing, Float64}}(d[:x1])
 
     f = @formula(y ~ 1 + x2 + x3 + x3*x2)
@@ -114,7 +116,7 @@
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
     ## Distributive property of :& over :+
-    d = deepcopy(d)
+    d = deepcopy(d_orig)
     f = @formula(y ~ 1 + (x1+x2) & (x3+x4))
     mf = ModelFrame(f, d)
     mm = ModelMatrix(mf)
