@@ -73,3 +73,4 @@ function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractFloatMatrix
 end
 
 ModelMatrix(mf::ModelFrame) = ModelMatrix{Matrix{Float64}}(mf)
+ModelMatrix(mm::AbstractVector{<:AbstractFloat}, asgn) = ModelMatrix(reshape(m, :, 1), asgn)
