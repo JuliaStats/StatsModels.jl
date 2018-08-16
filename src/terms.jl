@@ -142,7 +142,7 @@ Base.:~(lhs::TermOrTerms, rhs::TermOrTerms) = FormulaTerm(lhs, rhs)
 Base.:&(terms::AbstractTerm...) = InteractionTerm(terms)
 Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
 
-Base.:+(terms::AbstractTerm...) = (unique(terms)...)
+Base.:+(terms::AbstractTerm...) = (unique(terms)..., )
 
 ################################################################################
 # evaluating terms with data to generate model matrix entries
