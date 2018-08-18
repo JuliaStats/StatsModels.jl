@@ -44,6 +44,7 @@ export @formula,
     model_matrix,
     model_response
 
+include("utils.jl")
 include("contrasts.jl")
 include("terms.jl")
 include("schema.jl")
