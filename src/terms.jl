@@ -166,20 +166,10 @@ model_cols(t::CategoricalTerm, d::NamedTuple) = getindex(t.contrasts, d[t.sym], 
 # two options here: either special-case Data.Table (named tuple of vectors)
 # vs. vanilla NamedTuple, or reshape and use normal broadcasting
 model_cols(t::InteractionTerm, d::NamedTuple) =
-    kron((model_cols(term, d) for term in t.terms)...)
+    kron_insideout(*, (model_cols(term, d) for term in t.terms)...)
 
 function model_cols(t::InteractionTerm, d::Data.Table)
-    # need to know the number of rows to pre-allocate
-    rows = length(first(d))
-
-    term_mats = [model_cols(term, d) for term in t.terms]
-    output = Matrix{Float64}(undef, rows, prod(size.(term_mats, 2)))
-
-    for i in 1:rows
-        output[i, :] = kron((view(mat, i, :) for mat in term_mats)...)
-    end
-
-    output
+    row_kron_insideout(*, (model_cols(term, d) for term in t.terms)...)
 end
 
 model_cols(t::InterceptTerm{true}, d::NamedTuple) = ones(size(first(d)))
@@ -197,12 +187,8 @@ termnames(t::CategoricalTerm) =
     ["$(t.sym): $name" for name in t.contrasts.termnames]
 termnames(t::FunctionTerm) = string(t.exorig)
 termnames(ts::NTuple{N,AbstractTerm}) where N = vcat(termnames.(ts)...)
-function termnames(t::InteractionTerm)
-    terms_names = vectorize.(termnames.(collect(t.terms)))
-    terms_names[2:end] = [" & " .* tns for tns in terms_names[2:end]]
-    kron(terms_names...)
-end
-
+termnames(t::InteractionTerm) =
+    kron_insideout((args...) -> join(args, " & "), termnames.(t.terms)...)
 
 ################################################################################
 # old Terms features:

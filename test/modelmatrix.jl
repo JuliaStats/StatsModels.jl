@@ -192,7 +192,7 @@
     ## When both terms of interaction are non-redundant:
     mf = ModelFrame(@formula(n ~ 0 + x&y), d, contrasts=cs)
     mm = ModelMatrix(mf)
-    @test_broken mm.m == [1 0 0 0
+    @test mm.m == [1 0 0 0
                    0 1 0 0
                    0 0 1 0
                    0 0 0 1
@@ -201,20 +201,8 @@
                    0 0 1 0
                    0 0 0 1]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
-    @test_broken coefnames(mf) == ["x: a & y: c", "x: b & y: c",
+    @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
                                    "x: a & y: d", "x: b & y: d"]
-    ## new implementation does the order "inside out"
-    @test coefnames(mf) == ["x: a & y: c", "x: a & y: d",
-                            "x: b & y: c", "x: b & y: d"]
-    @test mm.m == [1  0  0  0
-                   0  0  1  0
-                   0  1  0  0
-                   0  0  0  1
-                   1  0  0  0
-                   0  0  1  0
-                   0  1  0  0
-                   0  0  0  1]
-
 
     # only a three-way interaction: every term is promoted.
     mf = ModelFrame(@formula(n ~ 0 + x&y&z), d, contrasts=cs)
@@ -317,7 +305,7 @@
     mf = ModelFrame(@formula(y ~ 0 + x), d)
     X = ModelMatrix(mf).m
     X[1] = 0.0
-    @test mf.d[1, :x] === 1.0
+    @test mf.data[:x][1] === 1.0
 
     # Ensure string columns are supported
     d1 = DataFrame(A = 1:4, B = categorical(["M", "F", "F", "M"]))
