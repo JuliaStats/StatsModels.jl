@@ -37,16 +37,17 @@ function missing_omit(d::T) where T<:Data.Table
     map(disallowmissing, _filter(d, nonmissings)), nonmissings
 end
 
-function ModelFrame(f::FormulaTerm, data::Data.Table)
+function ModelFrame(f::FormulaTerm, data::Data.Table; contrasts=Dict{Symbol,Any}())
     term_syms = (filter(x->x isa Symbol, mapreduce(termsyms, union, terms(f)))...,)
     data, _ = missing_omit(_select(data, term_syms))
 
-    sch = FullRank(schema(f, data))
+    sch = FullRank(schema(f, data, contrasts))
     f = apply_schema(f, sch)
     
     ModelFrame(f, sch, data)
 end
-ModelFrame(f::FormulaTerm, data) = ModelFrame(f, Data.stream!(data, Data.Table))
+ModelFrame(f::FormulaTerm, data; contrasts=Dict{Symbol,Any}()) =
+    ModelFrame(f, Data.stream!(data, Data.Table); contrasts=contrasts)
 
 model_matrix(mf::ModelFrame; data=mf.data) = model_cols(mf.f.rhs, data)
 StatsBase.model_response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, data)
