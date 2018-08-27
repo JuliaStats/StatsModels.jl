@@ -289,6 +289,13 @@
     # 3           1     0     0     1     0
     # 4           1     0     0     0     1
 
+    @testset "arbitrary functions in formulae" begin
+        mf = ModelFrame(@formula(y ~ log(x1)))
+        @test coefnames(mf) == ["log(x1)"]
+        mm = ModelMatrix(mf)
+        @test mm.m == log.(x1)
+    end
+
 
     # Ensure that random effects terms are dropped from coefnames
     d = DataFrame(x = [1,2,3], y = [4,5,6])
