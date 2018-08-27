@@ -23,6 +23,7 @@ function _nonmissing!(res, col::CategoricalArray{>: Missing})
 end
 
 _select(d::Data.Table, cols::NTuple{N,Symbol} where N) = NamedTuple{cols}(d)
+_select(d::Data.Table, cols::Vector{Symbol}) = _select(d, tuple(cols...))
 _filter(d::T, rows) where T<:Data.Table = T(([col[rows] for col in d]..., ))
 
 _size(d::Data.Table) = (length(first(d)), length(d))
@@ -38,8 +39,8 @@ function missing_omit(d::T) where T<:Data.Table
 end
 
 function ModelFrame(f::FormulaTerm, data::Data.Table; contrasts=Dict{Symbol,Any}())
-    term_syms = (filter(x->x isa Symbol, mapreduce(termsyms, union, terms(f)))...,)
-    data, _ = missing_omit(_select(data, term_syms))
+    term_vars = termvars(f)
+    data, _ = missing_omit(_select(data, term_vars))
 
     sch = FullRank(schema(f, data, contrasts))
     f = apply_schema(f, sch)

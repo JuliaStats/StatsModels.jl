@@ -182,3 +182,16 @@ termsyms(t::InteractionTerm) = mapreduce(termsyms, union, t.terms)
 termsyms(t::FunctionTerm) = Set([t.exorig])
 
 symequal(t1::AbstractTerm, t2::AbstractTerm) = issetequal(termsyms(t1), termsyms(t2))
+
+
+"""
+    termvars(t::AbstractTerm)
+
+The data variables that this term refers to.
+"""
+termvars(::AbstractTerm) = Symbol[]
+termvars(t::Union{Term, CategoricalTerm, ContinuousTerm}) = [t.sym]
+termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
+termvars(t::NTuple{N, AbstractTerm}) where N = mapreduce(termvars, union, t, init=Symbol[])
+termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
+termvars(t::FunctionTerm) = collect(t.names)
