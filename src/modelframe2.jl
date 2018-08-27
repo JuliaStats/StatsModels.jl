@@ -53,7 +53,7 @@ ModelFrame(f::FormulaTerm, data; contrasts=Dict{Symbol,Any}()) =
 model_matrix(mf::ModelFrame; data=mf.data) = model_cols(mf.f.rhs, data)
 StatsBase.model_response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, data)
 
-StatsBase.coefnames(mf::ModelFrame) = termnames(mf.f.rhs)
+StatsBase.coefnames(mf::ModelFrame) = vectorize(termnames(mf.f.rhs))
 
 
 

@@ -1,4 +1,6 @@
 @testset "Model matrix" begin
+    
+    global f
 
     # for testing while DataFrames still exports these:
     import StatsModels: @formula, ModelMatrix, ModelFrame, DummyCoding, EffectsCoding, HelmertCoding, ContrastsCoding, coefnames
@@ -290,21 +292,26 @@
     # 4           1     0     0     0     1
 
     @testset "arbitrary functions in formulae" begin
-        mf = ModelFrame(@formula(y ~ log(x1)))
+        d = deepcopy(d_orig)
+        mf = ModelFrame(@formula(y ~ log(x1)), d)
         @test coefnames(mf) == ["log(x1)"]
         mm = ModelMatrix(mf)
-        @test mm.m == log.(x1)
+        @test all(mm.m .== log.(x1))
     end
 
 
     # Ensure that random effects terms are dropped from coefnames
+
+    # with Terms 2.0, the handling of "special" syntax has changed: now it's
+    # assumed to be "normal" julia code so it doesn't make sense to exclude them
+    # automatically.
     d = DataFrame(x = [1,2,3], y = [4,5,6])
     mf = ModelFrame(@formula(y ~ 1 + (1 | x)), d)
-    @test coefnames(mf) == ["(Intercept)"]
+    @test coefnames(mf) == ["(Intercept)", "1 | x"]
 
     mf = ModelFrame(@formula(y ~ 0 + (1 | x)), d)
-    @test_throws ErrorException ModelMatrix(mf)
-    @test coefnames(mf) == Vector{String}()
+    @test all(ModelMatrix(mf).m .== float.(1 .| d[:x]))
+    @test coefnames(mf) == ["1 | x"]
 
 
     # Ensure X is not a view on df column
