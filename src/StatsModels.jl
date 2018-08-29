@@ -10,19 +10,20 @@ using SparseArrays
 using LinearAlgebra
 using Missings
 
-export @formula,
-       ModelFrame,
-       ModelMatrix,
+export
+    @formula,
+    ModelFrame,
+    ModelMatrix,
 
-       AbstractContrasts,
-       EffectsCoding,
-       DummyCoding,
-       HelmertCoding,
-       ContrastsCoding,
+    AbstractContrasts,
+    EffectsCoding,
+    DummyCoding,
+    HelmertCoding,
+    ContrastsCoding,
 
-       coefnames,
-       dropterm,
-       setcontrasts!,
+    coefnames,
+    dropterm,
+    setcontrasts!,
 
     AbstractTerm,
     TermOrTerms,
@@ -49,10 +50,7 @@ include("contrasts.jl")
 include("terms.jl")
 include("schema.jl")
 include("formula.jl")
-include("modelframe2.jl")
-# include("modelmatrix.jl")
+include("modelframe.jl")
 # include("statsmodel.jl")
-# include("deprecated.jl")
-
 
 end # module StatsModels
