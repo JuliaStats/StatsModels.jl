@@ -5,7 +5,17 @@ Base.show(io::IO, terms::NTuple{N, AbstractTerm}) where N = print(io, join(terms
 width(::T) where T<:AbstractTerm =
     throw(ArgumentError("terms of type $T have undefined width"))
 
-# "lazy" or deferred term for data with unknown type etc.
+"""
+    struct Term <: AbstractTerm
+
+A placeholder for a variable in a formula where the type (and necessary data
+invariants) is not yet known.  This will be converted to a
+[`ContinuousTerm`](@ref) or [`CategoricalTerm`](@ref) by [`apply_schema`](@ref).
+
+# Fields
+
+* `sym::Symbol`: The name of the data column this term refers to.
+"""
 struct Term <: AbstractTerm
     sym::Symbol
 end
@@ -14,12 +24,33 @@ width(::Term) =
     throw(ArgumentError("Un-typed Terms have undefined width.  " *
                         "Did you forget to apply_schema?"))
 
+"""
+    struct ConstantTerm{T<:Number} <: AbstractTerm
+
+Represents a literal number in a formula.  By default will be converted to
+[`InterceptTerm`] by [`apply_schema`](@ref).
+
+# Fields
+
+* `n::T`: The number represented by this term.
+"""
 struct ConstantTerm{T<:Number} <: AbstractTerm
     n::T
 end
 Base.show(io::IO, t::ConstantTerm) = print(io, t.n)
 width(::ConstantTerm) = 1
 
+"""
+    struct FormulaTerm{L,R} <: AbstractTerm
+
+Represents an entire formula, with a left- and right-hand side.  These can be of
+any type (captured by the type parameters).  
+
+# Fields
+
+* `lhs::L`: The left-hand side (e.g., response)
+* `rhs::R`: The right-hand side (e.g., predictors)
+"""
 struct FormulaTerm{L,R} <: AbstractTerm
     lhs::L
     rhs::R
@@ -150,7 +181,7 @@ Base.:+(terms::AbstractTerm...) = (unique(terms)..., )
 catdims(::Data.Table) = 2
 catdims(::NamedTuple) = 1
 
-model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where N =
+model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where {N} =
     cat([model_cols(t, d) for t in ts]..., dims=catdims(d))
 
 
