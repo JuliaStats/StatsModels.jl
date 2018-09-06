@@ -167,7 +167,7 @@ model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where {N} =
 
 # TODO: @generated to unroll the getfield stuff
 model_cols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
-    ft.fanon.(getfield.(d, Names)...)
+    ft.fanon.(getfield.(Ref(d), Names)...)
 
 model_cols(t::ContinuousTerm, d::NamedTuple) = convert.(Float64, d[t.sym])
 

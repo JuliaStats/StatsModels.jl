@@ -126,7 +126,7 @@ end
 function apply_schema(t::InteractionTerm, schema::FullRank)
     push!(schema.already, t)
     terms = apply_schema.(t.terms, Ref(schema.schema))
-    terms = apply_schema.(terms, schema, t)
+    terms = apply_schema.(terms, Ref(schema), Ref(t))
     InteractionTerm(terms)
 end
 
