@@ -5,17 +5,14 @@ os:
   - osx
 julia:
   - 0.7
+  - 1.0
   - nightly
 notifications:
   email: false
-# uncomment the following lines to override the default test script
-script:
-  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'Pkg.clone(pwd()); Pkg.build("StatsModels"); Pkg.test("StatsModels"; coverage=true)'
-after_success:
-  # build and deploy documentation with Documenter.jl
-  - julia -e 'cd(Pkg.dir("StatsModels")); Pkg.add("Documenter"); include(joinpath("docs", "make.jl"))'
-  # push coverage results to Coveralls
-  - julia -e 'cd(Pkg.dir("StatsModels")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
-  # push coverage results to Codecov
-  - julia -e 'cd(Pkg.dir("StatsModels")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+
+after_script:
+  # push coverage results to Codecov and Coveralls
+  - julia -e 'using Pkg, StatsModels; cd(joinpath(dirname(pathof(StatsModels)), "..")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder()); Coveralls.submit(process_folder())'
+  # Update the documentation
+  - julia -e 'using Pkg; Pkg.add("Documenter")'
+  - julia -e 'using StatsModels; ENV["DOCUMENTER_DEBUG"] = "true"; include(joinpath(dirname(pathof(StatsModels)), "..", "docs", "make.jl"))'
