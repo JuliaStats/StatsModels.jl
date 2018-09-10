@@ -99,7 +99,7 @@ function droprandomeffects(trms::Terms)
         # After dropping random-effects terms we drop any eterms whose rows are all false
         ckeep = .!retrms                 # columns to retain
         facs = trms.factors[:, ckeep]
-        rkeep = vec(sum(facs, 2) .> 0)
+        rkeep = vec(sum(facs, dims=2) .> 0)
         Terms(trms.terms[ckeep], trms.eterms[rkeep], facs[rkeep, :],
               trms.is_non_redundant[rkeep, ckeep],
               trms.order[ckeep], trms.response, trms.intercept)
