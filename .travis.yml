@@ -10,7 +10,7 @@ julia:
 notifications:
   email: false
 
-after_script:
+after_success:
   # push coverage results to Codecov and Coveralls
   - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder()); Codecov.submit(process_folder())'
   # Update the documentation
