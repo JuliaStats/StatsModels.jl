@@ -1,11 +1,7 @@
 @testset "Deprecations" begin
     f = @formula y ~ 1 + a*b
 
-    @static if VERSION > v"0.7.0-DEV.2988"
-        f2 = @test_logs (:warn, r"Formula\(lhs, rhs\) is deprecated") Formula(f.lhs, f.rhs)
-    else
-        f2 = @test_warn "deprecated" Formula(f.lhs, f.rhs)
-    end
+    f2 = @test_logs (:warn, r"Formula\(lhs, rhs\) is deprecated") Formula(f.lhs, f.rhs)
     @test f2.lhs == f.lhs
     @test f2.rhs == f.rhs
     @test f2.ex == f.ex
