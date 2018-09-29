@@ -48,12 +48,12 @@ end
 """
     drop_intercept(::Type)
 
-Define whether a given model automatically drops the intercept. Return `false` by default. 
-To specify that a model type `T` drops the intercept, overload this function for the 
+Define whether a given model automatically drops the intercept. Return `false` by default.
+To specify that a model type `T` drops the intercept, overload this function for the
 corresponding type: `drop_intercept(::Type{T}) = true`
 
-Models that drop the intercept will be fitted without one: the intercept term will be 
-removed even if explicitly provided by the user. Categorical variables will be expanded 
+Models that drop the intercept will be fitted without one: the intercept term will be
+removed even if explicitly provided by the user. Categorical variables will be expanded
 in the rank-reduced form (contrasts for `n` levels will only produce `n-1` columns).
 """
 drop_intercept(::Type) = false
@@ -90,12 +90,14 @@ StatsBase.r2(mm::DataFrameRegressionModel, variant::Symbol) = r2(mm.model, varia
 StatsBase.adjr2(mm::DataFrameRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
 
 # Predict function that takes data frame as predictor instead of matrix
-function StatsBase.predict(mm::DataFrameRegressionModel, df::AbstractDataFrame; kwargs...)
+function StatsBase.predict(mm::DataFrameRegressionModel{T}, df::AbstractDataFrame; kwargs...) where T
     # copy terms, removing outcome if present (ModelFrame will complain if a
     # term is not found in the DataFrame and we don't want to remove elements with missing y)
     newTerms = dropresponse!(mm.mf.terms)
     # create new model frame/matrix
+    drop_intercept(T) && (newTerms.intercept = true)
     mf = ModelFrame(newTerms, df; contrasts = mm.mf.contrasts)
+    drop_intercept(T) && (mf.terms.intercept = false)
     newX = ModelMatrix(mf).m
     yp = predict(mm, newX; kwargs...)
     out = missings(eltype(yp), size(df, 1))
