@@ -3,7 +3,7 @@
 
 # step 1: extract all Term symbols
 # step 2: create empty Schema (Dict)
-# step 3: for each term, create schema entrybased on column from data store
+# step 3: for each term, create schema entry based on column from data store
 
 # TODO: handle streaming (Data.RowTable) by iterating over rows and updating
 # schemas in place
@@ -73,6 +73,12 @@ end
 #
 # so what does that wrapper look like?  holds onto the terms that have been seen
 # so far, checks against that...
+#
+#
+# actually, want to replace the wrapper with dispatching on the _model_ type
+# (destination) as well.  so instead of a wrapper you'd have a third argument
+# which...not sure.  you can dispatch on ::RegressionModel or
+# ::StatisticalModel?  and smoehow use a trait to check for drop_intercept?
 
 apply_schema(ft::FormulaTerm, data::Data.Table, args...) =
     apply_schema(ft, schema(ft, data, args...))

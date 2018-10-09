@@ -61,8 +61,17 @@ drop_intercept(::Type) = false
 for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
                                  (:RegressionModel, DataFrameRegressionModel))
     @eval begin
-        function StatsBase.fit(::Type{T}, f::Formula, df::AbstractDataFrame,
-                               args...; contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
+        function StatsBase.fit(::Type{T}, f::FormulaTerm, data, args...;
+                               contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
+                               
+            Tables.istable(data) || throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
+            cols = Tables.columns(data)
+            schema = schema(data, cols, contrasts)
+            f = apply_schema(f, schema) # TODO: apply_schema(f, schema, T)
+            y, X = model_cols(f, cols)
+            $dfmodeltype(fit(T, X, y, args...; kwargs...)
+            
+            
             trms = Terms(f)
             drop_intercept(T) && (trms.intercept = true)
             mf = ModelFrame(trms, df, contrasts=contrasts)

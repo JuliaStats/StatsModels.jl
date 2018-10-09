@@ -42,6 +42,7 @@ function ModelFrame(f::FormulaTerm, data::Data.Table; contrasts=Dict{Symbol,Any}
     term_vars = termvars(f)
     data, _ = missing_omit(_select(data, term_vars))
 
+    # todo: use apply_schema(f, sch, ::ModelType)
     sch = FullRank(schema(f, data, contrasts))
     f = apply_schema(f, sch)
     
