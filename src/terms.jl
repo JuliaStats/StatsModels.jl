@@ -62,9 +62,10 @@ struct FunctionTerm{Forig,Fanon,Names} <: AbstractTerm
     fanon::Fanon
     names::NTuple{N,Symbol} where N
     exorig::Expr
+    args_parsed::Vector
 end
-FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol}, exorig::Expr) where {Fo,Fa,N}  =
-    FunctionTerm{Fo, Fa, names}(forig, fanon, names, exorig)
+FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol}, exorig::Expr, args_parsed) where {Fo,Fa,N}  =
+    FunctionTerm{Fo, Fa, names}(forig, fanon, names, exorig, args_parsed)
 Base.show(io::IO, t::FunctionTerm) = print(io, ":($(t.exorig))")
 width(::FunctionTerm) = 1
 
@@ -107,27 +108,6 @@ end
 
 struct PredictorsTerm{Ts} <: AbstractTerm
     terms::Ts
-end
-
-"""
-    capture_call_ex!(ex::Expr)
-
-Capture a call to a function that is not part of the formula DSL.  This replaces
-`ex` with a call to [`capture_call`](@ref)
-"""
-function capture_call_ex!(ex::Expr)
-    check_call(ex)
-    symbols = extract_symbols(ex)
-    symbols_ex = Expr(:tuple, symbols...)
-    f_anon_ex = Expr(:(->), symbols_ex, copy(ex))
-    f_orig = ex.args[1]
-    ex_orig = deepcopy(ex)
-    ex.args = [:(StatsModels.capture_call),
-               esc(f_orig),
-               f_anon_ex,
-               tuple(symbols...),
-               Meta.quot(ex_orig)]
-    ex
 end
 
 """

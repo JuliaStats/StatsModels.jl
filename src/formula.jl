@@ -211,23 +211,60 @@ function parse!(ex::Expr, rewrites::Vector)
     @debug "parsing $ex"
     catch_dollar(ex)
     check_call(ex)
-    # if not a "special call", then create an anonymous function, and don't recurse
+
+    # don't recurse into captured calls
+    is_call(ex, :(StatsModels.capture_call)) && return ex
+
+    # parse a copy of non-special calls
+    ex_parsed = ex.args[1] ∉ SPECIALS ? deepcopy(ex) : ex
+    
+    # iterate over children, checking for special rules
+    child_idx = 2
+    while child_idx <= length(ex_parsed.args)
+        @debug "  ($(ex_parsed.args[1])) i=$child_idx: $(ex_parsed.args[child_idx])"
+        # depth first: parse each child first
+        parse!(ex_parsed.args[child_idx], rewrites)
+        # find first rewrite rule that applies
+        rule = filterfirst(r->applies(ex_parsed, child_idx, r), rewrites)
+        # re-write according to that rule and update the child to position rewrite nex_parsedt
+        child_idx = rewrite!(ex_parsed, child_idx, rule)
+    end
+    @debug "done: $ex_parsed"
+
     if ex.args[1] ∈ SPECIALS
-        # iterate over children, checking for special rules
-        child_idx = 2
-        while child_idx <= length(ex.args)
-            @debug "  ($(ex.args[1])) i=$child_idx: $(ex.args[child_idx])"
-            # depth first: parse each child first
-            parse!(ex.args[child_idx], rewrites)
-            # find first rewrite rule that applies
-            rule = filterfirst(r->applies(ex, child_idx, r), rewrites)
-            # re-write according to that rule and update the child to position rewrite next
-            child_idx = rewrite!(ex, child_idx, rule)
-        end
-        @debug "done: $ex"
-        ex
+        return ex_parsed
+    else
+        @debug "  capturing non-special call $ex"
+        return capture_call_ex!(ex, ex_parsed)
     end
 end
+
+"""
+    capture_call_ex!(ex::Expr)
+
+Capture a call to a function that is not part of the formula DSL.  This replaces
+`ex` with a call to [`capture_call`](@ref)
+"""
+function capture_call_ex!(ex::Expr, ex_parsed::Expr)
+    symbols = extract_symbols(ex)
+    symbols_ex = Expr(:tuple, symbols...)
+    f_anon_ex = Expr(:(->), symbols_ex, copy(ex))
+    f_orig = ex.args[1]
+    ex.args = [:capture_call,
+               esc(f_orig),
+               f_anon_ex,
+               tuple(symbols...),
+               Meta.quot(deepcopy(ex)),
+               :[$(ex_parsed.args[2:end]...)]]
+    return ex
+end
+
+
+# okay.  if ex is a special, then rewrite the children according to The Rules.
+# If not, then copy the original args, parse them each, and rewrite the original
+# as a capture_call expression.
+
+
 
 # generate Term expressions for symbols and FormulaTerms for non-special calls
 terms!(::Nothing) = :(nothing)
@@ -237,9 +274,9 @@ function terms!(ex::Expr)
     if ex.args[1] ∈ SPECIALS
         ex.args[1] = esc(ex.args[1])
         ex.args[2:end] .= terms!.(ex.args[2:end])
-    else
-        @debug "  generating anonymous function for $ex"
-        capture_call_ex!(ex)
+    elseif is_call(ex, :capture_call)
+        # final argument of capture_call holds parsed terms
+        ex.args[end].args .= terms!.(ex.args[end].args)
     end
     return ex
 end
@@ -249,6 +286,8 @@ function sort_terms!(ex::Expr)
     check_call(ex)
     if ex.args[1] ∈ ASSOCIATIVE
         sort!(view(ex.args, 2:length(ex.args)), by=degree)
+    elseif is_call(ex, :capture_call)
+        sort_terms!.(ex.args[end].args)
     else
         # recursively sort children
         sort_terms!.(ex.args)
