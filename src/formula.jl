@@ -203,19 +203,7 @@ function filterfirst(f::Function, a::AbstractArray)
     idx === nothing ? nothing : a[idx]
 end
 
-const SPECIALS = Set([:+, :&, :*, :~])
-"""
-    is_special(s)
-    is_special(::Val{s}) where s
-
-Return `true` if arguments to calls to `s` should be treated as `Term`s, and
-`false` as normal julia code.  `is_special(s::Symbol)` falls back to
-`is_special(::Val{s})`, so to treat calls to `myfun` as special formula syntax
-define `is_special(::Val{:myfun}) = true`.
-"""
-is_special(s::Symbol) = s ∈ SPECIALS || is_special(Val(s))
-is_special(s) = false
-
+const SPECIALS = (:+, :&, :*, :~)
 
 parse!(x) = parse!(x, [And1, EmptyAnd, Subtraction, Star, AssociativeRule, Distributive])
 parse!(x, rewrites) = x
@@ -224,7 +212,7 @@ function parse!(ex::Expr, rewrites::Vector)
     catch_dollar(ex)
     check_call(ex)
     # if not a "special call", then create an anonymous function, and don't recurse
-    if is_special(ex.args[1])
+    if ex.args[1] ∈ SPECIALS
         # iterate over children, checking for special rules
         child_idx = 2
         while child_idx <= length(ex.args)
@@ -246,7 +234,7 @@ terms!(::Nothing) = :(nothing)
 terms!(s::Symbol) = :(Term($(Meta.quot(s))))
 terms!(n::Number) = :(ConstantTerm($n))
 function terms!(ex::Expr)
-    if is_special(ex.args[1])
+    if ex.args[1] ∈ SPECIALS
         ex.args[1] = esc(ex.args[1])
         ex.args[2:end] .= terms!.(ex.args[2:end])
     else
