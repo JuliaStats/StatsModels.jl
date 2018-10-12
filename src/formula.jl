@@ -102,12 +102,11 @@ Apply associative rule: if in an expression headed by an associative operator
 splice that child's children into it's location.
 """
 struct AssociativeRule <: FormulaRewrite end
-const ASSOCIATIVE = Set([:+, :&, :*])
+const ASSOCIATIVE = (:+, :&, :*)
 applies(ex::Expr, child_idx::Int, ::Type{AssociativeRule}) =
     is_call(ex) &&
-    is_call(ex.args[child_idx]) &&
     ex.args[1] in ASSOCIATIVE &&
-    ex.args[1] == ex.args[child_idx].args[1]
+    is_call(ex.args[child_idx], ex.args[1])
 function rewrite!(ex::Expr, child_idx::Int, ::Type{AssociativeRule})
     @debug "    associative: $ex -> "
     splice!(ex.args, child_idx, ex.args[child_idx].args[2:end])
