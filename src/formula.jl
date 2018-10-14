@@ -144,22 +144,6 @@ function rewrite!(ex::Expr, child_idx::Int, ::Type{Distributive})
 end
 
 """
-    Subtraction <: FormulaRewrite
-
-Correct `x - 1` to `x + -1`
-"""
-struct Subtraction <: FormulaRewrite end
-applies(ex::Expr, child_idx::Int, ::Type{Subtraction}) =
-    is_call(ex.args[child_idx], :-)
-function rewrite!(ex::Expr, child_idx::Int, ::Type{Subtraction})
-    child = ex.args[child_idx]
-    child.args[3] == 1 || throw(ArgumentError("Can only subtract 1, got $child"))
-    child.args[1] = :+
-    child.args[3] = -1
-    child_idx
-end
-
-"""
     And1 <: FormulaRewrite
 
 Remove numbers from interaction terms, so `1&x` becomes `&(x)` (which is later 
@@ -177,21 +161,6 @@ function rewrite!(ex::Expr, child_idx::Int, ::Type{And1})
     child_idx
 end
 
-"""
-    EmptyAnd <: FormulaRewrite
-
-Convert single-argument interactions to symbols: `&(x)` to `x` (cleanup after
-`And1`.
-"""
-struct EmptyAnd <: FormulaRewrite end
-applies(ex::Expr, child_idx::Int, ::Type{EmptyAnd}) =
-    is_call(ex.args[child_idx], :&) &&
-    length(ex.args[child_idx].args) == 2
-function rewrite!(ex::Expr, child_idx::Int, ::Type{EmptyAnd})
-    ex.args[child_idx] = ex.args[child_idx].args[2]
-    child_idx
-end
-
 # default re-write is a no-op (go to next child)
 rewrite!(ex::Expr, child_idx::Int, ::Nothing) = child_idx+1
 
@@ -204,7 +173,7 @@ end
 
 const SPECIALS = (:+, :&, :*, :~)
 
-parse!(x) = parse!(x, [And1, EmptyAnd, Subtraction, Star, AssociativeRule, Distributive])
+parse!(x) = parse!(x, [And1, Star, AssociativeRule, Distributive])
 parse!(x, rewrites) = x
 function parse!(ex::Expr, rewrites::Vector)
     @debug "parsing $ex"

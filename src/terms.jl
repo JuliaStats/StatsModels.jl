@@ -151,6 +151,7 @@ extract_symbols(ex::Expr) =
 Base.:~(lhs::TermOrTerms, rhs::TermOrTerms) = FormulaTerm(lhs, rhs)
 
 Base.:&(terms::AbstractTerm...) = InteractionTerm(terms)
+Base.:&(term::AbstractTerm) = term
 Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
 
 Base.:+(terms::AbstractTerm...) = (unique(terms)..., )

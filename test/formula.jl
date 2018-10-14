@@ -45,12 +45,10 @@
     @test hasintercept(t) == false
     @test t.rhs == term(0, :x1, :x2)
 
-    @test @formula(y ~ -1 + x1 + x2) ==
+    # subtraction not supported:
+    @test_skip @formula(y ~ -1 + x1 + x2) ==
         @formula(y ~ x1 - 1 + x2) ==
         @formula(y ~ x1 + x2 - 1)
-
-    ## can't subtract terms other than 1
-    @test_throws LoadError @eval @formula(y ~ x1 - x2)
 
     t = @formula(y ~ x1 & x2)
     @test t.rhs == x1&x2
