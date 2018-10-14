@@ -32,14 +32,14 @@ macro delegate(source, targets)
     return result
 end
 
-# Wrappers for DataFrameStatisticalModel and DataFrameRegressionModel
-struct DataFrameStatisticalModel{M,T} <: StatisticalModel
+# Wrappers for TableStatisticalModel and TableRegressionModel
+struct TableStatisticalModel{M,T} <: StatisticalModel
     model::M
     mf::ModelFrame
     mm::ModelMatrix{T}
 end
 
-struct DataFrameRegressionModel{M,T} <: RegressionModel
+struct TableRegressionModel{M,T} <: RegressionModel
     model::M
     mf::ModelFrame
     mm::ModelMatrix{T}
@@ -58,8 +58,8 @@ in the rank-reduced form (contrasts for `n` levels will only produce `n-1` colum
 """
 drop_intercept(::Type) = false
 
-for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
-                                 (:RegressionModel, DataFrameRegressionModel))
+for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
+                                 (:RegressionModel, TableRegressionModel))
     @eval begin
         function StatsBase.fit(::Type{T}, f::FormulaTerm, data, args...;
                                contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
@@ -69,7 +69,7 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
             schema = schema(data, cols, contrasts)
             f = apply_schema(f, schema) # TODO: apply_schema(f, schema, T)
             y, X = model_cols(f, cols)
-            $dfmodeltype(fit(T, X, y, args...; kwargs...)
+            $dfmodeltype(fit(T, X, y, args...; kwargs...))
             
             
             trms = Terms(f)
@@ -84,24 +84,26 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, DataFrameStatisticalModel),
 end
 
 # Delegate functions from StatsBase that use our new types
-const DataFrameModels = Union{DataFrameStatisticalModel, DataFrameRegressionModel}
-@delegate DataFrameModels.model [StatsBase.coef, StatsBase.confint,
+const TableModels = Union{TableStatisticalModel, TableRegressionModel}
+@delegate TableModels.model [StatsBase.coef, StatsBase.confint,
                                  StatsBase.deviance, StatsBase.nulldeviance,
                                  StatsBase.loglikelihood, StatsBase.nullloglikelihood,
                                  StatsBase.dof, StatsBase.dof_residual, StatsBase.nobs,
                                  StatsBase.stderror, StatsBase.vcov]
-@delegate DataFrameRegressionModel.model [StatsBase.residuals, StatsBase.model_response,
+@delegate TableRegressionModel.model [StatsBase.residuals, StatsBase.model_response,
                                           StatsBase.predict, StatsBase.predict!]
 # Need to define these manually because of ambiguity using @delegate
-StatsBase.r2(mm::DataFrameRegressionModel) = r2(mm.model)
-StatsBase.adjr2(mm::DataFrameRegressionModel) = adjr2(mm.model)
-StatsBase.r2(mm::DataFrameRegressionModel, variant::Symbol) = r2(mm.model, variant)
-StatsBase.adjr2(mm::DataFrameRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
+StatsBase.r2(mm::TableRegressionModel) = r2(mm.model)
+StatsBase.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
+StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
+StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
 
 # Predict function that takes data frame as predictor instead of matrix
-function StatsBase.predict(mm::DataFrameRegressionModel, df::AbstractDataFrame; kwargs...)
+function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
+    Tables.istable(data) ||
+        throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
     # copy terms, removing outcome if present (ModelFrame will complain if a
-    # term is not found in the DataFrame and we don't want to remove elements with missing y)
+    # term is not found in the Table and we don't want to remove elements with missing y)
     newTerms = dropresponse!(mm.mf.terms)
     # create new model frame/matrix
     mf = ModelFrame(newTerms, df; contrasts = mm.mf.contrasts)
@@ -112,10 +114,10 @@ function StatsBase.predict(mm::DataFrameRegressionModel, df::AbstractDataFrame; 
     return(out)
 end
 
-StatsBase.coefnames(model::DataFrameModels) = coefnames(model.mf)
+StatsBase.coefnames(model::TableModels) = coefnames(model.mf)
 
 # coeftable implementation
-function StatsBase.coeftable(model::DataFrameModels)
+function StatsBase.coeftable(model::TableModels)
     ct = coeftable(model.model)
     cfnames = coefnames(model.mf)
     if length(ct.rownms) == length(cfnames)
@@ -125,7 +127,7 @@ function StatsBase.coeftable(model::DataFrameModels)
 end
 
 # show function that delegates to coeftable
-function Base.show(io::IO, model::DataFrameModels)
+function Base.show(io::IO, model::TableModels)
     try
         ct = coeftable(model)
         println(io, "$(typeof(model))")
