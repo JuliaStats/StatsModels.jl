@@ -22,15 +22,15 @@ function _nonmissing!(res, col::CategoricalArray{>: Missing})
     end
 end
 
-_select(d::Data.Table, cols::NTuple{N,Symbol} where N) = NamedTuple{cols}(d)
-_select(d::Data.Table, cols::Vector{Symbol}) = _select(d, tuple(cols...))
-_filter(d::T, rows) where T<:Data.Table = T(([col[rows] for col in d]..., ))
+_select(d::ColumnTable, cols::NTuple{N,Symbol} where N) = NamedTuple{cols}(d)
+_select(d::ColumnTable, cols::Vector{Symbol}) = _select(d, tuple(cols...))
+_filter(d::T, rows) where T<:ColumnTable = T(([col[rows] for col in d]..., ))
 
-_size(d::Data.Table) = (length(first(d)), length(d))
-_size(d::Data.Table, dim::Int) = _size(d)[dim]
+_size(d::ColumnTable) = (length(first(d)), length(d))
+_size(d::ColumnTable, dim::Int) = _size(d)[dim]
 
 ## Default NULL handler.  Others can be added as keyword arguments
-function missing_omit(d::T) where T<:Data.Table
+function missing_omit(d::T) where T<:ColumnTable
     nonmissings = trues(_size(d, 1))
     for col in d
         _nonmissing!(nonmissings, col)
@@ -38,7 +38,7 @@ function missing_omit(d::T) where T<:Data.Table
     map(disallowmissing, _filter(d, nonmissings)), nonmissings
 end
 
-function ModelFrame(f::FormulaTerm, data::Data.Table; contrasts=Dict{Symbol,Any}())
+function ModelFrame(f::FormulaTerm, data::ColumnTable; contrasts=Dict{Symbol,Any}())
     term_vars = termvars(f)
     data, _ = missing_omit(_select(data, term_vars))
 
@@ -49,7 +49,7 @@ function ModelFrame(f::FormulaTerm, data::Data.Table; contrasts=Dict{Symbol,Any}
     ModelFrame(f, sch, data)
 end
 ModelFrame(f::FormulaTerm, data; contrasts=Dict{Symbol,Any}()) =
-    ModelFrame(f, Data.stream!(data, Data.Table); contrasts=contrasts)
+    ModelFrame(f, columntable(data); contrasts=contrasts)
 
 model_matrix(mf::ModelFrame; data=mf.data) = model_cols(mf.f.rhs, data)
 StatsBase.model_response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, data)

@@ -2,13 +2,16 @@ __precompile__(false)
 
 module StatsModels
 
-using DataFrames
-using DataStreams
+using Tables
 using OnlineStats
 using StatsBase
+using CategoricalArrays
+
 using SparseArrays
 using LinearAlgebra
 using Missings
+
+using Tables: ColumnTable
 
 export
     @formula,

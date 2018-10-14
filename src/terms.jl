@@ -158,7 +158,7 @@ Base.:+(terms::AbstractTerm...) = (unique(terms)..., )
 ################################################################################
 # evaluating terms with data to generate model matrix entries
 
-catdims(::Data.Table) = 2
+catdims(::ColumnTable) = 2
 catdims(::NamedTuple) = 1
 
 model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where {N} =
@@ -192,7 +192,7 @@ end
 model_cols(t::InteractionTerm, d::NamedTuple) =
     kron_insideout(*, (model_cols(term, d) for term in t.terms)...)
 
-function model_cols(t::InteractionTerm, d::Data.Table)
+function model_cols(t::InteractionTerm, d::ColumnTable)
     row_kron_insideout(*, (model_cols(term, d) for term in t.terms)...)
 end
 

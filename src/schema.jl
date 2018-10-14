@@ -18,15 +18,15 @@ needs_schema(::ConstantTerm) = false
 needs_schema(::FunctionTerm) = false
 needs_schema(t) = false
 
-schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:Data.Table} =
+schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:ColumnTable} =
     schema(Term.(collect(fieldnames(D))), dt, hints)
 
-schema(data, hints=Dict{Symbol,Any}()) = schema(Data.stream!(data, Data.Table), hints)
+schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
 schema(ts::Vector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
-    schema(Data.stream!(data, Data.Table), hints)
+    schema(columntable(data), hints)
 
 # handle hints:
-function schema(ts::Vector{<:AbstractTerm}, dt::Data.Table, hints::Dict{Symbol})
+function schema(ts::Vector{<:AbstractTerm}, dt::ColumnTable, hints::Dict{Symbol})
     sch = Dict{Any,Any}()
     for t in ts
         if t.sym ∈ keys(hints)
@@ -43,8 +43,8 @@ schema(f::FormulaTerm, data, hints::Dict{Symbol}) =
 
 schema(f::FormulaTerm, data) = schema(f, data, Dict{Symbol,Any}())
 
-schema(t::Term, dt::Data.Table) = schema(t, dt[t.sym])
-schema(t::Term, dt::Data.Table, hint) = schema(t, dt[t.sym], hint)
+schema(t::Term, dt::ColumnTable) = schema(t, dt[t.sym])
+schema(t::Term, dt::ColumnTable, hint) = schema(t, dt[t.sym], hint)
 
 schema(t::Term, xs::AbstractVector{<:Number}) = schema(t, xs, ContinuousTerm)
 schema(t::Term, xs::AbstractVector, ::Type{ContinuousTerm}) =
@@ -80,7 +80,7 @@ end
 # which...not sure.  you can dispatch on ::RegressionModel or
 # ::StatisticalModel?  and smoehow use a trait to check for drop_intercept?
 
-apply_schema(ft::FormulaTerm, data::Data.Table, args...) =
+apply_schema(ft::FormulaTerm, data::ColumnTable, args...) =
     apply_schema(ft, schema(ft, data, args...))
 
 apply_schema(t, schema) = t
