@@ -79,17 +79,38 @@ end
 # (destination) as well.  so instead of a wrapper you'd have a third argument
 # which...not sure.  you can dispatch on ::RegressionModel or
 # ::StatisticalModel?  and smoehow use a trait to check for drop_intercept?
+#
+# the other issue here is how to deal with a model having potentially multiple
+# traits, like full rank and implicit intercept.
+#
+# it seems like there are two choices: compute traits on teh fly, as needed, or
+# compute them all up front and apply with one at a time.
+#
+# the other issue is that some of these might require keeping track of
+# additional information during the re-write (like the full rank: you need to
+# know what terms you've seen already).  I'm not sure how to do that with
+# dispatch...other than how it already is, which is to dispatch on the schema
+# type and use that to hold metadata.
 
-apply_schema(ft::FormulaTerm, data::ColumnTable, args...) =
-    apply_schema(ft, schema(ft, data, args...))
+"""
+    apply_schema(t, schema, Mod)
+    apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 
-apply_schema(t, schema) = t
-apply_schema(terms::NTuple{N,AbstractTerm}, schema) where N = apply_schema.(terms, Ref(schema))
-apply_schema(t::Term, schema) = schema[t]
-apply_schema(ft::FormulaTerm, schema) = FormulaTerm(apply_schema(ft.lhs, schema),
-                                                    apply_schema(ft.rhs, schema))
-apply_schema(it::InteractionTerm, schema) = InteractionTerm(apply_schema(it.terms, schema))
-function apply_schema(t::ConstantTerm, schema)
+Return a new term that is the result of applying `schema` to term `t` with
+destination model (type) `Mod`.  If `Mod` is omitted, `Nothing` will be used.
+"""
+apply_schema(t, schema) = apply_schema(t, schema, Nothing)
+apply_schema(t, schema, Mod) = t
+apply_schema(terms::NTuple{N,AbstractTerm}, schema, Mod) where N =
+    apply_schema.(terms, Ref(schema), Mod)
+apply_schema(t::Term, schema, Mod) = schema[t]
+apply_schema(ft::FormulaTerm, schema, Mod) = FormulaTerm(apply_schema(ft.lhs, schema, Mod),
+                                                         apply_schema(ft.rhs, schema, Mod))
+apply_schema(it::InteractionTerm, schema, Mod) =
+    InteractionTerm(apply_schema(it.terms, schema, Mod))
+
+# TODO: special case this for <:RegressionModel ?
+function apply_schema(t::ConstantTerm, schema, Mod)
     t.n ∈ [-1, 0, 1] ||
         throw(ArgumentError("can't create InterceptTerm from $(t.n) (only -1, 0, and 1 allowed)"))
     InterceptTerm{t.n==1}()
@@ -103,12 +124,27 @@ end
 
 FullRank(schema) = FullRank(schema, Set())
 
-apply_schema(t, schema, ::Type{FullRank}) = apply_schema(t, FullRank(schema))
+function apply_schema(t::FormulaTerm, schema, Mod::Type{<:StatisticalModel})
+    schema = FullRank(schema)
+    if implicit_intercept(Mod) && !hasintercept(t) && !hasnointercept(t)
+        t = FormulaTerm(t.lhs, t.rhs + InterceptTerm{true}())
+    end
 
-# only apply rank-promoting logic to RIGHT hand side
-apply_schema(t::FormulaTerm, schema::FullRank) =
-    FormulaTerm(apply_schema(t.lhs, schema.schema),
-                apply_schema(t.rhs, schema))
+    # Models with the drop_intercept trait do not support intercept terms,
+    # usually because they include one implicitly.
+    if drop_intercept(Mod)
+        if hasintercept(t)
+            throw(ArgumentError("Model type $Mod doesn't support intercept " *
+                                "specified in formula $t"))
+        end
+        # start parsing as if we've already have the intercept
+        push!(schema.already(InterceptTerm{true}()))
+    end
+
+    # only apply rank-promoting logic to RIGHT hand side
+    FormulaTerm(apply_schema(t.lhs, schema.schema, Mod),
+                apply_schema(t.rhs, schema, Mod))
+end
 
 # strategy is: apply schema, then "repair" if necessary (promote to full rank
 # contrasts).  
@@ -116,23 +152,23 @@ apply_schema(t::FormulaTerm, schema::FullRank) =
 # to know whether to repair, need to know context a term appears in.  main
 # effects occur in "own" context.
 
-function apply_schema(t::ConstantTerm, schema::FullRank)
+function apply_schema(t::ConstantTerm, schema::FullRank, Mod)
     push!(schema.already, t)
-    apply_schema(t, schema.schema)
+    apply_schema(t, schema.schema, Mod)
 end
 
-apply_schema(t::InterceptTerm, schema::FullRank) = (push!(schema.already, t); t)
+apply_schema(t::InterceptTerm, schema::FullRank, Mod) = (push!(schema.already, t); t)
 
-function apply_schema(t::Term, schema::FullRank)
+function apply_schema(t::Term, schema::FullRank, Mod)
     push!(schema.already, t)
-    t = apply_schema(t, schema.schema) # continuous or categorical now
-    apply_schema(t, schema, t) # repair if necessary
+    t = apply_schema(t, schema.schema, Mod) # continuous or categorical now
+    apply_schema(t, schema, Mod, t) # repair if necessary
 end
 
-function apply_schema(t::InteractionTerm, schema::FullRank)
+function apply_schema(t::InteractionTerm, schema::FullRank, Mod)
     push!(schema.already, t)
-    terms = apply_schema.(t.terms, Ref(schema.schema))
-    terms = apply_schema.(terms, Ref(schema), Ref(t))
+    terms = apply_schema.(t.terms, Ref(schema.schema), Mod)
+    terms = apply_schema.(terms, Ref(schema), Mod, Ref(t))
     InteractionTerm(terms)
 end
 
@@ -140,10 +176,10 @@ end
 
 
 # context doesn't matter for non-categorical terms
-apply_schema(t, schema::FullRank, context) = t
+apply_schema(t, schema::FullRank, Mod, context::AbstractTerm) = t
 # when there's a context, check to see if any of the terms already seen would be
 # aliased by this term _if_ it were full rank.
-function apply_schema(t::CategoricalTerm, schema::FullRank, context)
+function apply_schema(t::CategoricalTerm, schema::FullRank, Mod, context::AbstractTerm)
     aliased = drop_term(context, t)
     @debug "$t in context of $context: aliases $aliased\n  seen already: $(schema.already)"
     for seen in schema.already
