@@ -155,6 +155,8 @@ Base.:&(term::AbstractTerm) = term
 Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
 
 Base.:+(terms::AbstractTerm...) = (unique(terms)..., )
+Base.:+(as::NTuple{N, AbstractTerm}, b::AbstractTerm) where {N} = (as..., b)
+Base.:+(a::AbstractTerm, bs::NTuple{N, AbstractTerm}) where {N} = (a, bs...)
 
 ################################################################################
 # evaluating terms with data to generate model matrix entries
@@ -219,6 +221,10 @@ termnames(t::InteractionTerm) =
 # old Terms features:
 
 hasintercept(t::AbstractTerm) = InterceptTerm{true}() ∈ terms(t) || ConstantTerm(1) ∈ terms(t)
+hasnointercept(t::AbstractTerm) =
+    InterceptTerm{false}() ∈ terms(t) ||
+    ConstantTerm(0) ∈ terms(t) ||
+    ConstantTerm(-1) ∈ terms(t)
 
 hasresponse(t) = false
 hasresponse(t::FormulaTerm{RHS, LHS}) where {RHS, LHS} = RHS !== nothing
