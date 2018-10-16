@@ -10,12 +10,12 @@
 
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
+terms(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
 terms(t::AbstractTerm) = [t]
 terms(t::NTuple{N, AbstractTerm}) where N = mapreduce(terms, union, t)
 
 needs_schema(t::AbstractTerm) = true
 needs_schema(::ConstantTerm) = false
-needs_schema(::FunctionTerm) = false
 needs_schema(t) = false
 
 schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:ColumnTable} =
@@ -23,7 +23,7 @@ schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:ColumnTable} =
 
 schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
 schema(ts::Vector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
-    schema(columntable(data), hints)
+    schema(ts, columntable(data), hints)
 
 # handle hints:
 function schema(ts::Vector{<:AbstractTerm}, dt::ColumnTable, hints::Dict{Symbol})
