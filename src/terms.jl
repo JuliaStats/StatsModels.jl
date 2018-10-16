@@ -213,9 +213,9 @@ termnames(t::ContinuousTerm) = string(t.sym)
 termnames(t::CategoricalTerm) = 
     ["$(t.sym): $name" for name in t.contrasts.termnames]
 termnames(t::FunctionTerm) = string(t.exorig)
-termnames(ts::NTuple{N,AbstractTerm}) where N = vcat(termnames.(ts)...)
+termnames(ts::NTuple{N,AbstractTerm}) where N = reduce(vcat, termnames.(ts))
 termnames(t::InteractionTerm) =
-    kron_insideout((args...) -> join(args, " & "), termnames.(t.terms)...)
+    kron_insideout((args...) -> join(args, " & "), vectorize.(termnames.(t.terms))...)
 
 ################################################################################
 # old Terms features:
