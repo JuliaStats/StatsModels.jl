@@ -1,7 +1,8 @@
-mutable struct ModelFrame{D}
+mutable struct ModelFrame{D,M}
     f::FormulaTerm
     schema
     data::D
+    model::Type{M}
 end
 
 
@@ -47,7 +48,7 @@ function ModelFrame(f::FormulaTerm, data::ColumnTable;
     sch = schema(f, data, contrasts)
     f = apply_schema(f, sch, Mod)
     
-    ModelFrame(f, sch, data)
+    ModelFrame(f, sch, data, mod)
 end
 
 ModelFrame(f::FormulaTerm, data; mod=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
