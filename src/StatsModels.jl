@@ -38,6 +38,7 @@ export
     InteractionTerm,
     FormulaTerm,
     InterceptTerm,
+    FunctionTerm,
 
     term,
     terms,
