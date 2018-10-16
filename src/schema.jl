@@ -98,6 +98,11 @@ end
 
 Return a new term that is the result of applying `schema` to term `t` with
 destination model (type) `Mod`.  If `Mod` is omitted, `Nothing` will be used.
+
+When `t` is a Continuous or CategoricalTerm already, the term will be returned 
+unchanged _unless_ a matching term is found in the schema.  This allows 
+selective re-setting of a schema to change the contrast coding or levels of a 
+categorical term, or to change a continuous term to categorical or vice versa.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 apply_schema(t, schema, Mod) = t
@@ -108,6 +113,9 @@ apply_schema(ft::FormulaTerm, schema, Mod) = FormulaTerm(apply_schema(ft.lhs, sc
                                                          apply_schema(ft.rhs, schema, Mod))
 apply_schema(it::InteractionTerm, schema, Mod) =
     InteractionTerm(apply_schema(it.terms, schema, Mod))
+
+apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema, Mod) =
+    get(schema, term(t.sym), t)
 
 # TODO: special case this for <:RegressionModel ?
 function apply_schema(t::ConstantTerm, schema, Mod)
@@ -123,6 +131,10 @@ mutable struct FullRank
 end
 
 FullRank(schema) = FullRank(schema, Set())
+
+Base.get(schema::FullRank, key, default) = get(schema.schema, key, default)
+Base.merge(a::FullRank, b::FullRank) = FullRank(merge(a.schema, b.schema),
+                                                union(a.already, b.already))
 
 function apply_schema(t::FormulaTerm, schema, Mod::Type{<:StatisticalModel})
     schema = FullRank(schema)
