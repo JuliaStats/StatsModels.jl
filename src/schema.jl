@@ -55,7 +55,7 @@ schema(t::Term, xs::AbstractVector) = schema(t, xs, CategoricalTerm)
 schema(t::Term, xs::AbstractArray, ::Type{CategoricalTerm}) = schema(t, xs, DummyCoding())
 
 function schema(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
-    counts = fit!(Series(CountMap(eltype(xs))), xs)
+    counts = fit!(Series(CountMap(DataStructures.SortedDict{eltype(xs),Int}())), xs)
     contrmat = ContrastsMatrix(contrasts, collect(keys(counts.stats[1])))
     CategoricalTerm(t.sym, counts, contrmat)
 end

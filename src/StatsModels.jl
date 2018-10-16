@@ -6,6 +6,7 @@ using Tables
 using OnlineStats
 using StatsBase
 using CategoricalArrays
+using DataStructures
 
 using SparseArrays
 using LinearAlgebra
