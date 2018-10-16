@@ -216,7 +216,7 @@ Capture a call to a function that is not part of the formula DSL.  This replaces
 function capture_call_ex!(ex::Expr, ex_parsed::Expr)
     symbols = extract_symbols(ex)
     symbols_ex = Expr(:tuple, symbols...)
-    f_anon_ex = Expr(:(->), symbols_ex, copy(ex))
+    f_anon_ex = esc(Expr(:(->), symbols_ex, copy(ex)))
     f_orig = ex.args[1]
     ex.args = [:capture_call,
                esc(f_orig),
