@@ -59,6 +59,24 @@ StatsBase.model_response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, da
 
 StatsBase.coefnames(mf::ModelFrame) = vectorize(termnames(mf.f.rhs))
 
+setcontrasts!(mf::ModelFrame; kwargs...) = setcontrasts!(mf, Dict(kwargs))
+function setcontrasts!(mf::ModelFrame, contrasts::Dict{Symbol})
+    new_schema = schema([term(k) for k in keys(contrasts)], mf.data, contrasts)
+
+    # warn of no-op for keys that dont correspond to known terms from old schema
+    unknown_keys = [k for k in keys(new_schema) if !haskey(mf.schema, k)]
+    if !isempty(unknown_keys)
+        unknown_keys_str = join(unknown_keys, ", ", " and ")
+        @warn "setcontrasts! for terms " * unknown_keys_str *
+            " has no effect since they are not found in original schema"
+    end
+
+    # apply only the re-mapped terms
+    mf.f = apply_schema(mf.f, new_schema, mf.model)
+    merge!(mf.schema, new_schema)
+    mf
+end
+
 
 
 const AbstractFloatMatrix{T<:AbstractFloat} =  AbstractMatrix{T}
