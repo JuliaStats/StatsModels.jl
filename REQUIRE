@@ -1,6 +1,7 @@
 julia 0.7-beta
 CategoricalArrays
 Tables
+StatsBase
 OnlineStats
 StatsBase 0.22.0
 Missings

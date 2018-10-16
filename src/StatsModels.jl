@@ -12,6 +12,7 @@ using LinearAlgebra
 using Missings
 
 using Tables: ColumnTable
+using StatsBase: StatisticalModel
 
 export
     @formula,

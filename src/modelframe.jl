@@ -38,18 +38,20 @@ function missing_omit(d::T) where T<:ColumnTable
     map(disallowmissing, _filter(d, nonmissings)), nonmissings
 end
 
-function ModelFrame(f::FormulaTerm, data::ColumnTable; contrasts=Dict{Symbol,Any}())
+function ModelFrame(f::FormulaTerm, data::ColumnTable;
+                    mod::Type{Mod}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where Mod
     term_vars = termvars(f)
     data, _ = missing_omit(_select(data, term_vars))
 
     # todo: use apply_schema(f, sch, ::ModelType)
-    sch = FullRank(schema(f, data, contrasts))
-    f = apply_schema(f, sch)
+    sch = schema(f, data, contrasts)
+    f = apply_schema(f, sch, Mod)
     
     ModelFrame(f, sch, data)
 end
-ModelFrame(f::FormulaTerm, data; contrasts=Dict{Symbol,Any}()) =
-    ModelFrame(f, columntable(data); contrasts=contrasts)
+
+ModelFrame(f::FormulaTerm, data; mod=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
+    ModelFrame(f, columntable(data); mod=mod, contrasts=contrasts)
 
 model_matrix(mf::ModelFrame; data=mf.data) = model_cols(mf.f.rhs, data)
 StatsBase.model_response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, data)
