@@ -138,9 +138,6 @@ Base.merge(a::FullRank, b::FullRank) = FullRank(merge(a.schema, b.schema),
 
 function apply_schema(t::FormulaTerm, schema, Mod::Type{<:StatisticalModel})
     schema = FullRank(schema)
-    if implicit_intercept(Mod) && !hasintercept(t) && !hasnointercept(t)
-        t = FormulaTerm(t.lhs, InterceptTerm{true}() + t.rhs)
-    end
 
     # Models with the drop_intercept trait do not support intercept terms,
     # usually because they include one implicitly.
@@ -150,7 +147,9 @@ function apply_schema(t::FormulaTerm, schema, Mod::Type{<:StatisticalModel})
                                 "specified in formula $t"))
         end
         # start parsing as if we've already have the intercept
-        push!(schema.already(InterceptTerm{true}()))
+        push!(schema.already, InterceptTerm{true}())
+    elseif implicit_intercept(Mod) && !hasintercept(t) && !hasnointercept(t)
+        t = FormulaTerm(t.lhs, InterceptTerm{true}() + t.rhs)
     end
 
     # only apply rank-promoting logic to RIGHT hand side
