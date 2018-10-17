@@ -224,7 +224,7 @@ end
 """
     termsyms(t::Terms.Term)
 
-Extract the Set of symbols referenced in this term.
+Extract the set of symbols referenced in this term.
 
 This is needed in order to determine when a categorical term should have
 standard (reduced rank) or full rank contrasts, based on the context it occurs

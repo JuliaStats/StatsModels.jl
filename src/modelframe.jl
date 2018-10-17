@@ -62,6 +62,7 @@ StatsBase.coefnames(mf::ModelFrame) = vectorize(termnames(mf.f.rhs))
 
 setcontrasts!(mf::ModelFrame; kwargs...) = setcontrasts!(mf, Dict(kwargs))
 function setcontrasts!(mf::ModelFrame, contrasts::Dict{Symbol})
+    # TODO: don't consume the whole table again if it's not needed
     new_schema = schema([term(k) for k in keys(contrasts)], mf.data, contrasts)
 
     # warn of no-op for keys that dont correspond to known terms from old schema

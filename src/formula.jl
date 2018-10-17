@@ -208,10 +208,12 @@ function parse!(ex::Expr, rewrites::Vector)
 end
 
 """
-    capture_call_ex!(ex::Expr)
+    capture_call_ex!(ex::Expr, ex_parsed::Expr)
 
 Capture a call to a function that is not part of the formula DSL.  This replaces
-`ex` with a call to [`capture_call`](@ref)
+`ex` with a call to [`capture_call`](@ref).  `ex_parsed` is a copy of `ex` whose
+arguments have been parsed according to the normal formula DSL rules and which 
+will be passed as the final argument to `capture_call`.
 """
 function capture_call_ex!(ex::Expr, ex_parsed::Expr)
     symbols = extract_symbols(ex)

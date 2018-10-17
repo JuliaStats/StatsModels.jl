@@ -1,8 +1,8 @@
 abstract type AbstractTerm end
 const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 
-Base.show(io::IO, terms::NTuple{N, AbstractTerm}) where N = print(io, join(terms, " + "))
-width(::T) where T<:AbstractTerm =
+Base.show(io::IO, terms::NTuple{N, AbstractTerm}) where {N} = print(io, join(terms, " + "))
+width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
 
 """
@@ -19,7 +19,7 @@ invariants) is not yet known.  This will be converted to a
 struct Term <: AbstractTerm
     sym::Symbol
 end
-Base.show(io::IO, t::Term) = print(io, "$(t.sym)")
+Base.show(io::IO, t::Term) = print(io, t.sym)
 width(::Term) =
     throw(ArgumentError("Un-typed Terms have undefined width.  " *
                         "Did you forget to apply_schema?"))
@@ -64,7 +64,8 @@ struct FunctionTerm{Forig,Fanon,Names} <: AbstractTerm
     exorig::Expr
     args_parsed::Vector
 end
-FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol}, exorig::Expr, args_parsed) where {Fo,Fa,N}  =
+FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
+             exorig::Expr, args_parsed) where {Fo,Fa,N}  =
     FunctionTerm{Fo, Fa, names}(forig, fanon, names, exorig, args_parsed)
 Base.show(io::IO, t::FunctionTerm) = print(io, ":($(t.exorig))")
 width(::FunctionTerm) = 1
@@ -77,8 +78,8 @@ width(ts::InteractionTerm) = prod(width(t) for t in ts.terms)
 
 # TODO: ConstantTerm?
 struct InterceptTerm{HasIntercept} <: AbstractTerm end
-Base.show(io::IO, t::InterceptTerm{T}) where T = print(io, T ? "1" : "0")
-width(::InterceptTerm{H}) where H = H ? 1 : 0
+Base.show(io::IO, t::InterceptTerm{H}) where {H} = print(io, H ? "1" : "0")
+width(::InterceptTerm{H}) where {H} = H ? 1 : 0
 
 # Typed terms
 struct ContinuousTerm <: AbstractTerm
@@ -111,31 +112,37 @@ struct PredictorsTerm{Ts} <: AbstractTerm
 end
 
 """
-    capture_call(call::Function, f_anon::Function, argnames::NTuple{N,Symbol}, ex_orig::Expr)
+    capture_call(f_orig::Function, f_anon::Function, argnames::NTuple{N,Symbol}, 
+                 ex_orig::Expr, args_parsed::Vector{AbstractTerm})
 
 When the [`@formula`](@ref) macro encounters a call to a function that's not 
 part of the DSL, it replaces the expression with a call to `capture_call` with 
 arguments: 
 
-* `call`: the original function that was called.
+* `f_orig`: the original function that was called.
 * `f_anon`: an anonymous function that calls the original expression, replacing 
   each symbol with one argument to the anonymous function
-* `argnames`: the symbols from the original expression corresponding to each 
+* `names`: the symbols from the original expression corresponding to each 
   argument of `f_anon`
 * `ex_orig`: the original (quoted) expression before [`capture_call_ex!`](@ref).
+* `args_parsed`: a vector of the original arguments, wrapped in terms with the 
+  special formula DSL rules applied, as if `f_orig` was a special DSL call.
 
 The default behavior is to pass these arguments to the `FunctionTerm` constructor.
 This default behavior can be overridden by dispatching on `call`.  That is, to 
-change how calls to `myfun` in a formula are handled, add a method for 
+change how calls to `myfun` in a formula are handled in the context of `MyModel`, 
+add a method:
     
-    capture_call(::typeof(myfun), args...)
+    apply_schema(t::FunctionTerm{typeof(myfun)}, schema, ::Type{MyModel})
 
-Alternatively, you can register `myfun` as a "special" function via
+If you simply want to pass the arguments to the original call, parsed as if the 
+call was a special, then you can use
 
-    StatsModels.is_special(Val(:myfun))
+    apply_schema(t::FunctionTerm{typeof(myfun)}, schema, ::Type{MyModel}) =
+        apply_schema(myfun(t.args_parsed...), schema, MyModel)
 
-In this case, calls to `myfun` in a formula will be passed through, with symbol
-arguments wrapped in `Term`s.
+For this to work, `myfun(args::AbstractTerm...)` should return another 
+`AbstractTerm`, which has an `apply_schema` method already defined for it.
 """
 capture_call(args...) = FunctionTerm(args...)
 
@@ -165,16 +172,16 @@ catdims(::ColumnTable) = 2
 catdims(::NamedTuple) = 1
 
 model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where {N} =
-    cat([model_cols(t, d) for t in ts]..., dims=catdims(d))
+    reduce(catdims(d) == 1 ? vcat : hcat, (model_cols(t, d) for t in ts))
 
 
 # TODO: @generated to unroll the getfield stuff
 model_cols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
     ft.fanon.(getfield.(Ref(d), Names)...)
 
-model_cols(t::ContinuousTerm, d::NamedTuple) = convert.(Float64, d[t.sym])
+model_cols(t::ContinuousTerm, d::NamedTuple) = Float64.(d[t.sym])
 
-model_cols(t::CategoricalTerm, d::NamedTuple) = getindex(t.contrasts, d[t.sym], :)
+model_cols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
 
 
 # an "inside out" kronecker-like product based on broadcasting reshaped arrays
@@ -208,12 +215,12 @@ vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x
 vectorize(x) = [x]
 
-termnames(::InterceptTerm{H}) where H = H ? "(Intercept)" : []
+termnames(::InterceptTerm{H}) where {H} = H ? "(Intercept)" : []
 termnames(t::ContinuousTerm) = string(t.sym)
 termnames(t::CategoricalTerm) = 
     ["$(t.sym): $name" for name in t.contrasts.termnames]
 termnames(t::FunctionTerm) = string(t.exorig)
-termnames(ts::NTuple{N,AbstractTerm}) where N = reduce(vcat, termnames.(ts))
+termnames(ts::NTuple{N,AbstractTerm}) where {N} = reduce(vcat, termnames.(ts))
 termnames(t::InteractionTerm) =
     kron_insideout((args...) -> join(args, " & "), vectorize.(termnames.(t.terms))...)
 
