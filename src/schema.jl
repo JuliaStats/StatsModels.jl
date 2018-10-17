@@ -14,19 +14,54 @@ terms(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
 terms(t::AbstractTerm) = [t]
 terms(t::NTuple{N, AbstractTerm}) where N = mapreduce(terms, union, t)
 
-needs_schema(t::AbstractTerm) = true
+needs_schema(::AbstractTerm) = true
 needs_schema(::ConstantTerm) = false
 needs_schema(t) = false
 
+"""
+    schema([terms::AbstractVector{<:AbstractTerm}, ]data, hints::Dict{Symbol})
+    schema(term::AbstractTerm, data, hints::Dict{Symbol})
+
+Compute all the invariants necessary to fit a model with `terms`.  A schema is a dict that
+maps `Term`s to their concrete instantiations (either `CategoricalTerm`s or
+`ContinuousTerm`s.  "Hints" may optionally be supplied in the form of a Dict mapping term
+names (as Symbols) to term or contrast types.  If a hint is not provided for a variable, the
+appropriate term type will be guessed based on the data type from the data column: any
+numeric data is assumed to be continuous, and any non-numeric data is assumed to be
+categorical.
+
+# Example
+
+```julia
+julia> d = (x=sample([:a, :b, :c], 10), y=rand(10));
+
+julia> ts = [Term(:x), Term(:y)];
+
+julia> schema(ts, d)
+Dict{Any,Any} with 2 entries:
+  y => y (continuous)
+  x => x (categorical(2): DummyCoding)
+
+julia> schema(ts, d, Dict(:x => HelmertCoding()))
+Dict{Any,Any} with 2 entries:
+  y => y (continuous)
+  x => x (categorical(2): HelmertCoding)
+
+julia> schema(ts, d, Dict(:y => CategoricalTerm))
+Dict{Any,Any} with 2 entries:
+  y => y (categorical(9): DummyCoding)
+  x => x (categorical(2): DummyCoding)
+```
+"""
+schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
 schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:ColumnTable} =
     schema(Term.(collect(fieldnames(D))), dt, hints)
-
-schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
 schema(ts::Vector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
     schema(ts, columntable(data), hints)
 
 # handle hints:
-function schema(ts::Vector{<:AbstractTerm}, dt::ColumnTable, hints::Dict{Symbol})
+function schema(ts::Vector{<:AbstractTerm}, dt::ColumnTable,
+                hints::Dict{Symbol}=Dict{Symbol,Any}())
     sch = Dict{Any,Any}()
     for t in ts
         if t.sym ∈ keys(hints)
@@ -48,7 +83,7 @@ schema(t::Term, dt::ColumnTable, hint) = schema(t, dt[t.sym], hint)
 
 schema(t::Term, xs::AbstractVector{<:Number}) = schema(t, xs, ContinuousTerm)
 schema(t::Term, xs::AbstractVector, ::Type{ContinuousTerm}) =
-    ContinuousTerm(t.sym, fit!(Series(Variance()), xs))
+    ContinuousTerm(t.sym, fit!(Series(Variance(), Extrema(eltype(xs))), xs))
 
 # default contrasts: dummy coding
 schema(t::Term, xs::AbstractVector) = schema(t, xs, CategoricalTerm)

@@ -60,7 +60,7 @@ The rules that are applied are
 macro formula(ex)
     is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
     length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
-    ex |> parse! |> sort_terms! |> terms!
+    terms!(sort_terms!(parse!(ex)))
 end
 
 """
@@ -228,13 +228,7 @@ function capture_call_ex!(ex::Expr, ex_parsed::Expr)
 end
 
 
-# okay.  if ex is a special, then rewrite the children according to The Rules.
-# If not, then copy the original args, parse them each, and rewrite the original
-# as a capture_call expression.
-
-
-
-# generate Term expressions for symbols and FormulaTerms for non-special calls
+# generate Term expressions for symbols (including parsed args of non-special calls
 terms!(::Nothing) = :(nothing)
 terms!(s::Symbol) = :(Term($(Meta.quot(s))))
 terms!(n::Number) = :(ConstantTerm($n))
