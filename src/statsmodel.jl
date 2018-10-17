@@ -62,23 +62,22 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
                                  (:RegressionModel, TableRegressionModel))
     @eval begin
         function StatsBase.fit(::Type{T}, f::FormulaTerm, data, args...;
-                               contrasts::Dict = Dict(), kwargs...) where T<:$modeltype
+                               contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(),
+                               kwargs...) where T<:$modeltype
                                
             Tables.istable(data) || throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
-            cols = Tables.columns(data)
-            schema = schema(data, cols, contrasts)
-            f = apply_schema(f, schema) # TODO: apply_schema(f, schema, T)
-            y, X = model_cols(f, cols)
-            $dfmodeltype(fit(T, X, y, args...; kwargs...))
-            
-            
-            trms = Terms(f)
-            drop_intercept(T) && (trms.intercept = true)
-            mf = ModelFrame(trms, df, contrasts=contrasts)
-            drop_intercept(T) && (mf.terms.intercept = false)
+            cols = columntable(data)
+
+            mf = ModelFrame(f, cols, mod=T, contrasts=contrasts)
             mm = ModelMatrix(mf)
             y = model_response(mf)
             $dfmodeltype(fit(T, mm.m, y, args...; kwargs...), mf, mm)
+
+            ## TODO: consider doing this manually, without the ModelFrame/ModelMatrix
+            # schema = schema(data, cols, contrasts)
+            # f = apply_schema(f, schema, T)
+            # y, X = model_cols(f, cols)
+            # $dfmodeltype(fit(T, X, y, args...; kwargs...))
         end
     end
 end
@@ -86,12 +85,14 @@ end
 # Delegate functions from StatsBase that use our new types
 const TableModels = Union{TableStatisticalModel, TableRegressionModel}
 @delegate TableModels.model [StatsBase.coef, StatsBase.confint,
-                                 StatsBase.deviance, StatsBase.nulldeviance,
-                                 StatsBase.loglikelihood, StatsBase.nullloglikelihood,
-                                 StatsBase.dof, StatsBase.dof_residual, StatsBase.nobs,
-                                 StatsBase.stderror, StatsBase.vcov]
+                             StatsBase.deviance, StatsBase.nulldeviance,
+                             StatsBase.loglikelihood, StatsBase.nullloglikelihood,
+                             StatsBase.dof, StatsBase.dof_residual, StatsBase.nobs,
+                             StatsBase.stderror, StatsBase.vcov]
 @delegate TableRegressionModel.model [StatsBase.residuals, StatsBase.model_response,
-                                          StatsBase.predict, StatsBase.predict!]
+                                      StatsBase.predict, StatsBase.predict!]
+StatsBase.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
+    predict(m.model, new_x; kwargs...)
 # Need to define these manually because of ambiguity using @delegate
 StatsBase.r2(mm::TableRegressionModel) = r2(mm.model)
 StatsBase.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
@@ -102,16 +103,15 @@ StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, var
 function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
-    # copy terms, removing outcome if present (ModelFrame will complain if a
-    # term is not found in the Table and we don't want to remove elements with missing y)
-    newTerms = dropresponse!(mm.mf.terms)
-    # create new model frame/matrix
-    mf = ModelFrame(newTerms, df; contrasts = mm.mf.contrasts)
-    newX = ModelMatrix(mf).m
-    yp = predict(mm, newX; kwargs...)
-    out = missings(eltype(yp), size(df, 1))
-    out[mf.nonmissing] = yp
-    return(out)
+
+    f = mm.mf.f
+    cols, nonmissings = missing_omit(columntable(data), f)
+    new_x = model_cols(f.rhs, cols)
+    y_pred = predict(mm.model, reshape(new_x, size(new_x, 1), :);
+                     kwargs...)
+    out = missings(eltype(y_pred), size(data, 1))
+    out[nonmissings] .= y_pred
+    return out
 end
 
 StatsBase.coefnames(model::TableModels) = coefnames(model.mf)
@@ -130,9 +130,9 @@ end
 function Base.show(io::IO, model::TableModels)
     try
         ct = coeftable(model)
-        println(io, "$(typeof(model))")
+        println(io, typeof(model))
         println(io)
-        println(io, Formula(model.mf.terms))
+        println(io, model.mf.f)
         println(io)
         println(io,"Coefficients:")
         show(io, ct)

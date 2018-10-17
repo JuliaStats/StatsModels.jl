@@ -57,6 +57,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     d[:x2] = [9:12;]
     d[:x3] = [13:16;]
     d[:x4] = [17:20;]
+    d[:x1p] = CategoricalArray{Union{Missing, Int}}(d[:x1])
 
     f = @formula(y ~ x1 * x2)
     m = fit(DummyMod, f, d)
@@ -89,7 +90,6 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     show(io, m)
 
     ## with categorical variables
-    d[:x1p] = CategoricalArray{Union{Missing, Int}}(d[:x1])
     f2 = @formula(y ~ x1p)
     m2 = fit(DummyMod, f2, d)
 
@@ -117,19 +117,23 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     f1 = @formula(y ~ 1 + x1 * x2)
     f2 = @formula(y ~ 0 + x1 * x2)
-    m1 = fit(DummyModNoIntercept, f1, d)
+    f3 = @formula(y ~ x1 * x2)
+    @test_throws ArgumentError m1 = fit(DummyModNoIntercept, f1, d)
     m2 = fit(DummyModNoIntercept, f2, d)
-    ct1 = coeftable(m1)
+    m3 = fit(DummyModNoIntercept, f3, d)
     ct2 = coeftable(m2)
-    @test ct1.rownms == ct2.rownms == ["x1", "x2", "x1 & x2"]
+    ct3 = coeftable(m3)
+    @test ct3.rownms == ct2.rownms == ["x1", "x2", "x1 & x2"]
 
     f1 = @formula(y ~ 1 + x1p)
     f2 = @formula(y ~ 0 + x1p)
-    m1 = fit(DummyModNoIntercept, f1, d)
+    f3 = @formula(y ~ x1p)
+    @test_throws ArgumentError m1 = fit(DummyModNoIntercept, f1, d)
     m2 = fit(DummyModNoIntercept, f2, d)
-    ct1 = coeftable(m1)
+    m3 = fit(DummyModNoIntercept, f3, d)
     ct2 = coeftable(m2)
-    @test ct1.rownms == ct2.rownms == ["x1p: 6", "x1p: 7", "x1p: 8"]
+    ct3 = coeftable(m3)
+    @test ct2.rownms == ct3.rownms == ["x1p: 6", "x1p: 7", "x1p: 8"]
 
     m2 = fit(DummyModTwo, f, d)
     show(io, m2)

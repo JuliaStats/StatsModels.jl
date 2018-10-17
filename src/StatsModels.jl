@@ -57,6 +57,6 @@ include("terms.jl")
 include("schema.jl")
 include("formula.jl")
 include("modelframe.jl")
-# include("statsmodel.jl")
+include("statsmodel.jl")
 
 end # module StatsModels
