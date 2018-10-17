@@ -161,11 +161,11 @@ end
 
 
 mutable struct FullRank
-    schema
-    already::Set
+    schema::Dict{Term,AbstractTerm}
+    already::Set{AbstractTerm}
 end
 
-FullRank(schema) = FullRank(schema, Set())
+FullRank(schema) = FullRank(schema, Set{AbstractTerm}())
 
 Base.get(schema::FullRank, key, default) = get(schema.schema, key, default)
 Base.merge(a::FullRank, b::FullRank) = FullRank(merge(a.schema, b.schema),
