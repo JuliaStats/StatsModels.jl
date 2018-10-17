@@ -46,7 +46,6 @@ function ModelFrame(f::FormulaTerm, data::ColumnTable;
                     mod::Type{Mod}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where Mod
     data, _ = missing_omit(data, f)
 
-    # todo: use apply_schema(f, sch, ::ModelType)
     sch = schema(f, data, contrasts)
     f = apply_schema(f, sch, Mod)
     

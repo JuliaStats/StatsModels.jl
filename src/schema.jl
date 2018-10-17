@@ -95,40 +95,8 @@ function schema(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
     CategoricalTerm(t.sym, counts, contrmat)
 end
 
-# TODO: add methods for schema(::Continuous/CategoricalTerm) (to re-set/validate schema)
-
-
-
-# now to _set_ the schema in formula...most straightforward way is to just look
-# up each term in the schema and replace it (calculating width of interaction
-# terms and things like that) but we want to handle the rank correcting stuff
-# too.  maybe that's best thought of as a kind of re-write rule?  or as a
-# special kind of schema/wrapper type?  then if it's just a dict, the "vanilla"
-# version is available...
-#
-# so what does that wrapper look like?  holds onto the terms that have been seen
-# so far, checks against that...
-#
-#
-# actually, want to replace the wrapper with dispatching on the _model_ type
-# (destination) as well.  so instead of a wrapper you'd have a third argument
-# which...not sure.  you can dispatch on ::RegressionModel or
-# ::StatisticalModel?  and smoehow use a trait to check for drop_intercept?
-#
-# the other issue here is how to deal with a model having potentially multiple
-# traits, like full rank and implicit intercept.
-#
-# it seems like there are two choices: compute traits on teh fly, as needed, or
-# compute them all up front and apply with one at a time.
-#
-# the other issue is that some of these might require keeping track of
-# additional information during the re-write (like the full rank: you need to
-# know what terms you've seen already).  I'm not sure how to do that with
-# dispatch...other than how it already is, which is to dispatch on the schema
-# type and use that to hold metadata.
-
 """
-    apply_schema(t, schema, Mod)
+    apply_schema(t, schema, ::Type{Mod}) where {Mod}
     apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 
 Return a new term that is the result of applying `schema` to term `t` with
@@ -154,7 +122,7 @@ apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema, Mod) =
 
 # TODO: special case this for <:RegressionModel ?
 function apply_schema(t::ConstantTerm, schema, Mod)
-    t.n ∈ [-1, 0, 1] ||
+    t.n ∈ (-1, 0, 1) ||
         throw(ArgumentError("can't create InterceptTerm from $(t.n) (only -1, 0, and 1 allowed)"))
     InterceptTerm{t.n==1}()
 end
