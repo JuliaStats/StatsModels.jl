@@ -102,7 +102,7 @@ end
 Return a new term that is the result of applying `schema` to term `t` with
 destination model (type) `Mod`.  If `Mod` is omitted, `Nothing` will be used.
 
-When `t` is a Continuous or CategoricalTerm already, the term will be returned 
+When `t` is a `ContinuousTerm` or `CategoricalTerm` already, the term will be returned 
 unchanged _unless_ a matching term is found in the schema.  This allows 
 selective re-setting of a schema to change the contrast coding or levels of a 
 categorical term, or to change a continuous term to categorical or vice versa.
