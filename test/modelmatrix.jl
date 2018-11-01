@@ -78,7 +78,7 @@
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x2]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
-    ## @test model_response(mf) == y''     # fails: Int64 vs. Float64
+    @test model_response(mf) == y''
 
     d = deepcopy(d_orig)
     d[:x1] = CategoricalArray{Union{Missing, Float64}}(d[:x1])
