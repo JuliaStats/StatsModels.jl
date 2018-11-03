@@ -81,17 +81,14 @@ end
 
 
 
-const AbstractFloatMatrix{T<:AbstractFloat} =  AbstractMatrix{T}
-
-mutable struct ModelMatrix{T <: AbstractFloatMatrix}
+mutable struct ModelMatrix{T <: AbstractMatrix{<:AbstractFloat}}
     m::T
     assign::Vector{Int}
 end
 
-Base.size(mm::ModelMatrix) = size(mm.m)
 Base.size(mm::ModelMatrix, dim...) = size(mm.m, dim...)
 
-function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractFloatMatrix
+function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractMatrix{<:AbstractFloat}
     mat = model_matrix(mf)
     mat = reshape(mat, size(mat,1), :)
     asgn = mapreduce((it)->first(it)*ones(width(last(it))), append!,

@@ -24,9 +24,9 @@ needs_schema(t) = false
 
 Compute all the invariants necessary to fit a model with `terms`.  A schema is a dict that
 maps `Term`s to their concrete instantiations (either `CategoricalTerm`s or
-`ContinuousTerm`s.  "Hints" may optionally be supplied in the form of a Dict mapping term
-names (as Symbols) to term or contrast types.  If a hint is not provided for a variable, the
-appropriate term type will be guessed based on the data type from the data column: any
+`ContinuousTerm`s.  "Hints" may optionally be supplied in the form of a `Dict` mapping term
+names (as `Symbol`s) to term or contrast types.  If a hint is not provided for a variable, 
+the appropriate term type will be guessed based on the data type from the data column: any
 numeric data is assumed to be continuous, and any non-numeric data is assumed to be
 categorical.
 
@@ -56,11 +56,11 @@ Dict{Any,Any} with 2 entries:
 schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
 schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:ColumnTable} =
     schema(Term.(collect(fieldnames(D))), dt, hints)
-schema(ts::Vector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
+schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
     schema(ts, columntable(data), hints)
 
 # handle hints:
-function schema(ts::Vector{<:AbstractTerm}, dt::ColumnTable,
+function schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
                 hints::Dict{Symbol}=Dict{Symbol,Any}())
     sch = Dict{Any,Any}()
     for t in ts

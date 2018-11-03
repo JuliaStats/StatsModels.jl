@@ -25,7 +25,7 @@
     x2 = [9.:12;]
     x3 = [13.:16;]
     x4 = [17.:20;]
-    f = @formula(y ~ 1 + x1 + x2)
+    f = @formula(y ~ x1 + x2)
     mf = ModelFrame(f, d)
     @test coefnames(mf) == ["(Intercept)","x1","x2"]
     @test model_response(mf) == [1:4;]
