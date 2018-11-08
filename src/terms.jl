@@ -81,16 +81,18 @@ Base.show(io::IO, t::InterceptTerm{H}) where {H} = print(io, H ? "1" : "0")
 width(::InterceptTerm{H}) where {H} = H ? 1 : 0
 
 # Typed terms
-struct ContinuousTerm <: AbstractTerm
+struct ContinuousTerm{T} <: AbstractTerm
     sym::Symbol
-    series::Series
+    mean::T
+    var::T
+    min::T
+    max::T
 end
 Base.show(io::IO, t::ContinuousTerm) = print(io, "$(t.sym) (continuous)")
 width(::ContinuousTerm) = 1
 
 struct CategoricalTerm{C,T,N} <: AbstractTerm
     sym::Symbol
-    series::Series
     contrasts::ContrastsMatrix{C,T}
 end
 Base.show(io::IO, t::CategoricalTerm{C,T,N}) where {C,T,N} =
@@ -98,8 +100,8 @@ Base.show(io::IO, t::CategoricalTerm{C,T,N}) where {C,T,N} =
 width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 
 # constructor that computes the width based on the contrasts matrix
-CategoricalTerm(sym::Symbol, counts::Series, contrasts::ContrastsMatrix{C,T}) where {C,T} =
-    CategoricalTerm{C,T,length(contrasts.termnames)}(sym, counts, contrasts)
+CategoricalTerm(sym::Symbol, contrasts::ContrastsMatrix{C,T}) where {C,T} =
+    CategoricalTerm{C,T,length(contrasts.termnames)}(sym, contrasts)
 
 # Model terms
 struct ResponseTerm{Ts} <: AbstractTerm

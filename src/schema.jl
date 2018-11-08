@@ -82,17 +82,18 @@ schema(t::Term, dt::ColumnTable) = schema(t, dt[t.sym])
 schema(t::Term, dt::ColumnTable, hint) = schema(t, dt[t.sym], hint)
 
 schema(t::Term, xs::AbstractVector{<:Number}) = schema(t, xs, ContinuousTerm)
-schema(t::Term, xs::AbstractVector, ::Type{ContinuousTerm}) =
-    ContinuousTerm(t.sym, fit!(Series(Variance(), Extrema(eltype(xs))), xs))
-
+function schema(t::Term, xs::AbstractVector, ::Type{ContinuousTerm})
+    μ, σ2 = StatsBase.mean_and_var(xs)
+    min, max = extrema(xs)
+    ContinuousTerm(t.sym, promote(μ, σ2, min, max)...)
+end
 # default contrasts: dummy coding
 schema(t::Term, xs::AbstractVector) = schema(t, xs, CategoricalTerm)
 schema(t::Term, xs::AbstractArray, ::Type{CategoricalTerm}) = schema(t, xs, DummyCoding())
 
 function schema(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
-    counts = fit!(Series(CountMap(DataStructures.SortedDict{eltype(xs),Int}())), xs)
-    contrmat = ContrastsMatrix(contrasts, collect(keys(counts.stats[1])))
-    CategoricalTerm(t.sym, counts, contrmat)
+    contrmat = ContrastsMatrix(contrasts, sort!(unique(xs)))
+    CategoricalTerm(t.sym, contrmat)
 end
 
 """
@@ -207,7 +208,7 @@ function apply_schema(t::CategoricalTerm, schema::FullRank, Mod, context::Abstra
     push!(schema.already, aliased)
     # repair:
     new_contrasts = ContrastsMatrix(FullDummyCoding(), t.contrasts.levels)
-    t = CategoricalTerm(t.sym, t.series, new_contrasts)
+    t = CategoricalTerm(t.sym, new_contrasts)
     @debug "  aliased term absent, repairing: $t"
     t
 end

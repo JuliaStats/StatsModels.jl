@@ -3,7 +3,6 @@ __precompile__(true)
 module StatsModels
 
 using Tables
-using OnlineStats
 using StatsBase
 using CategoricalArrays
 using DataStructures
