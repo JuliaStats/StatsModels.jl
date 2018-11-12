@@ -25,7 +25,7 @@
     x2 = [9.:12;]
     x3 = [13.:16;]
     x4 = [17.:20;]
-    f = @formula(y ~ x1 + x2)
+    f = @formula(y ~ 1 + x1 + x2)
     mf = ModelFrame(f, d)
     @test coefnames(mf) == ["(Intercept)","x1","x2"]
     @test model_response(mf) == [1:4;]
@@ -37,6 +37,11 @@
 
     @test isa(mm.m, Matrix{Float64})
     @test isa(smm.m, sparsetype)
+
+    f_implint = @formula(y ~ x1 + x2)
+    @test ModelMatrix(ModelFrame(f_implint, d)).m == mm.m
+
+    @test ModelMatrix(ModelFrame(f_implint, d, mod=Nothing)).m == hcat(x1, x2)
 
     #test_group("expanding a nominal array into a design matrix of indicators for each dummy variable")
 
