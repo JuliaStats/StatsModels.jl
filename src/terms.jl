@@ -235,7 +235,7 @@ hasnointercept(t::AbstractTerm) =
     ConstantTerm(-1) ∈ terms(t)
 
 hasresponse(t) = false
-hasresponse(t::FormulaTerm{RHS, LHS}) where {RHS, LHS} = RHS !== nothing
+hasresponse(t::FormulaTerm{LHS}) where {LHS} = LHS !== nothing
 
 # convenience converters
 term(n::Number) = ConstantTerm(n)
