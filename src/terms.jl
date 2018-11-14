@@ -189,16 +189,17 @@ model_cols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
 # for a single row, some will be scalars, others possibly vectors.  for a whole
 # table, some will be vectors, possibly some matrices
 function kron_insideout(op::Function, args...)
-    args = [reshape(a, ones(Int, i-1)..., :) for (i,a) in enumerate(args)]
+    args = (reshape(a, ones(Int, i-1)..., :) for (i,a) in enumerate(args))
     vec(broadcast(op, args...))
 end
 
 function row_kron_insideout(op::Function, args...)
-    args = [reshape(a, size(a,1), ones(Int, i-1)..., :) for (i,a) in enumerate(args)]
-    reshape(broadcast(op, args...), size(args[1],1), :)
+    rows = size(args[1], 1)
+    args = (reshape(a, size(a,1), ones(Int, i-1)..., :) for (i,a) in enumerate(args))
+    reshape(broadcast(op, args...), rows, :)
 end
 
-# two options here: either special-case Data.Table (named tuple of vectors)
+# two options here: either special-case ColumnTable (named tuple of vectors)
 # vs. vanilla NamedTuple, or reshape and use normal broadcasting
 model_cols(t::InteractionTerm, d::NamedTuple) =
     kron_insideout(*, (model_cols(term, d) for term in t.terms)...)

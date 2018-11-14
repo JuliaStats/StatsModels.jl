@@ -24,13 +24,12 @@ function _nonmissing!(res, col::CategoricalArray{>: Missing})
 end
 
 _select(d::ColumnTable, cols::NTuple{N,Symbol} where N) = NamedTuple{cols}(d)
-_select(d::ColumnTable, cols::Vector{Symbol}) = _select(d, tuple(cols...))
 _filter(d::T, rows) where T<:ColumnTable = T(([col[rows] for col in d]..., ))
 
 _size(d::ColumnTable) = (length(first(d)), length(d))
 _size(d::ColumnTable, dim::Int) = _size(d)[dim]
 
-## Default NULL handler.  Others can be added as keyword arguments
+## Default Missing handler.  Others can be added as keyword arguments
 function missing_omit(d::T) where T<:ColumnTable
     nonmissings = trues(_size(d, 1))
     for col in d
@@ -40,7 +39,7 @@ function missing_omit(d::T) where T<:ColumnTable
 end
 
 missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
-    missing_omit(_select(data, termvars(formula)))
+    missing_omit(_select(data, tuple(termvars(formula)...)))
 
 function ModelFrame(f::FormulaTerm, data::ColumnTable;
                     mod::Type{Mod}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where Mod
