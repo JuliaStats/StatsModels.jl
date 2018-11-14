@@ -2,8 +2,6 @@
 
     using StatsModels: hasresponse, hasintercept
 
-    global t, f, form
-
     y, x1, x2, x3, a, b, c, One = term(:y, :x1, :x2, :x3, :a, :b, :c, 1)
 
     ## totally empty

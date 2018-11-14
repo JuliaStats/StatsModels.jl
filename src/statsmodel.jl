@@ -97,7 +97,7 @@ function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
     y_pred = predict(mm.model, reshape(new_x, size(new_x, 1), :);
                      kwargs...)
     out = missings(eltype(y_pred), size(data, 1))
-    out[nonmissings] .= y_pred
+    out[nonmissings] = y_pred
     return out
 end
 

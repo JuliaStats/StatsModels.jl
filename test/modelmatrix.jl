@@ -1,10 +1,5 @@
 @testset "Model matrix" begin
     
-    global f
-
-    # for testing while DataFrames still exports these:
-    import StatsModels: @formula, ModelMatrix, ModelFrame, DummyCoding, EffectsCoding, HelmertCoding, ContrastsCoding, coefnames
-
     using StatsBase: StatisticalModel
 
     using SparseArrays, DataFrames
@@ -314,11 +309,7 @@
         mm = ModelMatrix(mf)
         @test all(mm.m .== log.(x1))
 
-        # Ensure that random effects terms are dropped from coefnames
-
-        # with Terms 2.0, the handling of "special" syntax has changed: now it's
-        # assumed to be "normal" julia code so it doesn't make sense to exclude them
-        # automatically.
+        # | is not special in base formula:
         d = DataFrame(x = [1,2,3], y = [4,5,6])
         mf = ModelFrame(@formula(y ~ 1 + (1 | x)), d)
         @test coefnames(mf) == ["(Intercept)", "1 | x"]
