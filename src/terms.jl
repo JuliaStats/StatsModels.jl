@@ -96,7 +96,7 @@ struct CategoricalTerm{C,T,N} <: AbstractTerm
     contrasts::ContrastsMatrix{C,T}
 end
 Base.show(io::IO, t::CategoricalTerm{C,T,N}) where {C,T,N} =
-    print(io, "$(t.sym) (categorical($N): $C)")
+    print(io, "$(t.sym) ($(length(t.contrasts.levels)) levels): $C($N)")
 width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 
 # constructor that computes the width based on the contrasts matrix

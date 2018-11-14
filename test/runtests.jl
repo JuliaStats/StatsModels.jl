@@ -9,6 +9,7 @@ using StatsBase
 using StatsModels: ContrastsMatrix
 
 my_tests = ["formula.jl",
+            "terms.jl",
             "modelmatrix.jl",
             "statsmodel.jl",
             "contrasts.jl",
