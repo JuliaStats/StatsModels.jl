@@ -89,7 +89,6 @@ Base.size(mm::ModelMatrix, dim...) = size(mm.m, dim...)
 
 function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractMatrix{<:AbstractFloat}
     mat = model_matrix(mf)
-    mat = reshape(mat, size(mat,1), :)
     asgn = mapreduce((it)->first(it)*ones(width(last(it))), append!,
                      enumerate(vectorize(mf.f.rhs)), init=Int[])
     ModelMatrix(convert(T, mat), asgn)
