@@ -39,6 +39,7 @@ export
     FormulaTerm,
     InterceptTerm,
     FunctionTerm,
+    MatrixTerm,
 
     term,
     terms,

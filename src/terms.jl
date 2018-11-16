@@ -114,6 +114,7 @@ end
 # wrap single terms in a tuple
 MatrixTerm(t::AbstractTerm) = MatrixTerm((t, ))
 
+Base.show(io::IO, t::MatrixTerm) = show(io, t.terms)
 width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
 
 """
