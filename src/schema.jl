@@ -12,6 +12,7 @@ terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
 terms(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
 terms(t::AbstractTerm) = [t]
+terms(t::MatrixTerm) = terms(t.terms)
 terms(t::NTuple{N, AbstractTerm}) where N = mapreduce(terms, union, t)
 
 needs_schema(::AbstractTerm) = true
@@ -113,13 +114,17 @@ apply_schema(t, schema, Mod) = t
 apply_schema(terms::NTuple{N,AbstractTerm}, schema, Mod) where N =
     apply_schema.(terms, Ref(schema), Mod)
 apply_schema(t::Term, schema, Mod) = schema[t]
-apply_schema(ft::FormulaTerm, schema, Mod) = FormulaTerm(apply_schema(ft.lhs, schema, Mod),
-                                                         apply_schema(ft.rhs, schema, Mod))
+apply_schema(ft::FormulaTerm, schema, Mod) =
+    FormulaTerm(apply_schema(ft.lhs, schema, Mod),
+                extract_matrix_terms(apply_schema(ft.rhs, schema, Mod)))
 apply_schema(it::InteractionTerm, schema, Mod) =
     InteractionTerm(apply_schema(it.terms, schema, Mod))
 
+# for re-setting schema (in setcontrasts!)
 apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema, Mod) =
     get(schema, term(t.sym), t)
+apply_schema(t::MatrixTerm, sch, Mod) = MatrixTerm(apply_schema.(t.terms, Ref(sch), Mod))
+
 
 # TODO: special case this for <:RegressionModel ?
 function apply_schema(t::ConstantTerm, schema, Mod)
@@ -158,7 +163,7 @@ function apply_schema(t::FormulaTerm, schema, Mod::Type{<:StatisticalModel})
 
     # only apply rank-promoting logic to RIGHT hand side
     FormulaTerm(apply_schema(t.lhs, schema.schema, Mod),
-                apply_schema(t.rhs, schema, Mod))
+                extract_matrix_terms(apply_schema(t.rhs, schema, Mod)))
 end
 
 # strategy is: apply schema, then "repair" if necessary (promote to full rank
@@ -215,6 +220,7 @@ end
 
 drop_term(from, to) = symequal(from, to) ? ConstantTerm(1) : from
 drop_term(from::FormulaTerm, to) = FormulaTerm(from.lhs, drop_term(from.rhs, to))
+drop_term(from::MatrixTerm, to) = MatrixTerm(drop_term(from.terms, to))
 drop_term(from::NTuple{N, AbstractTerm}, to) where N =
     tuple((t for t = from if !symequal(t, to))...)
 function drop_term(from::InteractionTerm, t)
@@ -250,5 +256,6 @@ termvars(::AbstractTerm) = Symbol[]
 termvars(t::Union{Term, CategoricalTerm, ContinuousTerm}) = [t.sym]
 termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
 termvars(t::NTuple{N, AbstractTerm}) where N = mapreduce(termvars, union, t, init=Symbol[])
+termvars(t::MatrixTerm) = termvars(t.terms)
 termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
 termvars(t::FunctionTerm) = collect(t.names)

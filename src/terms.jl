@@ -103,14 +103,75 @@ width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 CategoricalTerm(sym::Symbol, contrasts::ContrastsMatrix{C,T}) where {C,T} =
     CategoricalTerm{C,T,length(contrasts.termnames)}(sym, contrasts)
 
-# Model terms
-struct ResponseTerm{Ts} <: AbstractTerm
-    terms::Ts
-end
+"""
+    MatrixTerm{Ts} <: AbstractTerm
 
-struct PredictorsTerm{Ts} <: AbstractTerm
+A collection of terms that should be combined to produce a single matrix.
+"""
+struct MatrixTerm{Ts<:NTuple{N,AbstractTerm} where N} <: AbstractTerm
     terms::Ts
 end
+# wrap single terms in a tuple
+MatrixTerm(t::AbstractTerm) = MatrixTerm((t, ))
+
+width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
+
+"""
+    extract_matrix_terms(ts::NTuple{N,AbstractTerm}) where {N}
+
+Depending on whether the component terms are matrix terms (meaning they have
+`is_matrix_term(T) == true`), `extract_matrix_terms` will return
+
+1.  A single `MatrixTerm` (if all components are matrix terms)
+2.  A tuple of the components (if none of them are matrix terms)
+3.  A tuple of terms, with all matrix terms collected into a single `MatrixTerm`
+    in the first element of the tuple, and the remaining non-matrix terms passed
+    through unchanged.
+
+By default all terms are matrix terms (that is,
+`is_matrix_term(::Type{<:AbstractTerm}) = true`), the first case is by far the
+most common.  The others are provided only for convenience when dealing with
+specialized terms that can't be concatenated into a single model matrix, like
+random effects terms in
+[MixedModels.jl](https://github.com/dmbates/MixedModels.jl).
+
+"""
+function extract_matrix_terms(ts::NTuple{N,AbstractTerm}) where {N}
+    ismat = collect(is_matrix_term.(ts))
+    if all(ismat)
+        MatrixTerm(ts)
+    elseif any(ismat)
+        matterms = ts[ismat]
+        (MatrixTerm(ts[ismat]), ts[.!ismat]...)
+    else
+        ts
+    end
+end
+extract_matrix_terms(t::T) where {T<:AbstractTerm} =
+    is_matrix_term(T) ? MatrixTerm((t, )) : t
+extract_matrix_terms(t::MatrixTerm) = t
+
+
+"""
+    is_matrix_term(::Type{<:AbstractTerm})
+
+Does this type of term get concatenated with other matrix terms into a single
+model matrix?  This controls the behavior of the `MatrixTerm` constructor.  If
+all the component terms passed to `MatrixTerm` have `is_matrix_term(T) = true`,
+then a single `MatrixTerm` is constructed.  If any of the terms have
+`is_matrix_term(T) = false` then the constructor returns a tuple of terms; one
+`MatrixTerm` (if there are any matrix terms), and one for each of the other
+non-matrix terms.
+
+Since all "normal" terms which describe one or more model matrix columns are
+matrix terms, this defaults to `true` for any `AbstractTerm`.
+
+An example of a non-matrix term is a random effect term in
+[MixedModels.jl](https://github.com/dmbates/MixedModels.jl).
+"""
+is_matrix_term(::T) where {T} = is_matrix_term(T)
+is_matrix_term(::Type{<:AbstractTerm}) = true
+
 
 """
     capture_call(f_orig::Function, f_anon::Function, argnames::NTuple{N,Symbol}, 
@@ -172,9 +233,7 @@ Base.:+(a::AbstractTerm, bs::NTuple{N, AbstractTerm}) where {N} = (a, bs...)
 catdims(::ColumnTable) = 2
 catdims(::NamedTuple) = 1
 
-model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where {N} =
-    reduce(catdims(d) == 1 ? vcat : hcat, (model_cols(t, d) for t in ts))
-
+model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where {N} = model_cols.(ts, Ref(d))
 
 # TODO: @generated to unroll the getfield stuff
 model_cols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
@@ -213,6 +272,10 @@ model_cols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1)
 
 model_cols(t::FormulaTerm, d::NamedTuple) = (model_cols(t.lhs,d), model_cols(t.rhs, d))
 
+function model_cols(t::MatrixTerm, d::NamedTuple)
+    reduce(catdims(d) == 1 ? vcat : hcat, (model_cols(tt, d) for tt in t.terms))
+end
+
 vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x
 vectorize(x) = [x]
@@ -223,6 +286,7 @@ termnames(t::CategoricalTerm) =
     ["$(t.sym): $name" for name in t.contrasts.termnames]
 termnames(t::FunctionTerm) = string(t.exorig)
 termnames(ts::NTuple{N,AbstractTerm}) where {N} = reduce(vcat, termnames.(ts))
+termnames(t::MatrixTerm) = termnames(t.terms)
 termnames(t::InteractionTerm) =
     kron_insideout((args...) -> join(args, " & "), vectorize.(termnames.(t.terms))...)
 
