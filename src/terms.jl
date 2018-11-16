@@ -230,9 +230,6 @@ Base.:+(a::AbstractTerm, bs::NTuple{N, AbstractTerm}) where {N} = (a, bs...)
 ################################################################################
 # evaluating terms with data to generate model matrix entries
 
-catdims(::ColumnTable) = 2
-catdims(::NamedTuple) = 1
-
 model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where {N} = model_cols.(ts, Ref(d))
 
 # TODO: @generated to unroll the getfield stuff
@@ -272,9 +269,13 @@ model_cols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1)
 
 model_cols(t::FormulaTerm, d::NamedTuple) = (model_cols(t.lhs,d), model_cols(t.rhs, d))
 
-function model_cols(t::MatrixTerm, d::NamedTuple)
-    reduce(catdims(d) == 1 ? vcat : hcat, (model_cols(tt, d) for tt in t.terms))
+function model_cols(t::MatrixTerm, d::ColumnTable)
+    mat = reduce(hcat, (model_cols(tt, d) for tt in t.terms))
+    reshape(mat, size(mat, 1), :)
 end
+
+model_cols(t::MatrixTerm, d::NamedTuple) =
+    reduce(vcat, (model_cols(tt, d) for tt in t.terms))
 
 vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x

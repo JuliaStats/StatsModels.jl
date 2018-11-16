@@ -34,7 +34,7 @@ StatsModels.model_cols(t::NonMatrixTerm, d) = model_cols(t.term, d)
         f_plain = apply_schema(f, sch)
         @test f_plain.rhs.terms[1] isa FunctionTerm
         @test f_plain == apply_schema(f, sch, Nothing)
-        @test last(model_cols(f_plain, d)) == d[:x].^3
+        @test last(model_cols(f_plain, d)) == hcat(d[:x].^3)
         
         f_special = apply_schema(f, sch, PolyModel)
         @test f_special.rhs.terms[1] isa PolyTerm
@@ -65,13 +65,13 @@ StatsModels.model_cols(t::NonMatrixTerm, d) = model_cols(t.term, d)
         f2 = apply_schema(f2, sch)
         @test f2.rhs isa Tuple{MatrixTerm, NonMatrixTerm}
         @test f2.rhs == apply_schema((MatrixTerm(term(:x)), NonMatrixTerm(term(:y))), sch)
-        @test model_cols(f2.rhs, d) == (d.x, d.y)
+        @test model_cols(f2.rhs, d) == (hcat(d.x), d.y)
 
         # matrix term goes first
         f3 = apply_schema(f3, sch)
         @test f3.rhs isa Tuple{MatrixTerm, NonMatrixTerm}
         @test f3.rhs == apply_schema((MatrixTerm(term(:y)), NonMatrixTerm(term(:x))), sch)
-        @test model_cols(f3.rhs, d) == (d.y, d.x)
+        @test model_cols(f3.rhs, d) == (hcat(d.y), d.x)
 
         f4 = apply_schema(f4, sch)
         @test f4.rhs isa Tuple{NonMatrixTerm, NonMatrixTerm}
