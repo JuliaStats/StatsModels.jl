@@ -14,11 +14,20 @@ fields with possibly heterogeneous types.  One of the primary goals of
 `StatsModels` is to make it simpler to transform tabular data into matrix format
 suitable for statistical modeling.
 
-At the moment, "tabular data" means an `AbstractDataFrame`.  Ultimately, the
-goal is to support any tabular data format that adheres to a minimal API,
-**regardless of backend**.
+At the moment, "tabular data" means a
+[Tables.jl](https://github.com/JuliaData/Tables.jl) table, which will be
+materialized as a `Tables.ColumnTable` (a `NamedTuple` of column vectors).  Work
+on first-class support for streaming/row-oriented tables is ongoing.
 
-## The `Formula` type
+## The `@formula` DSL
+
+!!! warning
+
+    The internal representation of formulae was recently completely overhauled,
+    which is **not yet reflected in the documentation here**.  Most user-facing
+    functionality should be the same as before, but anything that relies on the
+    internal representations (like `Terms`) and other non-standard uses will need
+    to be updated.
 
 The basic conceptual tool for this is the `Formula`, which has a left side and a
 right side, separated by `~`. Formulas are constructed using the `@formula` macro:
@@ -176,5 +185,4 @@ Internally, this is accomplished in three stages:
 ```@docs
 ModelFrame
 ModelMatrix
-Terms
 ```
