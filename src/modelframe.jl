@@ -59,6 +59,19 @@ StatsBase.model_response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, da
 
 StatsBase.coefnames(mf::ModelFrame) = vectorize(termnames(mf.f.rhs))
 
+"""
+    setcontrasts!(mf::ModelFrame; kwargs...)
+    setcontrasts!(mf::ModelFrame, contrasts::Dict{Symbol})
+
+Update the contrasts used for coding categorical variables in
+[`ModelFrame`](@ref) in place.  This is accomplished by computing a new schema
+based on the provided contrasts and the `ModelFrame`'s data, and applying it to
+the `ModelFrame`'s `FormulaTerm`.
+
+Note that only the `ModelFrame` itself is mutated: because `AbstractTerm`s are
+immutable, any changes will produce a copy.
+
+"""
 setcontrasts!(mf::ModelFrame; kwargs...) = setcontrasts!(mf, Dict(kwargs))
 function setcontrasts!(mf::ModelFrame, contrasts::Dict{Symbol})
     # TODO: don't consume the whole table again if it's not needed

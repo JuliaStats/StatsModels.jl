@@ -29,22 +29,29 @@ on first-class support for streaming/row-oriented tables is ongoing.
     internal representations (like `Terms`) and other non-standard uses will need
     to be updated.
 
-The basic conceptual tool for this is the `Formula`, which has a left side and a
-right side, separated by `~`. Formulas are constructed using the `@formula` macro:
+StatsModels implements the `@formula` domain-specific language (DSL) for
+describing table-to-matrix transformations.  This DSL is designed to be familiar
+to users of other statistical software, while also taking advantage of Julia's
+unique strengths to be fast and flexible.
+
+A formula has a left side and a right side, separated by `~`:
 
 ```jldoctest
 julia> @formula(y ~ 1 + a)
 Formula: y ~ 1 + a
 ```
 
-Note that the `@formula` macro **must** be called with parentheses to ensure that
-the formula is parsed properly.
+!!! note 
+
+    The `@formula` macro **must** be called with parentheses to ensure that
+    the formula is parsed properly.
 
 The left side of a formula conventionally represents *dependent* variables, and
-the right side *independent* variables (or regressors).  *Terms* are separated
-by `+`.  Basic terms are the integers `1` or `0`—evaluated as the presence or
-absence of a constant intercept term, respectively—and variables like `x`,
-which will evaluate to the data source column with that name as a symbol (`:x`).
+the right side *independent* variables (or predictors/regressors).  *Terms* are
+separated by `+`.  Basic terms are the integers `1` or `0`—evaluated as the
+presence or absence of a constant intercept term, respectively—and variables
+like `x`, which will evaluate to the data source column with that name as a
+symbol (`:x`).
 
 Individual variables can be combined into *interaction terms* with `&`, as in
 `a&b`, which will evaluate to the product of the columns named `:a` and `:b`.
@@ -55,7 +62,7 @@ It's often convenient to include main effects and interactions for a number of
 variables.  The `*` operator does this, expanding in the following way:
 
 ```jldoctest
-julia> Formula(StatsModels.Terms(@formula(y ~ 1 + a*b)))
+julia> @formula(y ~ 1 + a*b)
 Formula: y ~ 1 + a + b + a & b
 ```
 
@@ -66,7 +73,7 @@ This applies to higher-order interactions, too: `a*b*c` expands to the main
 effects, all two-way interactions, and the three way interaction `a&b&c`:
 
 ```jldoctest
-julia> Formula(StatsModels.Terms(@formula(y ~ 1 + a*b*c)))
+julia> @formula(y ~ 1 + a*b*c)
 Formula: y ~ 1 + a + b + c + a & b + a & c + b & c + &(a, b, c)
 ```
 
@@ -74,14 +81,74 @@ Both the `*` and the `&` operators act like multiplication, and are distributive
 over addition:
 
 ```jldoctest
-julia> Formula(StatsModels.Terms(@formula(y ~ 1 + (a+b) & c)))
+julia> @formula(y ~ 1 + (a+b) & c)
 Formula: y ~ 1 + a & c + b & c
 
-julia> Formula(StatsModels.Terms(@formula(y ~ 1 + (a+b) * c)))
+julia> @formula(y ~ 1 + (a+b) * c)
 Formula: y ~ 1 + a + b + c + a & c + b & c
 ```
 
+### Calls to non-DSL functions
+
+Whenever the `@formula` macro encounters a call to a non-DSL function (e.g.,
+anything other than `~`, `+`, `&`, or `*`), it "captures" it as a
+`FunctionTerm`.  
+
 ### Constructing a formula programmatically
+
+A basic formula consists of individual terms bound together with `+`, `&`, and
+(at the highest level) `~`.  There are two basic kinds of terms: a
+`ConstantTerm` represents a constant value (like a literal number), while a
+`Term` represents a placeholder variable that names a table column.  You can
+inspect the expression that is generated and evaluated by the `@formula` macro
+with `@macroexpand`:
+
+```jldoctest
+julia> @macroexpand(@formula(y ~ 1 + a))
+:((StatsModels.Term)(:y) ~ (StatsModels.ConstantTerm)(1) + (StatsModels.Term)(:a))
+
+julia> @macroexpand(@formula(y ~ a*b))
+:((StatsModels.Term)(:y) ~ (StatsModels.Term)(:a) + (StatsModels.Term)(:b) + (StatsModels.Term)(:a) & (StatsModels.Term)(:b))
+```
+
+Constructing formulae programmatically is thus straightforward: wrap each symbol
+referring to columns in a `Term` and combine them using the same operators.
+
+```jldoctest
+julia> f = Term(:y) ~ ConstantTerm(1) + Term(:a)
+
+julia> f == @formula(y ~ 1 + a)
+```
+
+The `term` function is provided as a convenience and generates a `Term` for
+`Symbol` arguments and a `ConstantTerm` for numeric arguments.  This is
+convenient if you have a vector of numbers (for an intercept) and symbols:
+
+```jldoctest
+julia> rhs = [1, :a, :b]
+
+julia> f = term(:y) ~ (+)(term.(rhs)...) # or use sum
+
+julia> f == @formula(y ~ 1 + a + b)
+```
+
+Note that at this stage, none of the syntactic transformations of the
+`@formula` macro will be applied, so any interactions will need to be spelled
+out in full:
+
+```jldoctest
+julia> term(:a) * term(:b)
+ERROR: MethodError: no method matching *(::Term, ::Term)
+Closest candidates are:
+  *(::Any, ::Any, ::Any, ::Any...) at operators.jl:502
+Stacktrace:
+ [1] top-level scope at none:0
+
+julia> term(:a) + term(:b) + term(:a)&term(:b)
+a + b + a&b
+```
+
+Moreover, no non-DSL calls will be captured.
 
 Because a `Formula` is created at compile time with the `@formula` macro,
 creating one programmatically means dipping into Julia's
