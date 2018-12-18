@@ -1,4 +1,5 @@
 abstract type AbstractTerm end
+const TupleTerm = NTuple{N, AbstractTerm} where N
 const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 
 Base.show(io::IO, terms::NTuple{N, AbstractTerm}) where {N} = print(io, join(terms, " + "))

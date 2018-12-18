@@ -54,6 +54,23 @@ end
 ModelFrame(f::FormulaTerm, data; mod=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
     ModelFrame(f, columntable(data); mod=mod, contrasts=contrasts)
 
+function model_matrix(f::FormulaTerm, data;
+                      hints=Dict{Symbol,Any}(), mod::Type{Mod}=StatisticalModel) where Mod
+    Tables.istable(data) ||
+        throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
+    f = has_schema(f) ? f : apply_schema(f, schema(f, data, hints), Mod)
+    model_cols(f.rhs, columntable(data))
+end
+function StatsBase.model_response(f::FormulaTerm, data;
+                                  hints=Dict{Symbol,Any}(),
+                                  mod::Type{Mod}=StatisticalModel) where Mod
+    Tables.istable(data) ||
+        throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
+    f = has_schema(f) ? f : apply_schema(f, schema(f, data, hints), Mod)
+    model_cols(f.lhs, columntable(data))
+end
+
+
 model_matrix(mf::ModelFrame; data=mf.data) = model_cols(mf.f.rhs, data)
 StatsBase.model_response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, data)
 

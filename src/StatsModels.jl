@@ -12,9 +12,12 @@ using LinearAlgebra
 using Missings
 
 using Tables: ColumnTable
-using StatsBase: StatisticalModel
 
 export
+    #re-export from StatsBase:
+    StatisticalModel,
+    RegressionModel,
+    
     @formula,
     ModelFrame,
     ModelMatrix,
