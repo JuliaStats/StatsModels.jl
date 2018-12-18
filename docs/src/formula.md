@@ -30,6 +30,11 @@ A basic formula is composed of individual *terms*—symbols which refer to data
 columns, or literal numbers `0` or `1`—combined by `+`, `&`, `*`, and (at the
 top level) `~`.
 
+!!! note 
+
+    The `@formula` macro **must** be called with parentheses to ensure that
+    the formula is parsed properly.
+
 ### An example
 
 ```jldoctest
@@ -64,32 +69,20 @@ julia> model_matrix(f, df)
  1.0  7.0  0.845915  0.0  0.0  0.0       0.0     
  1.0  8.0  0.357598  1.0  0.0  0.357598  0.0     
  1.0  9.0  0.124941  0.0  1.0  0.0       0.124941
-
-julia> model_response(f, df)
-9-element Array{Float64,1}:
- 0.6331463310677918  
- 0.25472183475816124 
- 0.23193542855982008 
- 0.38103031987753466 
- 0.7058141270129243  
- 0.8363531035615845  
- 0.683605976900957   
- 0.052424120057035895
- 0.735717932914747   
-
 ```
 
 Let's break down the formula expression ` y ~ 1 + a + b + c + b&c`:
 
 * At the top level is the **formula separator** `~`, which separates the
-  response variables on the right from the predictor variables on the right
+  response variables on the left from the predictor variables on the right
 * On the left is `y`, which means that the resopnse variable is the column from
-  the data named `:y`.
+  the data named `:y` (this can be accessed with the analogous `model_response`
+  function)
 * The right hand side `1 + a + b + c + b&c` is made up of a number of different
   **terms**, separated by `+`.
 * The first term `1` generates a constant or "intercept" column in the model
   matrix.
-* The next three terms ` a + b + c` correspond, like the right-hand side term
+* The next three terms `a + b + c` correspond, like the right-hand side term
   `y`, to columns from the data table called `:a`, `:b`, and `:c`.
     * The `:a` and `:b` columns are both numeric, so they're treated as
       **continuous variables** and simply converted to `Float64` and copied to
@@ -120,6 +113,121 @@ term separator `+`:
 julia> @formula(y ~ 1 + (a + b) & c)
 y ~ 1 + a&c + b&c
 ```
+
+## Non-DSL calls
+
+Any calls to functions that are not built into the DSL (or part of an
+[extension]() provided by a modeling package) are treated like normal Julia
+code, and evaluated elementwise:
+
+```jldoctest
+julia> model_matrix(@formula(y ~ 1 + a + log(1+a) + length(c)), df)
+9×4 Array{Float64,2}:
+ 1.0  1.0  0.693147  1.0
+ 1.0  2.0  1.09861   1.0
+ 1.0  3.0  1.38629   1.0
+ 1.0  4.0  1.60944   1.0
+ 1.0  5.0  1.79176   1.0
+ 1.0  6.0  1.94591   1.0
+ 1.0  7.0  2.07944   1.0
+ 1.0  8.0  2.19722   1.0
+ 1.0  9.0  2.30259   1.0
+```
+
+Note that the expression `1 + a` is treated differently as part of the formula
+then in the call to `log`, where it's interpreted as normal addition.
+
+## The lifecycle of a `@formula`
+
+The `model_matrix` function used in the example above hides a lot of important
+internal details.  A formula goes through a number of stages, starting as an
+expression that's passed to the `@formula` macro and ending up generating a
+numeric matrix when ultimately combined with a tabular data source:
+
+1. "Macro time" when only the surface syntax is available
+2. "Schema time" incorporates information about **data invariants** (types of each
+   variable, levels of categorical variables, summary statistics for continuous
+   variables) and the **model type**.
+3. "Data time" when the actual data values themselves are available.
+
+For in-memory (columnar) tables, there is not much difference between "data
+time" and "schema time" in practice, but in principle it's important to
+distinguish between these when dealing with truly streaming data, or large data
+stores where calculating invariants of the data may be expensive.
+
+### Macro time
+
+The `@formula` macro does syntactic transformations of the formula expression.
+At this point, _only_ the expression itself is available, and there's no way to
+know whether a term corresponds to a continuous or categorical variable.
+
+For standard formulae, this amounts to applying the syntactic rules for the DSL
+operators (expanding `*` and applying the distributive and associative rules),
+and wrapping each symbol in a `Term` constructor:
+
+```julia
+julia> @macroexpand @formula(y ~ 1 + a*b)
+:(Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) & Term(:b))
+```
+
+Calling this stage "macro time" is a bit of a misnormer because much of the
+action happens when the expression returned by the `@formula` macro is
+evaluated.  At this point, the `Term`s are combined to create higher-order terms
+via overloaded methods for `~`, `+`, and `&`:
+
+```julia
+julia> dump(Term(:a) & Term(:b))
+InteractionTerm{Tuple{Term,Term}}
+  terms: Tuple{Term,Term}
+    1: Term
+      sym: Symbol a
+    2: Term
+      sym: Symbol b
+
+julia> dump(Term(:a) + Term(:b))
+Tuple{Term,Term}
+  1: Term
+    sym: Symbol a
+  2: Term
+    sym: Symbol b
+
+julia> dump(Term(:y) ~ Term(:a))
+FormulaTerm{Term,Term}
+  lhs: Term
+    sym: Symbol y
+  rhs: Term
+    sym: Symbol a
+```
+
+!!! note
+    
+    As always, you can introspect which method is called with
+
+    ```julia
+    julia> @which Term(:a) & Term(:b)
+    &(terms::AbstractTerm...) in StatsModels at /home/dave/.julia/dev/StatsModels/src/terms.jl:224
+    ```
+
+The reason that the actual construction of higher-order terms is done after the
+macro is expanded is that it makes it much easier to create a formula
+programatically:
+
+```julia
+julia> f = Term(:y) ~ sum(Term(s) for s in [:a, :b, :c])
+y ~ a + b + c
+
+julia> f == @formula(y ~ a + b + c)
+true
+```
+
+The major exception to this is that non-DSL calls **must** be specified using
+the `@formula` macro.  The reason for this is that non-DSL calls are "captured"
+and turned into anonymous functions that can be evaluated elementwise, which has
+to happen at compile time.  For instance, the call to `log` in `@formula(y ~
+log(a+b))` is converted into the anonymous function `(a,b) -> log(a+b)`.
+
+### Schema time
+
 A formula has a left side and a right side, separated by `~`:
 
 ```jldoctest
