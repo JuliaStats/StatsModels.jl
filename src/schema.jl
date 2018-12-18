@@ -13,7 +13,7 @@ terms(t::InteractionTerm) = terms(t.terms)
 terms(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
 terms(t::AbstractTerm) = [t]
 terms(t::MatrixTerm) = terms(t.terms)
-terms(t::NTuple{N, AbstractTerm}) where N = mapreduce(terms, union, t)
+terms(t::TupleTerm) = mapreduce(terms, union, t)
 
 needs_schema(::AbstractTerm) = true
 needs_schema(::ConstantTerm) = false
@@ -111,7 +111,7 @@ categorical term, or to change a continuous term to categorical or vice versa.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 apply_schema(t, schema, Mod) = t
-apply_schema(terms::NTuple{N,AbstractTerm}, schema, Mod) where N =
+apply_schema(terms::TupleTerm, schema, Mod) =
     apply_schema.(terms, Ref(schema), Mod)
 apply_schema(t::Term, schema, Mod) = schema[t]
 apply_schema(ft::FormulaTerm, schema, Mod) =
@@ -227,7 +227,7 @@ end
 drop_term(from, to) = symequal(from, to) ? ConstantTerm(1) : from
 drop_term(from::FormulaTerm, to) = FormulaTerm(from.lhs, drop_term(from.rhs, to))
 drop_term(from::MatrixTerm, to) = MatrixTerm(drop_term(from.terms, to))
-drop_term(from::NTuple{N, AbstractTerm}, to) where N =
+drop_term(from::TupleTerm, to) =
     tuple((t for t = from if !symequal(t, to))...)
 function drop_term(from::InteractionTerm, t)
     terms = drop_term(from.terms, t)
@@ -261,7 +261,7 @@ The data variables that this term refers to.
 termvars(::AbstractTerm) = Symbol[]
 termvars(t::Union{Term, CategoricalTerm, ContinuousTerm}) = [t.sym]
 termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
-termvars(t::NTuple{N, AbstractTerm}) where N = mapreduce(termvars, union, t, init=Symbol[])
+termvars(t::TupleTerm) = mapreduce(termvars, union, t, init=Symbol[])
 termvars(t::MatrixTerm) = termvars(t.terms)
 termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
 termvars(t::FunctionTerm) = collect(t.names)

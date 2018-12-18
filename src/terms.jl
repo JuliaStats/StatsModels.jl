@@ -2,7 +2,7 @@ abstract type AbstractTerm end
 const TupleTerm = NTuple{N, AbstractTerm} where N
 const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 
-Base.show(io::IO, terms::NTuple{N, AbstractTerm}) where {N} = print(io, join(terms, " + "))
+Base.show(io::IO, terms::TupleTerm) = print(io, join(terms, " + "))
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
 
@@ -109,7 +109,7 @@ CategoricalTerm(sym::Symbol, contrasts::ContrastsMatrix{C,T}) where {C,T} =
 
 A collection of terms that should be combined to produce a single matrix.
 """
-struct MatrixTerm{Ts<:NTuple{N,AbstractTerm} where N} <: AbstractTerm
+struct MatrixTerm{Ts<:TupleTerm} <: AbstractTerm
     terms::Ts
 end
 # wrap single terms in a tuple
@@ -119,7 +119,7 @@ Base.show(io::IO, t::MatrixTerm) = show(io, t.terms)
 width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
 
 """
-    extract_matrix_terms(ts::NTuple{N,AbstractTerm}) where {N}
+    extract_matrix_terms(ts::TupleTerm)
 
 Depending on whether the component terms are matrix terms (meaning they have
 `is_matrix_term(T) == true`), `extract_matrix_terms` will return
@@ -138,7 +138,7 @@ random effects terms in
 [MixedModels.jl](https://github.com/dmbates/MixedModels.jl).
 
 """
-function extract_matrix_terms(ts::NTuple{N,AbstractTerm}) where {N}
+function extract_matrix_terms(ts::TupleTerm)
     ismat = collect(is_matrix_term.(ts))
     if all(ismat)
         MatrixTerm(ts)
@@ -226,13 +226,18 @@ Base.:&(term::AbstractTerm) = term
 Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
 
 Base.:+(terms::AbstractTerm...) = (unique(terms)..., )
-Base.:+(as::NTuple{N, AbstractTerm}, b::AbstractTerm) where {N} = (as..., b)
-Base.:+(a::AbstractTerm, bs::NTuple{N, AbstractTerm}) where {N} = (a, bs...)
+Base.:+(as::TupleTerm, b::AbstractTerm) = (as..., b)
+Base.:+(a::AbstractTerm, bs::TupleTerm) = (a, bs...)
 
 ################################################################################
 # evaluating terms with data to generate model matrix entries
 
-model_cols(ts::NTuple{N, AbstractTerm}, d::NamedTuple) where {N} = model_cols.(ts, Ref(d))
+function model_cols(t, d::D) where D
+    Tables.istable(d) || throw(ArgumentError("Data of type $D is not a table!"))
+    model_cols(t, columntable(d))
+end
+
+model_cols(ts::TupleTerm, d::NamedTuple) = model_cols.(ts, Ref(d))
 
 # TODO: @generated to unroll the getfield stuff
 model_cols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
@@ -288,7 +293,7 @@ termnames(t::ContinuousTerm) = string(t.sym)
 termnames(t::CategoricalTerm) = 
     ["$(t.sym): $name" for name in t.contrasts.termnames]
 termnames(t::FunctionTerm) = string(t.exorig)
-termnames(ts::NTuple{N,AbstractTerm}) where {N} = reduce(vcat, termnames.(ts))
+termnames(ts::TupleTerm) = reduce(vcat, termnames.(ts))
 termnames(t::MatrixTerm) = termnames(t.terms)
 termnames(t::InteractionTerm) =
     kron_insideout((args...) -> join(args, " & "), vectorize.(termnames.(t.terms))...)
