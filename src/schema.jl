@@ -74,10 +74,10 @@ function schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
     return sch
 end
 
-schema(f::FormulaTerm, data, hints::Dict{Symbol}) =
+schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
     schema(filter(needs_schema, terms(f)), data, hints)
 
-schema(f::FormulaTerm, data) = schema(f, data, Dict{Symbol,Any}())
+schema(f::TermOrTerms, data) = schema(f, data, Dict{Symbol,Any}())
 
 schema(t::Term, dt::ColumnTable) = schema(t, dt[t.sym])
 schema(t::Term, dt::ColumnTable, hint) = schema(t, dt[t.sym], hint)
