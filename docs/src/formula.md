@@ -228,6 +228,39 @@ log(a+b))` is converted into the anonymous function `(a,b) -> log(a+b)`.
 
 ### Schema time
 
+The next phase of life for a formula begins when a _schema_ for the data becomes
+available.  A schema is a mapping from data columns to a concrete term
+type---either a `ContinuousTerm` or a `CategoricalTerm`---which represents all
+the summary information about a data column necessary to create a model matrix
+from that column.
+
+A schema is computed with the `schema` function.  By default, it will create a
+schema for every column in the data:
+
+```julia
+julia> schema(df)
+Dict{Any,Any} with 4 entries:
+  b => b (continuous)
+  a => a (continuous)
+  c => c (3 levels): DummyCoding(2)
+  y => y (continuous)
+```
+
+However, if a term (including a `FormulaTerm`) is provided, the schema will be
+computed based only on the necessary variables:
+
+```julia
+julia> schema(@formula(y ~ 1 + a), df)
+Dict{Any,Any} with 2 entries:
+  a => a (continuous)
+  y => y (continuous)
+
+julia> schema(Term(:a) + Term(:b), df)
+Dict{Any,Any} with 2 entries:
+  b => b (continuous)
+  a => a (continuous)
+```
+
 A formula has a left side and a right side, separated by `~`:
 
 ```jldoctest
