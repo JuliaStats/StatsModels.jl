@@ -9,8 +9,7 @@ normal Julian mechanisms of multiple dispatch.
 
 ## The lifecycle of a `@formula`
 
-The `model_matrix` function used in the example above hides a lot of important
-internal details.  A formula goes through a number of stages, starting as an
+A formula goes through a number of stages, starting as an
 expression that's passed to the `@formula` macro and ending up generating a
 numeric matrix when ultimately combined with a tabular data source:
 
@@ -133,7 +132,12 @@ Dict{Any,Any} with 2 entries:
 
 Once a schema is computed, it's _applied_ to the formula with `apply_schema`.
 This converts each placeholder `Term` into a `ContinuousTerm` or
-`CategoricalTerm`.
+`CategoricalTerm`.  This is done by calling `apply_schema(term, schema,
+ModelType)` recursively on each term.  Dispatching on the term, schema, and
+model type allows for package authors to override default behavior for model
+types they define or even adding extensions to the `@formula` DSL by dispatching
+on `::FunctionTerm{F}` ([see below](#Extending-@formula-syntax-1) for more
+details)
 
 ### Data time
 
@@ -150,3 +154,64 @@ julia> df = DataFrame(y = rand(9), a = [1:9;], b = rand(9), c = repeat(["a","b",
 
 julia> 
 ```
+
+
+## Extending `@formula` syntax
+
+Package authors may want to create additional syntax to the `@formula` DSL so
+their users can conveniently specify particular kinds of models.  StatsModels.jl
+provides mechanisms for such extensions that do _not_ rely on compile time
+"macro magic", but on standard julian mechanisms of multiple dispatch.
+
+Extensions have three components:
+1. **Syntax**: the julia function which is given special meaning inside a formula.
+2. **Context**: the model type(s) where this extension applies
+3. **Behavior**: how tabular data bis transformed under this extension
+
+### Example
+
+As an example, we'll add syntax for specifying a [polynomial
+regression](https://en.wikipedia.org/wiki/Polynomial_regression) model, which
+fits a regression using polynomial basis functions of a continuous predictor.
+
+The first step is to specify the **syntax** we're going to use.  While it's
+possible to use an existing function, the best practice is to define a new
+function to make dispatch less ambiguous.
+
+```julia
+# syntax: best practice to define a _new_ function
+poly(x, n) = x^n
+
+# type of model where syntax applies
+const POLY_CONTEXT = Any
+
+# struct for behavior
+struct PolyTerm <: AbstractTerm
+    term::ContinuousTerm
+    deg::Int
+end
+PolyTerm(t::ContinuousTerm, deg::ConstantTerm) = PolyTerm(t, deg.n)
+
+
+function apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{POLY_CONTEXT})
+    PolyTerm(apply_schema(t.args_parsed[1], sch, Mod
+end
+    PolyTerm(apply_schema(t.args_parsed...)
+
+StatsModels.model_cols(p::PolyTerm, d::NamedTuple) =
+    reduce(hcat, (d[p.term].^n for n in 1:p.deg))
+
+```
+
+### Summary
+
+"Custom syntax" means that calls to a particular function in a formula are
+not interpreted as normal julia code, but rather as a particular kind of term.
+
+Custom syntax is a combination of **syntax** (julia function) and **term**
+(subtype of `AbstractTerm`)p
+
+The standard way to extend the `@formula` DSL is to create a custom
+`AbstractTerm`.
+
+
