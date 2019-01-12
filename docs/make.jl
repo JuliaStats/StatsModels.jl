@@ -7,7 +7,8 @@ makedocs(
         "Introduction" => "index.md",
         "Modeling tabular data" => "formula.md",
         "Internals and extending the `@formula`" => "internals.md",
-        "Contrast coding categorical variables" => "contrasts.md"
+        "Contrast coding categorical variables" => "contrasts.md",
+        "API documentation" => "api.md"
     ]
 )
 

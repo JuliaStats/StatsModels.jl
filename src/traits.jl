@@ -1,5 +1,16 @@
 # Traits used for statistical models
 
+"""
+    implicit_intercept(T::Type)
+
+Returns `true` if model of type `T` should includes an implicit intercept even
+if none is specified in the formula.  Is `true` by default for all
+`T<:StatisticalModel`, and `false` for others.
+
+If a model has an implicit intercept, it can be explicitly excluded by using `0`
+in the formula, which generates [`InterceptTerm{false}`](@ref InterceptTerm) with
+[`apply_schema`](@ref).
+"""
 implicit_intercept(x::T) where {T} = implicit_intercept(T)
 implicit_intercept(::Type{T}) where {T} = false
 implicit_intercept(::Type{<:StatisticalModel}) = true
