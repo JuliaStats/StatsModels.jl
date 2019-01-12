@@ -33,25 +33,25 @@ categorical.
 
 # Example
 
-```julia
+```julia-repl
 julia> d = (x=sample([:a, :b, :c], 10), y=rand(10));
 
 julia> ts = [Term(:x), Term(:y)];
 
 julia> schema(ts, d)
 Dict{Any,Any} with 2 entries:
+  x => x (3 levels): DummyCoding(2)
   y => y (continuous)
-  x => x (categorical(2): DummyCoding)
 
 julia> schema(ts, d, Dict(:x => HelmertCoding()))
 Dict{Any,Any} with 2 entries:
+  x => x (3 levels): HelmertCoding(2)
   y => y (continuous)
-  x => x (categorical(2): HelmertCoding)
 
 julia> schema(ts, d, Dict(:y => CategoricalTerm))
 Dict{Any,Any} with 2 entries:
-  y => y (categorical(9): DummyCoding)
-  x => x (categorical(2): DummyCoding)
+  x => x (3 levels): DummyCoding(2)
+  y => y (10 levels): DummyCoding(9)
 ```
 """
 schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
@@ -79,8 +79,38 @@ schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
 
 schema(f::TermOrTerms, data) = schema(f, data, Dict{Symbol,Any}())
 
-schema(t::Term, dt::ColumnTable) = schema(t, dt[t.sym])
-schema(t::Term, dt::ColumnTable, hint) = schema(t, dt[t.sym], hint)
+"""
+    schema(t::Term, data[, hint])
+
+Create concrete term from the placeholder `t` based on a data source and
+optional hint.  If `data` is a table, the `getproperty` is used to extract the
+appropriate column.
+
+The `hint` can be a concrete term type (`ContinuouTerm` or `CategoricalTerm`),
+or an instance of some `<:AbstractContrasts`, in which case a `CategoricalTerm`
+will be created using those contrasts.
+
+If no hint is provided, the `eltype` of the data is used: `Number`s are assumed
+to be continuous, and all others are assumed to be categorical.
+
+# Example
+
+```julia-repl
+julia> schema(term(:a), [1, 2, 3])
+a (continuous)
+
+julia> schema(term(:a), [1, 2, 3], CategoricalTerm)
+a (3 levels): DummyCoding(2)
+
+julia> schema(term(:a), [1, 2, 3], EffectsCoding())
+a (3 levels): EffectsCoding(2)
+
+julia> schema(term(:a), (a = [1, 2, 3], b = rand(3)))
+a (continuous)
+```
+"""
+schema(t::Term, dt::ColumnTable) = schema(t, getproperty(dt, t.sym))
+schema(t::Term, dt::ColumnTable, hint) = schema(t, getproprety(dt, t.sym), hint)
 
 schema(t::Term, xs::AbstractVector{<:Number}) = schema(t, xs, ContinuousTerm)
 function schema(t::Term, xs::AbstractVector, ::Type{ContinuousTerm})

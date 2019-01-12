@@ -74,7 +74,7 @@ end
 model_matrix(mf::ModelFrame; data=mf.data) = model_cols(mf.f.rhs, data)
 StatsBase.model_response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, data)
 
-StatsBase.coefnames(mf::ModelFrame) = vectorize(termnames(mf.f.rhs))
+StatsBase.coefnames(mf::ModelFrame) = vectorize(coefnames(mf.f.rhs))
 
 """
     setcontrasts!(mf::ModelFrame; kwargs...)
