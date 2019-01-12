@@ -37,41 +37,13 @@ top level) `~`.
 
 ### An example
 
-```jldoctest
-julia> using StatsModels, DataFrames
-
-julia> f = @formula(y ~ 1 + a + b + c + b&c)
-y ~ 1 + a + b + c + b&c
-
-julia> df = DataFrame(y = rand(9), a = [1:9;], b = rand(9), c = repeat(["a","b","c"], 3))
-9×4 DataFrame
-│ Row │ y         │ a     │ b        │ c      │
-│     │ Float64   │ Int64 │ Float64  │ String │
-├─────┼───────────┼───────┼──────────┼────────┤
-│ 1   │ 0.633146  │ 1     │ 0.537954 │ a      │
-│ 2   │ 0.254722  │ 2     │ 0.852915 │ b      │
-│ 3   │ 0.231935  │ 3     │ 0.743751 │ c      │
-│ 4   │ 0.38103   │ 4     │ 0.209199 │ a      │
-│ 5   │ 0.705814  │ 5     │ 0.162384 │ b      │
-│ 6   │ 0.836353  │ 6     │ 0.690534 │ c      │
-│ 7   │ 0.683606  │ 7     │ 0.845915 │ a      │
-│ 8   │ 0.0524241 │ 8     │ 0.357598 │ b      │
-│ 9   │ 0.735718  │ 9     │ 0.124941 │ c      │
-
-julia> f = apply_schema(f, schema(f, df))
-y (continuous) ~ 1 + a (continuous) + b (continuous) + c (3 levels): DummyCoding(2) + c (3 levels): DummyCoding(2)&b (continuous)
-
-julia> model_matrix(f, df)
-9×7 Array{Float64,2}:
- 1.0  1.0  0.537954  0.0  0.0  0.0       0.0     
- 1.0  2.0  0.852915  1.0  0.0  0.852915  0.0     
- 1.0  3.0  0.743751  0.0  1.0  0.0       0.743751
- 1.0  4.0  0.209199  0.0  0.0  0.0       0.0     
- 1.0  5.0  0.162384  1.0  0.0  0.162384  0.0     
- 1.0  6.0  0.690534  0.0  1.0  0.0       0.690534
- 1.0  7.0  0.845915  0.0  0.0  0.0       0.0     
- 1.0  8.0  0.357598  1.0  0.0  0.357598  0.0     
- 1.0  9.0  0.124941  0.0  1.0  0.0       0.124941
+```@repl
+using Random; Random.seed!(1); # hide
+using StatsModels, DataFrames
+f = @formula(y ~ 1 + a + b + c + b&c)
+df = DataFrame(y = rand(9), a = [1:9;], b = rand(9), c = repeat(["a","b","c"], 3))
+f = apply_schema(f, schema(f, df))
+model_matrix(f, df)
 ```
 
 Let's break down the formula expression ` y ~ 1 + a + b + c + b&c`:
@@ -108,17 +80,15 @@ Because we often want to include both "main effects" (`b` and `c`) and
 interactions (`b&c`) of multiple variables, the formula DSL uses the `*`
 operator to denote this:
 
-```jldoctest
-julia> @formula(y ~ 1 + a + b*c)
-y ~ 1 + a + b + c + b&c
+```@repl
+@formula(y ~ 1 + a + b*c)
 ```
 
 Also note that the interaction operators `&` and `*` are distributive with the
 term separator `+`:
 
-```jldoctest
-julia> @formula(y ~ 1 + (a + b) & c)
-y ~ 1 + a&c + b&c
+```@repl
+@formula(y ~ 1 + (a + b) & c)
 ```
 
 ## Non-DSL calls
@@ -127,18 +97,8 @@ Any calls to functions that are not built into the DSL (or part of an
 [extension](internals.html) provided by a modeling package) are treated like
 normal Julia code, and evaluated elementwise:
 
-```jldoctest
-julia> model_matrix(@formula(y ~ 1 + a + log(1+a) + length(c)), df)
-9×4 Array{Float64,2}:
- 1.0  1.0  0.693147  1.0
- 1.0  2.0  1.09861   1.0
- 1.0  3.0  1.38629   1.0
- 1.0  4.0  1.60944   1.0
- 1.0  5.0  1.79176   1.0
- 1.0  6.0  1.94591   1.0
- 1.0  7.0  2.07944   1.0
- 1.0  8.0  2.19722   1.0
- 1.0  9.0  2.30259   1.0
+```@repl
+model_matrix(@formula(y ~ 1 + a + log(1+a) + length(c)), df)
 ```
 
 Note that the expression `1 + a` is treated differently as part of the formula
@@ -149,126 +109,51 @@ than in the call to `log`, where it's interpreted as normal addition.
 A formula can be constructed at run-time by creating `Term`s and combining them
 with the formula operators `+`, `&`, and `~`:
 
-```julia
-julia> Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) & Term(:b)
-y ~ 1 + a + b + a&b
+```@repl
+Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) & Term(:b)
 ```
 
 The `term` method constructs a term of the appropriate type from symbols and
 numbers, which makes it easy to work with collections of mixed type:
 
-```julia
+```@repl
 julia> ts = term.([1, :a, :b])
-3-element Array{AbstractTerm,1}:
- 1
- a
- b
 ```
 
 These can then be combine with standard reduction techniques:
 
-```julia
-julia> f1 = term(:y) ~ foldl(+, ts)
-y ~ 1 + a + b
-
-julia> f2 = term(:y) ~ sum(ts)
-y ~ 1 + a + b
-
-julia> f1 == f2 == @formula(y ~ 1 + a + b)
-true
+```@repl
+f1 = term(:y) ~ foldl(+, ts)
+f2 = term(:y) ~ sum(ts)
+f1 == f2 == @formula(y ~ 1 + a + b)
 ```
 
+## Fitting a model from a formula
 
+The main use of `@formula` is to streamline specifying and fitting statistical
+models based on tabular data.  From the user's perspective, this is done by
+`fit` methods that take a `FormulaTerm` and a table instead of numeric
+matrices.
 
+Internally, this is accomplished in three steps:
 
+1. The expression passed to `@formula` is lowered to term constructors combined
+   by `~`, `+`, and `&`, which evaluate to create terms for the whole formula
+   and any interaction terms.
+2. A schema is extracted from the data, which determines whether each variable
+   is continuous or categorical and extracts the summary statistics of each
+   variable (mean/variance/min/max or unique levels respectively).  This schema
+   is then _applied_ to the formula with `apply_schema(term, schema,
+   ::Type{Model})`, which returns a new formula with each placeholder `Term`
+   replaced with a concrete `ContinuousTerm` or `CategoricalTerm` as
+   appropriate.  This is also the stage where any custom syntax is applied (see
+   [the section on extending the `@formula` DSL](/internals.html) for more
+   details)
+3. Numeric arrays are generated for the response and predictors from the full
+   table using `model_cols(term, data)`.
 
-
-
-
-
-
-
-
-
-
-
-### Formula separator `~`
-
-A formula has a left side and a right side, separated by `~`:
-
-```jldoctest
-julia> @formula(y ~ 1 + a)
-Formula: y ~ 1 + a
-```
-
-!!! note 
-
-    The `@formula` macro **must** be called with parentheses to ensure that
-    the formula is parsed properly.
-
-The left side of a formula conventionally represents *dependent* variables, and
-the right side *independent* variables (or predictors/regressors).  *Terms* are
-separated by `+`.  Basic terms are the integers `1` or `0`—evaluated as the
-presence or absence of a constant intercept term, respectively—and variables
-like `x`, which will evaluate to the data source column with that name as a
-symbol (`:x`).
-
-Individual variables can be combined into *interaction terms* with `&`, as in
-`a&b`, which will evaluate to the product of the columns named `:a` and `:b`.
-If either `a` or `b` are categorical, then the interaction term `a&b` generates
-all the product of each pair of the columns of `a` and `b`.
-
-It's often convenient to include main effects and interactions for a number of
-variables.  The `*` operator does this, expanding in the following way:
-
-```jldoctest
-julia> @formula(y ~ 1 + a*b)
-Formula: y ~ 1 + a + b + a & b
-```
-
-(We trigger parsing of the formula using the internal `Terms` type to show how
-the `Formula` expands).
-
-This applies to higher-order interactions, too: `a*b*c` expands to the main
-effects, all two-way interactions, and the three way interaction `a&b&c`:
-
-```jldoctest
-julia> @formula(y ~ 1 + a*b*c)
-Formula: y ~ 1 + a + b + c + a & b + a & c + b & c + &(a, b, c)
-```
-
-Both the `*` and the `&` operators act like multiplication, and are distributive
-over addition:
-
-```jldoctest
-julia> @formula(y ~ 1 + (a+b) & c)
-Formula: y ~ 1 + a & c + b & c
-
-julia> @formula(y ~ 1 + (a+b) * c)
-Formula: y ~ 1 + a + b + c + a & c + b & c
-```
-
-### Calls to non-DSL functions
-
-Whenever the `@formula` macro encounters a call to a non-DSL function (e.g.,
-anything other than `~`, `+`, `&`, or `*`), it "captures" it as a
-`FunctionTerm`.  
-
-
-## The `ModelFrame` and `ModelMatrix` types
-
-The main use of `Formula`s is for fitting statistical models based on tabular
-data.  From the user's perspective, this is done by `fit` methods that take a
-`Formula` and a `DataFrame` instead of numeric matrices.
-
-Internally, this is accomplished in three stages:
-
-1. The `Formula` is parsed into [`Terms`](@ref).
-2. The `Terms` and the data source are wrapped in a [`ModelFrame`](@ref).
-3. A numeric [`ModelMatrix`](@ref) is generated from the `ModelFrame` and passed to the
-   model's `fit` method.
-
-```@docs
-ModelFrame
-ModelMatrix
-```
+The `ModelFrame` and `ModelMatrix` types can still be used to do this
+transformation, but this is only to preserve some backwards compatibility.
+Package authors who would like to include support for fitting models from a
+`@formula` are **strongly** encouraged to directly use `schema`, `apply_schema`,
+and `model_cols` to handle the table-to-matrix transformations they need.
