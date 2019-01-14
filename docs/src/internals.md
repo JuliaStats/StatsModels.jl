@@ -95,42 +95,56 @@ schema(df)
 However, if a term (including a `FormulaTerm`) is provided, the schema will be
 computed based only on the necessary variables:
 
-```julia
-julia> schema(@formula(y ~ 1 + a), df)
-Dict{Any,Any} with 2 entries:
-  a => a (continuous)
-  y => y (continuous)
-
-julia> schema(Term(:a) + Term(:b), df)
-Dict{Any,Any} with 2 entries:
-  b => b (continuous)
-  a => a (continuous)
+```@repl 1
+schema(@formula(y ~ 1 + a), df)
+schema(Term(:a) + Term(:b), df)
 ```
 
-Once a schema is computed, it's _applied_ to the formula with `apply_schema`.
-This converts each placeholder `Term` into a `ContinuousTerm` or
-`CategoricalTerm`.  This is done by calling `apply_schema(term, schema,
-ModelType)` recursively on each term.  Dispatching on the term, schema, and
-model type allows for package authors to override default behavior for model
-types they define or even adding extensions to the `@formula` DSL by dispatching
-on `::FunctionTerm{F}` ([see below](#Extending-@formula-syntax-1) for more
+Once a schema is computed, it's _applied_ to the formula with
+[`apply_schema`](@ref).  Among other things, this _instantiates_ placeholder
+terms: 
+* `Term`s become `ContinuousTerm`s or `CategoricalTerm`s
+* `ConstantTerm`s become `InterceptTerm`s
+* Tuples of terms [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
+  they should be concatenated into a single model matrix
+
+```@repl 1
+f = @formula(y ~ 1 + a + b + c)
+typeof(f)
+f = apply_schema(f, schema(f, df))
+typeof(f)
+```
+
+This transformation is done by calling `apply_schema(term, schema, ModelType)`
+recursively on each term (`ModelType` defaults to `StatisticalModel`).  Because
+`apply_schema` dispatches on the term, schema, and model type, this stage allows
+generic context-aware transformations, based on _both_ the source (schema) _and_
+the destination (model type).  This is the primary mechanisms by which the
+formula DSL can be extended ([see below](#Extending-@formula-syntax-1) for more
 details)
 
 ### Data time
 
 At the end of "schema time", a formula encapsulates all the information needed
 to convert a table into a numeric model matrix.  That is, it is ready for "data
-time".  The main API method is `model_cols`:
+time".  The main API method is [`model_cols`](@ref), which when applied to a
+`FormulaTerm` returns a tuple of the numeric forms for the left- (response) and
+right-hand (predictor) sides.
 
+```@repl 1
+model_cols(f, df)
+```
+
+Model cols can also take a single row from a table, as a `NamedTuple`:
+
+```@repl 1
+using Tables
+model_cols(f, first(Tables.rowtable(df)))
+```
 
 Any `AbstractTerm` can be passed to `model_cols` with a table and returns one or
 more numeric arrays:
 
-```julia
-julia> df = DataFrame(y = rand(9), a = [1:9;], b = rand(9), c = repeat(["a","b","c"], 3));
-
-julia> 
-```
 
 
 ## Extending `@formula` syntax
