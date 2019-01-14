@@ -110,7 +110,7 @@ a (continuous)
 ```
 """
 schema(t::Term, dt::ColumnTable) = schema(t, getproperty(dt, t.sym))
-schema(t::Term, dt::ColumnTable, hint) = schema(t, getproprety(dt, t.sym), hint)
+schema(t::Term, dt::ColumnTable, hint) = schema(t, getproperty(dt, t.sym), hint)
 
 schema(t::Term, xs::AbstractVector{<:Number}) = schema(t, xs, ContinuousTerm)
 function schema(t::Term, xs::AbstractVector, ::Type{ContinuousTerm})
