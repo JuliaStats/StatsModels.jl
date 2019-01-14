@@ -37,7 +37,7 @@
         @test (a ~ b) == FormulaTerm(a, b)
         @test string(a~b) == "$a ~ $b"
         @test a & b == InteractionTerm((a,b))
-        @test string(a&b) == "$a&$b"
+        @test string(a & b) == "$a & $b"
 
         c = term(:c)
         @test (a+b)+c == (a,b,c)

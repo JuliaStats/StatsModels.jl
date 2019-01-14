@@ -119,7 +119,7 @@ The [`term`](@ref) function constructs a term of the appropriate type from
 symbols and numbers, which makes it easy to work with collections of mixed type:
 
 ```@repl 1
-ts = term.([1, :a, :b])
+ts = term(1, :a, :b)
 ```
 
 These can then be combine with standard reduction techniques:
