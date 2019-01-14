@@ -34,7 +34,7 @@ For standard formulae, this amounts to applying the syntactic rules for the DSL
 operators (expanding `*` and applying the distributive and associative rules),
 and wrapping each symbol in a `Term` constructor:
 
-```julia
+```julia-repl
 julia> @macroexpand @formula(y ~ 1 + a*b)
 :(Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) & Term(:b))
 ```
@@ -44,28 +44,11 @@ action happens when the expression returned by the `@formula` macro is
 evaluated.  At this point, the `Term`s are combined to create higher-order terms
 via overloaded methods for `~`, `+`, and `&`:
 
-```julia
-julia> dump(Term(:a) & Term(:b))
-InteractionTerm{Tuple{Term,Term}}
-  terms: Tuple{Term,Term}
-    1: Term
-      sym: Symbol a
-    2: Term
-      sym: Symbol b
-
-julia> dump(Term(:a) + Term(:b))
-Tuple{Term,Term}
-  1: Term
-    sym: Symbol a
-  2: Term
-    sym: Symbol b
-
-julia> dump(Term(:y) ~ Term(:a))
-FormulaTerm{Term,Term}
-  lhs: Term
-    sym: Symbol y
-  rhs: Term
-    sym: Symbol a
+```@repl 1
+using StatsModels; # hide
+dump(Term(:a) & Term(:b))
+dump(Term(:a) + Term(:b))
+dump(Term(:y) ~ Term(:a))
 ```
 
 !!! note
@@ -81,12 +64,9 @@ The reason that the actual construction of higher-order terms is done after the
 macro is expanded is that it makes it much easier to create a formula
 programatically:
 
-```julia
-julia> f = Term(:y) ~ sum(Term(s) for s in [:a, :b, :c])
-y ~ a + b + c
-
-julia> f == @formula(y ~ a + b + c)
-true
+```@repl 1
+f = Term(:y) ~ sum(Term(s) for s in [:a, :b, :c])
+f == @formula(y ~ a + b + c)
 ```
 
 The major exception to this is that non-DSL calls **must** be specified using
@@ -106,13 +86,10 @@ from that column.
 A schema is computed with the `schema` function.  By default, it will create a
 schema for every column in the data:
 
-```julia
-julia> schema(df)
-Dict{Any,Any} with 4 entries:
-  b => b (continuous)
-  a => a (continuous)
-  c => c (3 levels): DummyCoding(2)
-  y => y (continuous)
+```@repl 1
+using DataFrames    # for pretty printing---any Table will do
+df = DataFrame(y = rand(9), a = [1:9;], b = rand(9), c = repeat(["a","b","c"], 3))
+schema(df)
 ```
 
 However, if a term (including a `FormulaTerm`) is provided, the schema will be
