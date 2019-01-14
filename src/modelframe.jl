@@ -1,3 +1,37 @@
+"""
+Wrapper that encapsulates a `FormulaTerm`, schema, data table, and model type.
+
+This wrapper encapsulates all the information that's required to transform data
+of the same structure as the wrapped data frame into a model matrix (the
+`FormulaTerm`), as well as the information about how that formula term as
+instantiated (the schema and model type)
+
+Creating a model frame involves first extracting the [`schema`](@ref) for the
+data (using any contrasts provided as hints), and then applying that schema with
+[`apply_schema`](@ref) to the formula in the context of the provided model type.
+
+# Constructors
+
+```julia
+ModelFrame(f::FormulaTerm, data; mod::Type{Mod} = StatisticalModel, contrasts::Dict = Dict())
+```
+
+# Fields
+
+* `f::FormulaTerm`: Formula whose left hand side is the *response* and right hand
+  side are the *predictors*.
+* `schema::Any`: The schema applied that was applied to generate `f`.
+* `data::D`: The data table being modeled.  The only restriction is that `data` 
+  is a table (`Tables.istable(data) == true`)
+* `model::Type{M}`: The type of the model that will be fit from this model frame.
+
+# Examples
+
+```julia
+julia> df = (x = 1:4, y = 5:8)
+julia> mf = ModelFrame(@formula(y ~ 1 + x), df)
+```
+"""
 mutable struct ModelFrame{D,M}
     f::FormulaTerm
     schema
@@ -109,7 +143,22 @@ function setcontrasts!(mf::ModelFrame, contrasts::Dict{Symbol})
 end
 
 
+"""
+Convert a `ModelFrame` into a numeric matrix suitable for modeling
 
+# Fields
+
+* `m::T <: AbstractMatrix{<:AbstractFloat}` The generated numeric matrix
+* `assign::Vector{Int}` the index of the term corresponding to each column of `m`.
+
+# Constructors
+
+```julia
+ModelMatrix(mf::ModelFrame)
+# Specify the type of the resulting matrix (default Matrix{Float64})
+ModelMatrix{T <: AbstractFloatMatrix}(mf::ModelFrame)
+```
+"""
 mutable struct ModelMatrix{T <: AbstractMatrix{<:AbstractFloat}}
     m::T
     assign::Vector{Int}

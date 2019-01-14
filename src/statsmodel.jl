@@ -32,13 +32,40 @@ macro delegate(source, targets)
     return result
 end
 
-# Wrappers for TableStatisticalModel and TableRegressionModel
+"""
+Wrapper for a `StatisticalModel` that has been fit from a `@formula` and tabular
+data.  
+
+Most functions from the StatsBase API are simply delegated to the wrapped model,
+with the exception of functions like `fit`, `predict`, and `coefnames` where the
+tabular nature of the data means that additional processing is required or
+information provided by the formula.
+
+# Fields
+* `model::M` the wrapped `StatisticalModel`.
+* `mf::ModelFrame` encapsulates the formula, schema, and model type.
+* `mm::ModelMatrix{T}` the model matrix that the model was fit from.
+"""
 struct TableStatisticalModel{M,T} <: StatisticalModel
     model::M
     mf::ModelFrame
     mm::ModelMatrix{T}
 end
 
+"""
+Wrapper for a `RegressioModel` that has been fit from a `@formula` and tabular
+data.  
+
+Most functions from the StatsBase API are simply delegated to the wrapped model,
+with the exception of functions like `fit`, `predict`, and `coefnames` where the
+tabular nature of the data means that additional processing is required or
+information provided by the formula.
+
+# Fields
+* `model::M` the wrapped `RegressioModel`.
+* `mf::ModelFrame` encapsulates the formula, schema, and model type.
+* `mm::ModelMatrix{T}` the model matrix that the model was fit from.
+"""
 struct TableRegressionModel{M,T} <: RegressionModel
     model::M
     mf::ModelFrame
@@ -86,7 +113,7 @@ StatsBase.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
 StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
 
-# Predict function that takes data frame as predictor instead of matrix
+# Predict function that takes data table as predictor instead of matrix
 function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
