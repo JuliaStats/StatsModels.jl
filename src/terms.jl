@@ -341,6 +341,14 @@ Base.:+(a::AbstractTerm, bs::TupleTerm) = (a, bs...)
 ################################################################################
 # evaluating terms with data to generate model matrix entries
 
+"""
+    model_cols(t::AbstractTerm, data)
+
+Create a numerical "model columns" representation of data based on an
+`AbstractTerm`.  `data` can either be a whole table or a single row (in the form
+of a `NamedTuple` of scalar values).  Tables will be converted to a `NamedTuple`
+of `Vectors` (e.g., a `Tables.ColumnTable`).
+"""
 function model_cols(t, d::D) where D
     Tables.istable(d) || throw(ArgumentError("Data of type $D is not a table!"))
     model_cols(t, columntable(d))
