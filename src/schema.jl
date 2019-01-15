@@ -128,8 +128,7 @@ function schema(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
 end
 
 """
-    apply_schema(t, schema, ::Type{Mod}) where {Mod}
-    apply_schema(t, schema) = apply_schema(t, schema, Nothing)
+    apply_schema(t, schema[, Mod::Type = Nothing])
 
 Return a new term that is the result of applying `schema` to term `t` with
 destination model (type) `Mod`.  If `Mod` is omitted, `Nothing` will be used.
