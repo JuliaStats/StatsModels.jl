@@ -88,12 +88,14 @@ end
 ModelFrame(f::FormulaTerm, data; mod=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
     ModelFrame(f, columntable(data); mod=mod, contrasts=contrasts)
 
-function model_matrix(f::FormulaTerm, data;
+model_matrix(f::FormulaTerm, data; kwargs...) = model_matrix(f.rhs, data; kwargs...)
+
+function model_matrix(t::Union{AbstractTerm, TupleTerm}, data;
                       hints=Dict{Symbol,Any}(), mod::Type{Mod}=StatisticalModel) where Mod
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
-    f = has_schema(f) ? f : apply_schema(f, schema(f, data, hints), Mod)
-    model_cols(f.rhs, columntable(data))
+    t = has_schema(t) ? t : apply_schema(t, schema(t, data, hints), Mod)
+    model_cols(extract_matrix_terms(t), columntable(data))
 end
 function StatsBase.model_response(f::FormulaTerm, data;
                                   hints=Dict{Symbol,Any}(),
