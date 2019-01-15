@@ -169,7 +169,8 @@ The first step is to specify the **syntax** we're going to use.  While it's
 possible to use an existing function, the best practice is to define a new
 function to make dispatch less ambiguous.
 
-```julia
+```@example 1
+using StatsBase # hide
 # syntax: best practice to define a _new_ function
 poly(x, n) = x^n
 
@@ -181,28 +182,77 @@ struct PolyTerm <: AbstractTerm
     term::ContinuousTerm
     deg::Int
 end
-PolyTerm(t::ContinuousTerm, deg::ConstantTerm) = PolyTerm(t, deg.n)
 
+Base.show(io::IO, p::PolyTerm) = print(io, "poly($(p.term), $(p.deg))")
 
-function apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{POLY_CONTEXT})
-    PolyTerm(apply_schema(t.args_parsed[1], sch, Mod
+function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{<:POLY_CONTEXT})
+    term = apply_schema(t.args_parsed[1], sch, Mod)
+    isa(term, ContinuousTerm) ||
+        throw(ArgumentError("PolyTerm only works with continuous terms (got $term)"))
+    deg = t.args_parsed[2]
+    isa(deg, ConstantTerm) ||
+        throw(ArgumentError("PolyTerm degree must be a number (got $deg)"))
+    PolyTerm(term, deg.n)
 end
-    PolyTerm(apply_schema(t.args_parsed...)
 
-StatsModels.model_cols(p::PolyTerm, d::NamedTuple) =
-    reduce(hcat, (d[p.term].^n for n in 1:p.deg))
+function StatsModels.model_cols(p::PolyTerm, d::NamedTuple)
+    col = model_cols(p.term, d)
+    reduce(hcat, (col.^n for n in 1:p.deg))
+end
 
+StatsBase.coefnames(p::PolyTerm) = coefnames(p.term) .* "^" .* string.(1:p.deg)
+```
+
+Now, we can use `poly` in a formula:
+
+```@repl 1
+data = DataFrame(y = rand(4), a = rand(4), b = [1:4;])
+f = @formula(y ~ 1 + poly(b, 2) * a)
+f = apply_schema(f, schema(data))
+model_cols(f.rhs, data)
+coefnames(f.rhs)
+```
+
+It's also possible to _block_ interpretation of the `poly` syntax as special in
+certain contexts by adding additional (more specific) methods.  For instance, we
+could block for the default model context of `Nothing`:
+
+```@example 1
+StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{Nothing}) = t
+```
+
+Now the `poly` is interpreted by default as the "vanilla" function defined
+first, which just raises it's first argument to the designated power:
+
+```@repl 1
+f = apply_schema(@formula(y ~ 1 + poly(b,2) * a), schema(data))
+model_cols(f.rhs, data)
+coefnames(f.rhs)
+```
+
+But by using a different context (e.g., `StatisticalModel`) we get the custom
+interpretation:
+
+```@repl 1
+f2 = apply_schema(@formula(y ~ 1 + poly(b,2) * a), schema(data), StatisticalModel)
+model_cols(f2.rhs, data)
+coefnames(f2.rhs)
 ```
 
 ### Summary
 
-"Custom syntax" means that calls to a particular function in a formula are
-not interpreted as normal julia code, but rather as a particular kind of term.
+"Custom syntax" means that calls to a particular function in a formula are not
+interpreted as normal julia code, but rather as a particular (possibly special)
+kind of term.
 
-Custom syntax is a combination of **syntax** (julia function) and **term**
-(subtype of `AbstractTerm`)p
+Custom syntax is a combination of **syntax** (julia function), **term** (subtype
+of `AbstractTerm`).  This syntax applies in a particular **context** (schema
+plus model type, designated via a method of [`apply_schema`](@ref)),
+transforming a `FunctionTerm{syntax}` into another (often custom) term type.
+This custom term type then specifies special **behavior** at data time (via a
+method for [`model_cols`](@ref)).
 
-The standard way to extend the `@formula` DSL is to create a custom
-`AbstractTerm`.
-
-
+Finally, note that it's easy for a package to intercept the formula terms and
+manipulate them directly as well, before calling `apply_schema` or
+`model_cols`.  This gives packages great flexibility in how they interpret
+formula terms.

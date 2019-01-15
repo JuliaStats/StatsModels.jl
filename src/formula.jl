@@ -181,7 +181,10 @@ function parse!(ex::Expr, rewrites::Vector)
     check_call(ex)
 
     # don't recurse into captured calls
-    is_call(ex, :(StatsModels.capture_call)) && return ex
+    if is_call(ex, :capture_call) || is_call(ex, :(StatsModels.capture_call))
+        @debug "  skipping capture_call"
+        return ex
+    end
 
     # parse a copy of non-special calls
     ex_parsed = ex.args[1] ∉ SPECIALS ? deepcopy(ex) : ex
