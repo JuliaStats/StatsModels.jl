@@ -50,6 +50,10 @@ apply_schema
 
 ## Modeling
 
+```@docs
+fit
+```
+
 ### Traits
 
 ```@docs

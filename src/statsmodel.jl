@@ -96,6 +96,27 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
     end
 end
 
+@doc """
+    fit(Mod::Type{<:StatisticalModel}, f::FormulaTerm, data, args...; 
+        contrasts::Dict{Symbol}, kwargs...)
+
+Convert tabular data into a numeric response vector and predictor matrix using
+the formula `f`, and then `fit` the specified model type, wrapping the result in
+a [`TableRegressionModel`](@ref) or [`TableStatisticalModel`](@ref) (as
+appropriate)
+
+This is intended as a backstop for modeling packages that implement model types
+that are subtypes of `StatsBase.StatisticalModel` but do not explicitly support
+the full StatsModels terms-based interface.  Currently this works by creating a
+[`ModelFrame`](@ref) from the formula and data, and then converting this to a
+[`ModelMatrix`](@ref), but this is an internal implementation 
+
+**Note:** This is *not* the recommended way to support `@formula`/terms-based
+model fitting.  Rather, package authors should specify their own methods for
+fitting based on `<:AbstractTerm`s, and use StatsModels' [`schema`](@ref),
+[`apply_schema`](@ref), and [`model_cols`](@ref) API.
+""" fit
+
 # Delegate functions from StatsBase that use our new types
 const TableModels = Union{TableStatisticalModel, TableRegressionModel}
 @delegate TableModels.model [StatsBase.coef, StatsBase.confint,
