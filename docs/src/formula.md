@@ -137,6 +137,42 @@ models based on tabular data.  From the user's perspective, this is done by
 `fit` methods that take a `FormulaTerm` and a table instead of numeric
 matrices.
 
+As an example, we'll simulate some data from a linear regression model with an
+interaction term, a continuous predictor, a categorical predictor, and the
+interaction of the two, and then fit a `GLM.LinearModel` to recover the
+simulated coefficients.
+
+```julia-repl
+julia> using GLM, DataFrames, StatsModels
+
+julia> data = DataFrame(a = rand(100), b = repeat(["d", "e", "f", "g"], 25));
+
+# simulate response:
+julia> X = model_matrix(@formula(y ~ 1 + a*b).rhs, data);
+
+julia> β_true = [1., 2, 3, 4, 5, 6, 7, 8];
+
+julia> ϵ = randn(100)*0.1;
+
+julia> data[:y] = X*β_true .+ ϵ
+
+julia> fit(LinearModel, @formula(y ~ 1 + a*b), data)
+StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+
+y (continuous) ~ 1 + a (continuous) + b (4 levels): DummyCoding(3) + a (continuous) & b (4 levels): DummyCoding(3)
+
+Coefficients:
+             Estimate Std.Error t value Pr(>|t|)
+(Intercept)  0.945011 0.0443292  21.318   <1e-36
+a             2.04038 0.0781928 26.0942   <1e-43
+b: e          3.06689 0.0585607 52.3711   <1e-69
+b: f          4.03094 0.0620725 64.9393   <1e-77
+b: g          5.06553 0.0656504 77.1592   <1e-84
+a & b: e      5.90041  0.101969 57.8648   <1e-73
+a & b: f       6.9842  0.105653 66.1048   <1e-78
+a & b: g      7.93213  0.108797 72.9077   <1e-82
+```
+
 Internally, this is accomplished in three steps:
 
 1. The expression passed to `@formula` is lowered to term constructors combined
