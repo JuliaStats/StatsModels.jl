@@ -55,8 +55,8 @@ At the top level is the **formula separator** `~`, which separates the left-hand
 the right `1 + a + b + c + b&c`.
 
 The left-hand side has one term `y` which means that the resopnse variable is
-the column from the data named `:y`.  The response is accessed with the
-analogous `model_response(f, df)` function.
+the column from the data named `:y`.  The response can be accessed with the
+analogous `response(f, df)` function.
 
 The right hand side is made up of a number of different **terms**, separated by
 `+`: `1 + a + b + c + b&c`.  Each term corresponds to one or more columns in the
@@ -100,7 +100,7 @@ Any calls to functions that are not built into the DSL (or part of an
 package) are treated like normal Julia code, and evaluated elementwise:
 
 ```@repl 1
-model_matrix(@formula(y ~ 1 + a + log(1+a) + length(c)), df)
+modelmatrix(@formula(y ~ 1 + a + log(1+a) + length(c)), df)
 ```
 
 Note that the expression `1 + a` is treated differently as part of the formula
@@ -148,7 +148,7 @@ julia> using GLM, DataFrames, StatsModels
 julia> data = DataFrame(a = rand(100), b = repeat(["d", "e", "f", "g"], 25));
 
 # simulate response:
-julia> X = model_matrix(@formula(y ~ 1 + a*b).rhs, data);
+julia> X = modelmatrix(@formula(y ~ 1 + a*b).rhs, data);
 
 julia> β_true = [1., 2, 3, 4, 5, 6, 7, 8];
 

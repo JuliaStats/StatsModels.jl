@@ -88,18 +88,18 @@ end
 ModelFrame(f::FormulaTerm, data; mod=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
     ModelFrame(f, columntable(data); mod=mod, contrasts=contrasts)
 
-model_matrix(f::FormulaTerm, data; kwargs...) = model_matrix(f.rhs, data; kwargs...)
+StatsBase.modelmatrix(f::FormulaTerm, data; kwargs...) = modelmatrix(f.rhs, data; kwargs...)
 
-function model_matrix(t::Union{AbstractTerm, TupleTerm}, data;
-                      hints=Dict{Symbol,Any}(), mod::Type{Mod}=StatisticalModel) where Mod
+function StatsBase.modelmatrix(t::Union{AbstractTerm, TupleTerm}, data;
+                               hints=Dict{Symbol,Any}(), mod::Type{Mod}=StatisticalModel) where Mod
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
     t = has_schema(t) ? t : apply_schema(t, schema(t, data, hints), Mod)
     model_cols(extract_matrix_terms(t), columntable(data))
 end
-function StatsBase.model_response(f::FormulaTerm, data;
-                                  hints=Dict{Symbol,Any}(),
-                                  mod::Type{Mod}=StatisticalModel) where Mod
+function StatsBase.response(f::FormulaTerm, data;
+                            hints=Dict{Symbol,Any}(),
+                            mod::Type{Mod}=StatisticalModel) where Mod
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
     f = has_schema(f) ? f : apply_schema(f, schema(f, data, hints), Mod)
@@ -107,8 +107,8 @@ function StatsBase.model_response(f::FormulaTerm, data;
 end
 
 
-model_matrix(mf::ModelFrame; data=mf.data) = model_cols(mf.f.rhs, data)
-StatsBase.model_response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, data)
+StatsBase.modelmatrix(mf::ModelFrame; data=mf.data) = model_cols(mf.f.rhs, data)
+StatsBase.response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, data)
 
 StatsBase.coefnames(mf::ModelFrame) = vectorize(coefnames(mf.f.rhs))
 
@@ -169,7 +169,7 @@ end
 Base.size(mm::ModelMatrix, dim...) = size(mm.m, dim...)
 
 function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractMatrix{<:AbstractFloat}
-    mat = model_matrix(mf)
+    mat = modelmatrix(mf)
     asgn = mapreduce((it)->first(it)*ones(width(last(it))), append!,
                      enumerate(vectorize(mf.f.rhs)), init=Int[])
     ModelMatrix(convert(T, mat), asgn)

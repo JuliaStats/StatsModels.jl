@@ -23,7 +23,7 @@
     f = @formula(y ~ 1 + x1 + x2)
     mf = ModelFrame(f, d)
     @test coefnames(mf) == ["(Intercept)","x1","x2"]
-    @test model_response(mf) == [1:4;]
+    @test response(mf) == [1:4;]
     mm = ModelMatrix(mf)
     smm = ModelMatrix{sparsetype}(mf)
     @test mm.m[:,1] == ones(4)
@@ -78,7 +78,7 @@
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x2]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
-    @test model_response(mf) == y''
+    @test response(mf) == y''
 
     d = deepcopy(d_orig)
     d[:x1] = CategoricalArray{Union{Missing, Float64}}(d[:x1])
@@ -153,7 +153,7 @@
     ## Same variable on left and right side
     mf = ModelFrame(@formula(x1 ~ x1), d)
     mm = ModelMatrix(mf)
-    mm.m == model_response(mf)
+    mm.m == response(mf)
 
     ## Promote non-redundant categorical terms to full rank
     @testset "non-redundant categorical terms" begin

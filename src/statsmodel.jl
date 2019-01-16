@@ -84,7 +84,7 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
 
             mf = ModelFrame(f, cols, mod=T, contrasts=contrasts)
             mm = ModelMatrix(mf)
-            y = model_response(mf)
+            y = response(mf)
             $dfmodeltype(fit(T, mm.m, y, args...; kwargs...), mf, mm)
 
             ## TODO: consider doing this manually, without the ModelFrame/ModelMatrix
@@ -124,7 +124,7 @@ const TableModels = Union{TableStatisticalModel, TableRegressionModel}
                              StatsBase.loglikelihood, StatsBase.nullloglikelihood,
                              StatsBase.dof, StatsBase.dof_residual, StatsBase.nobs,
                              StatsBase.stderror, StatsBase.vcov]
-@delegate TableRegressionModel.model [StatsBase.residuals, StatsBase.model_response,
+@delegate TableRegressionModel.model [StatsBase.residuals, StatsBase.response,
                                       StatsBase.predict, StatsBase.predict!]
 StatsBase.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
     predict(m.model, new_x; kwargs...)

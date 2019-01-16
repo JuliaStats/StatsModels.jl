@@ -52,6 +52,8 @@ apply_schema
 
 ```@docs
 fit
+response
+modelmatrix
 ```
 
 ### Traits

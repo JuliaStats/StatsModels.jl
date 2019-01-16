@@ -51,8 +51,8 @@ export
     apply_schema,
     width,
     model_cols,
-    model_matrix,
-    model_response
+    modelmatrix,
+    response
 
 include("traits.jl")
 include("contrasts.jl")

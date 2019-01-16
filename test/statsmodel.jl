@@ -12,7 +12,7 @@ StatsBase.predict(mod::DummyMod, newX::Matrix) = newX * mod.beta
 ## dumb fit method: just copy the x and y input over
 StatsBase.fit(::Type{DummyMod}, x::Matrix, y::Vector) =
     DummyMod(collect(1:size(x, 2)), x, y)
-StatsBase.model_response(mod::DummyMod) = mod.y
+StatsBase.response(mod::DummyMod) = mod.y
 ## dumb coeftable: just prints the "beta" values
 StatsBase.coeftable(mod::DummyMod) =
     CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
@@ -32,7 +32,7 @@ StatsModels.drop_intercept(::Type{DummyModNoIntercept}) = true
 ## dumb fit method: just copy the x and y input over
 StatsBase.fit(::Type{DummyModNoIntercept}, x::Matrix, y::Vector) =
     DummyModNoIntercept(collect(1:size(x, 2)), x, y)
-StatsBase.model_response(mod::DummyModNoIntercept) = mod.y
+StatsBase.response(mod::DummyModNoIntercept) = mod.y
 ## dumb coeftable: just prints the "beta" values
 StatsBase.coeftable(mod::DummyModNoIntercept) =
     CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
@@ -61,7 +61,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     f = @formula(y ~ x1 * x2)
     m = fit(DummyMod, f, d)
-    @test model_response(m) == Array(d[:y])
+    @test response(m) == Array(d[:y])
 
     ## coefnames delegated to model frame by default
     @test coefnames(m) == coefnames(ModelFrame(f, d)) == ["(Intercept)", "x1", "x2", "x1 & x2"]
