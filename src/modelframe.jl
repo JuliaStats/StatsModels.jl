@@ -121,7 +121,7 @@ end
 ## as the default)
 function evalcontrasts(df::AbstractDataFrame, contrasts::Dict = Dict())
     evaledContrasts = Dict()
-    for (term, col) in eachcol(df)
+    for (term, col) in eachcol(df, true)
         is_categorical(col) || continue
         evaledContrasts[term] = ContrastsMatrix(haskey(contrasts, term) ?
                                                 contrasts[term] :
