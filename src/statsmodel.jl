@@ -48,12 +48,12 @@ end
 """
     drop_intercept(::Type)
 
-Define whether a given model automatically drops the intercept. Return `false` by default. 
-To specify that a model type `T` drops the intercept, overload this function for the 
+Define whether a given model automatically drops the intercept. Return `false` by default.
+To specify that a model type `T` drops the intercept, overload this function for the
 corresponding type: `drop_intercept(::Type{T}) = true`
 
-Models that drop the intercept will be fitted without one: the intercept term will be 
-removed even if explicitly provided by the user. Categorical variables will be expanded 
+Models that drop the intercept will be fitted without one: the intercept term will be
+removed even if explicitly provided by the user. Categorical variables will be expanded
 in the rank-reduced form (contrasts for `n` levels will only produce `n-1` columns).
 """
 drop_intercept(::Type) = false
@@ -100,8 +100,10 @@ function StatsBase.predict(mm::DataFrameRegressionModel{T}, df::AbstractDataFram
     drop_intercept(T) && (mf.terms.intercept = false)
     newX = ModelMatrix(mf).m
     yp = predict(mm, newX; kwargs...)
-    out = missings(eltype(yp), size(df, 1))
-    out[mf.nonmissing] = yp
+    # if `interval = :confidence` in the kwargs, `yp` will be a 3-column matrix
+    outsize = yp isa Matrix ? (size(df, 1), 3) : size(df,1)
+    out = missings(eltype(yp), outsize)
+    out[mf.nonmissing, :] = yp
     return(out)
 end
 
