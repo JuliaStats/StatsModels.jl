@@ -1,11 +1,9 @@
 # Internals and extending the formula DSL
 
-The Julia `@formula` is designed to be as extensible as possible through the
-normal Julian mechanisms of multiple dispatch.
-
-
-
-
+This section is intended to help **package developers** understand the internals
+of how a `@formula` becomes a numerical matrix, in order to use, manipulate, and
+even extend the DSL.  The Julia `@formula` is designed to be as extensible as
+possible through the normal Julian mechanisms of multiple dispatch.
 
 ## The lifecycle of a `@formula`
 
