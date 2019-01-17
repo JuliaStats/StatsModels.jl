@@ -89,6 +89,28 @@ StatsBase.adjr2(mm::DataFrameRegressionModel) = adjr2(mm.model)
 StatsBase.r2(mm::DataFrameRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::DataFrameRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
 
+function _return_predictions(yp::AbstractVector, nonmissings, len)
+    out = missings(eltype(yp), len)
+    out[nonmissings] = yp
+    out
+end
+
+function _return_predictions(yp::AbstractMatrix, nonmissings, len)
+    out = missings(eltype(yp), (len, 3))
+    out[nonmissings, :] = yp
+    DataFrame(newy = out[:,1], lower = out[:,2], upper = out[:,3])
+end
+
+function _return_predictions(yp::NamedTuple, nonmissings, len)
+    y = missings(eltype(yp[:newy]), len)
+    l, h = similar(y), similar(y)
+    out = (newy = y, lower = l, upper = h)
+    for key in (:newy, :lower, :upper)
+        out[key][nonmissings] = yp[key]
+    end
+    DataFrame(out)
+end
+
 # Predict function that takes data frame as predictor instead of matrix
 function StatsBase.predict(mm::DataFrameRegressionModel{T}, df::AbstractDataFrame; kwargs...) where T
     # copy terms, removing outcome if present (ModelFrame will complain if a
@@ -100,11 +122,7 @@ function StatsBase.predict(mm::DataFrameRegressionModel{T}, df::AbstractDataFram
     drop_intercept(T) && (mf.terms.intercept = false)
     newX = ModelMatrix(mf).m
     yp = predict(mm, newX; kwargs...)
-    # if `interval = :confidence` in the kwargs, `yp` will be a 3-column matrix
-    outsize = yp isa Matrix ? (size(df, 1), 3) : size(df,1)
-    out = missings(eltype(yp), outsize)
-    out[mf.nonmissing, :] = yp
-    return(out)
+    _return_predictions(yp, mf.nonmissing, size(df, 1))
 end
 
 StatsBase.coefnames(model::DataFrameModels) = coefnames(model.mf)
