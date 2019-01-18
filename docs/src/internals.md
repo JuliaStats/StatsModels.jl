@@ -11,7 +11,7 @@ A formula goes through a number of stages, starting as an
 expression that's passed to the `@formula` macro and ending up generating a
 numeric matrix when ultimately combined with a tabular data source:
 
-1. "Macro time" when only the surface syntax is available
+1. "Macro time" when only the surface syntax is available.
 2. "Schema time" incorporates information about **data invariants** (types of each
    variable, levels of categorical variables, summary statistics for continuous
    variables) and the **model type**.
@@ -133,14 +133,14 @@ right-hand (predictor) sides.
 model_cols(f, df)
 ```
 
-Model cols can also take a single row from a table, as a `NamedTuple`:
+`model_cols` can also take a single row from a table, as a `NamedTuple`:
 
 ```@repl 1
 using Tables
 model_cols(f, first(Tables.rowtable(df)))
 ```
 
-Any `AbstractTerm` can be passed to `model_cols` with a table and returns one or
+Any `AbstractTerm` can be passed to `model_cols` with a table, which returns one or
 more numeric arrays:
 
 
@@ -153,9 +153,9 @@ provides mechanisms for such extensions that do _not_ rely on compile time
 "macro magic", but on standard julian mechanisms of multiple dispatch.
 
 Extensions have three components:
-1. **Syntax**: the julia function which is given special meaning inside a formula.
+1. **Syntax**: the Julia function which is given special meaning inside a formula.
 2. **Context**: the model type(s) where this extension applies
-3. **Behavior**: how tabular data bis transformed under this extension
+3. **Behavior**: how tabular data is transformed under this extension
 
 ### Example
 
@@ -172,7 +172,7 @@ using StatsBase # hide
 # syntax: best practice to define a _new_ function
 poly(x, n) = x^n
 
-# type of model where syntax applies
+# type of model where syntax applies: here this applies to any model type
 const POLY_CONTEXT = Any
 
 # struct for behavior
@@ -220,7 +220,7 @@ StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{Nothing})
 ```
 
 Now the `poly` is interpreted by default as the "vanilla" function defined
-first, which just raises it's first argument to the designated power:
+first, which just raises its first argument to the designated power:
 
 ```@repl 1
 f = apply_schema(@formula(y ~ 1 + poly(b,2) * a), schema(data))
@@ -240,10 +240,10 @@ coefnames(f2.rhs)
 ### Summary
 
 "Custom syntax" means that calls to a particular function in a formula are not
-interpreted as normal julia code, but rather as a particular (possibly special)
+interpreted as normal Julia code, but rather as a particular (possibly special)
 kind of term.
 
-Custom syntax is a combination of **syntax** (julia function), **term** (subtype
+Custom syntax is a combination of **syntax** (Julia function) and **term** (subtype
 of `AbstractTerm`).  This syntax applies in a particular **context** (schema
 plus model type, designated via a method of [`apply_schema`](@ref)),
 transforming a `FunctionTerm{syntax}` into another (often custom) term type.
