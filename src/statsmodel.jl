@@ -98,14 +98,14 @@ end
 function _return_predictions(yp::AbstractMatrix, nonmissings, len)
     out = missings(eltype(yp), (len, 3))
     out[nonmissings, :] = yp
-    DataFrame(y = out[:,1], lower = out[:,2], upper = out[:,3])
+    DataFrame(prediction = out[:,1], lower = out[:,2], upper = out[:,3])
 end
 
 function _return_predictions(yp::NamedTuple, nonmissings, len)
-    y = missings(eltype(yp[:y]), len)
+    y = missings(eltype(yp[:prediction]), len)
     l, h = similar(y), similar(y)
-    out = (y = y, lower = l, upper = h)
-    for key in (:y, :lower, :upper)
+    out = (prediction = y, lower = l, upper = h)
+    for key in (:prediction, :lower, :upper)
         out[key][nonmissings] = yp[key]
     end
     DataFrame(out)
