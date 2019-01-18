@@ -11,7 +11,7 @@ A formula goes through a number of stages, starting as an
 expression that's passed to the `@formula` macro and ending up generating a
 numeric matrix when ultimately combined with a tabular data source:
 
-1. "Macro time" when only the surface syntax is available.
+1. "Syntax time" when only the surface syntax is available
 2. "Schema time" incorporates information about **data invariants** (types of each
    variable, levels of categorical variables, summary statistics for continuous
    variables) and the **model type**.
@@ -22,7 +22,7 @@ time" and "schema time" in practice, but in principle it's important to
 distinguish between these when dealing with truly streaming data, or large data
 stores where calculating invariants of the data may be expensive.
 
-### Macro time
+### Syntax time
 
 The `@formula` macro does syntactic transformations of the formula expression.
 At this point, _only_ the expression itself is available, and there's no way to
@@ -37,10 +37,10 @@ julia> @macroexpand @formula(y ~ 1 + a*b)
 :(Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) & Term(:b))
 ```
 
-Calling this stage "macro time" is a bit of a misnormer because much of the
-action happens when the expression returned by the `@formula` macro is
-evaluated.  At this point, the `Term`s are combined to create higher-order terms
-via overloaded methods for `~`, `+`, and `&`:
+Note that much of the action happens _outside_ the `@formula` macro, when the
+expression returned by the `@formula` macro is evaluated.  At this point, the
+`Term`s are combined to create higher-order terms via overloaded methods for
+`~`, `+`, and `&`:
 
 ```@repl 1
 using StatsModels; # hide
@@ -113,13 +113,14 @@ f = apply_schema(f, schema(f, df))
 typeof(f)
 ```
 
-This transformation is done by calling `apply_schema(term, schema, ModelType)`
-recursively on each term (`ModelType` defaults to `StatisticalModel`).  Because
-`apply_schema` dispatches on the term, schema, and model type, this stage allows
-generic context-aware transformations, based on _both_ the source (schema) _and_
-the destination (model type).  This is the primary mechanisms by which the
-formula DSL can be extended ([see below](#Extending-@formula-syntax-1) for more
-details)
+This transformation is done by calling `apply_schema(term, schema, modeltype)`
+recursively on each term (the `modeltype` defaults to `StatisticalModel` when
+fitting a statistical model, and `Nothing` if `apply_schema` is called with only
+two arguments).  Because `apply_schema` dispatches on the term, schema, and
+model type, this stage allows generic context-aware transformations, based on
+_both_ the source (schema) _and_ the destination (model type).  This is the
+primary mechanisms by which the formula DSL can be extended ([see
+below](#Extending-@formula-syntax-1) for more details)
 
 ### Data time
 
@@ -157,7 +158,8 @@ Extensions have three components:
 2. **Context**: the model type(s) where this extension applies
 3. **Behavior**: how tabular data is transformed under this extension
 
-### Example
+These correspond to the stages summarized above (syntax time, schema time, and
+data time)
 
 As an example, we'll add syntax for specifying a [polynomial
 regression](https://en.wikipedia.org/wiki/Polynomial_regression) model, which
@@ -168,7 +170,7 @@ possible to use an existing function, the best practice is to define a new
 function to make dispatch less ambiguous.
 
 ```@example 1
-using StatsBase # hide
+using StatsBase
 # syntax: best practice to define a _new_ function
 poly(x, n) = x^n
 

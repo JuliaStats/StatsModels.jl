@@ -35,7 +35,7 @@ top level) `~`.
     The `@formula` macro **must** be called with parentheses to ensure that
     the formula is parsed properly.
 
-### An example
+Here is an example of the `@formula` in action:
 
 ```@repl 1
 using Random; Random.seed!(1); # hide
