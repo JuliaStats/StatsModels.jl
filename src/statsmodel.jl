@@ -48,12 +48,12 @@ end
 """
     drop_intercept(::Type)
 
-Define whether a given model automatically drops the intercept. Return `false` by default. 
-To specify that a model type `T` drops the intercept, overload this function for the 
+Define whether a given model automatically drops the intercept. Return `false` by default.
+To specify that a model type `T` drops the intercept, overload this function for the
 corresponding type: `drop_intercept(::Type{T}) = true`
 
-Models that drop the intercept will be fitted without one: the intercept term will be 
-removed even if explicitly provided by the user. Categorical variables will be expanded 
+Models that drop the intercept will be fitted without one: the intercept term will be
+removed even if explicitly provided by the user. Categorical variables will be expanded
 in the rank-reduced form (contrasts for `n` levels will only produce `n-1` columns).
 """
 drop_intercept(::Type) = false
@@ -89,6 +89,28 @@ StatsBase.adjr2(mm::DataFrameRegressionModel) = adjr2(mm.model)
 StatsBase.r2(mm::DataFrameRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::DataFrameRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
 
+function _return_predictions(yp::AbstractVector, nonmissings, len)
+    out = missings(eltype(yp), len)
+    out[nonmissings] = yp
+    out
+end
+
+function _return_predictions(yp::AbstractMatrix, nonmissings, len)
+    out = missings(eltype(yp), (len, 3))
+    out[nonmissings, :] = yp
+    DataFrame(prediction = out[:,1], lower = out[:,2], upper = out[:,3])
+end
+
+function _return_predictions(yp::NamedTuple, nonmissings, len)
+    y = missings(eltype(yp[:prediction]), len)
+    l, h = similar(y), similar(y)
+    out = (prediction = y, lower = l, upper = h)
+    for key in (:prediction, :lower, :upper)
+        out[key][nonmissings] = yp[key]
+    end
+    DataFrame(out)
+end
+
 # Predict function that takes data frame as predictor instead of matrix
 function StatsBase.predict(mm::DataFrameRegressionModel{T}, df::AbstractDataFrame; kwargs...) where T
     # copy terms, removing outcome if present (ModelFrame will complain if a
@@ -100,9 +122,7 @@ function StatsBase.predict(mm::DataFrameRegressionModel{T}, df::AbstractDataFram
     drop_intercept(T) && (mf.terms.intercept = false)
     newX = ModelMatrix(mf).m
     yp = predict(mm, newX; kwargs...)
-    out = missings(eltype(yp), size(df, 1))
-    out[mf.nonmissing] = yp
-    return(out)
+    _return_predictions(yp, mf.nonmissing, size(df, 1))
 end
 
 StatsBase.coefnames(model::DataFrameModels) = coefnames(model.mf)
