@@ -242,7 +242,7 @@ rewrite!(ex::Expr, child_idx::Int, ::Nothing) = child_idx+1
 # like `findfirst` but returns the first element where predicate is true, or
 # nothing
 function filterfirst(f::Function, a::AbstractArray)
-    idx = Compat.findfirst(f, a)
+    idx = findfirst(f, a)
     idx === nothing ? nothing : a[idx]
 end
 
@@ -385,7 +385,7 @@ dropterm(f::Formula, trm::Union{Number, Symbol, Expr}) = dropterm!(copy(f), trm)
 
 function dropterm!(f::Formula, trm::Union{Number, Symbol, Expr})
     rhs = f.rhs
-    if !(is_call(rhs, :+) && (tpos = Compat.findlast(isequal(trm), rhs.args)) !== nothing)
+    if !(is_call(rhs, :+) && (tpos = findlast(isequal(trm), rhs.args)) !== nothing)
         throw(ArgumentError("$trm is not a summand of '$(f.rhs)'"))
     end
     if isa(trm, Number)

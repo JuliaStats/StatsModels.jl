@@ -2,12 +2,10 @@ __precompile__(true)
 
 module StatsModels
 
-using Compat
 using DataFrames
 using StatsBase
-using Compat.SparseArrays
-using Compat.LinearAlgebra
-using Compat: @debug, @warn
+using SparseArrays
+using LinearAlgebra
 
 export @formula,
        Formula,
