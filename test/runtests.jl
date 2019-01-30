@@ -1,7 +1,6 @@
-using Compat
 using Test
-using Compat.LinearAlgebra
-using Compat.SparseArrays
+using LinearAlgebra
+using SparseArrays
 
 using StatsModels
 using DataFrames

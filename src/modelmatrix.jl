@@ -114,7 +114,7 @@ of `trms.factors` if `trms.response` is true.
 function dropresponse!(trms::Terms)
     if trms.response
         ckeep = 2:size(trms.factors, 2)
-        rkeep = vec(Compat.any(trms.factors[:, ckeep], dims=2))
+        rkeep = vec(any(trms.factors[:, ckeep], dims=2))
         Terms(trms.terms, trms.eterms[rkeep], trms.factors[rkeep, ckeep],
               trms.is_non_redundant[rkeep, ckeep], trms.order[ckeep], false, trms.intercept)
     else
