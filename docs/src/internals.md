@@ -122,6 +122,23 @@ _both_ the source (schema) _and_ the destination (model type).  This is the
 primary mechanisms by which the formula DSL can be extended ([see
 below](#Extending-@formula-syntax-1) for more details)
 
+!!! note
+    
+    You can see a more detailed description of any formula or term with an
+    `IOContext` with `:limit=>false`:
+    
+    ```julia-repl
+    julia> show(IOContext(stdout, :limit=>false), f)
+    FormulaTerm
+    Response:
+      y(continuous)
+    Predictors:
+      1
+      a(continuous)
+      b(continuous)
+      c(3 levels): DummyCoding(2)
+    ```
+
 ### Data time
 
 At the end of "schema time", a formula encapsulates all the information needed
