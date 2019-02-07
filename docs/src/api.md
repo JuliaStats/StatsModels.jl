@@ -1,7 +1,7 @@
 ```@meta
 CurrentModule = StatsModels
 DocTestSetup = quote 
-    using StatsModels, Random
+    using StatsModels, Random, StatsBase
     Random.seed!(2001)
 end
 ```

@@ -169,7 +169,7 @@ has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
 has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
 
-mutable struct FullRank
+struct FullRank
     schema::Dict{Term,AbstractTerm}
     already::Set{AbstractTerm}
 end
