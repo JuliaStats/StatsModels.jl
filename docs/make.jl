@@ -1,7 +1,7 @@
 using Documenter, StatsModels
 
 makedocs(
-    format = :html,
+    format = Documenter.HTML(),
     sitename = "StatsModels.jl",
     pages = [
         "Introduction" => "index.md",
@@ -13,7 +13,6 @@ makedocs(
 )
 
 deploydocs(
-    julia = "0.6",
     repo = "github.com/JuliaStats/StatsModels.jl.git",
     target = "build",
     deps = nothing,
