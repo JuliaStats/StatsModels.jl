@@ -470,17 +470,28 @@ model_cols(t::ContinuousTerm, d::NamedTuple) = Float64.(d[t.sym])
 model_cols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
 
 
+"""
+    reshape_last_to_i(i::Int, a)
+
+Reshape `a` so that its last dimension moves to dimension `i` (+1 if `a` is an 
+`AbstractMatrix`).  
+"""
+reshape_last_to_i(i, a) = a
+reshape_last_to_i(i, a::AbstractVector) = reshape(a, ones(Int, i-1)..., :)
+reshape_last_to_i(i, a::AbstractMatrix) = reshape(a, size(a,1), ones(Int, i-1)..., :)
+
 # an "inside out" kronecker-like product based on broadcasting reshaped arrays
 # for a single row, some will be scalars, others possibly vectors.  for a whole
 # table, some will be vectors, possibly some matrices
 function kron_insideout(op::Function, args...)
-    args = (reshape(a, ones(Int, i-1)..., :) for (i,a) in enumerate(args))
+    args = (reshape_last_to_i(i,a) for (i,a) in enumerate(args))
     vec(broadcast(op, args...))
 end
 
 function row_kron_insideout(op::Function, args...)
     rows = size(args[1], 1)
-    args = (reshape(a, size(a,1), ones(Int, i-1)..., :) for (i,a) in enumerate(args))
+    args = (reshape_last_to_i(i,reshape(a, size(a,1), :)) for (i,a) in enumerate(args))
+    # args = (reshape(a, size(a,1), ones(Int, i-1)..., :) for (i,a) in enumerate(args))
     reshape(broadcast(op, args...), rows, :)
 end
 

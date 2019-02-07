@@ -339,4 +339,16 @@
 
     @test (M1.m, M1.assign) == (M2.m, M2.assign) == (M3.m, M3.assign)
 
+    @testset "row-wise model matrix construction" begin
+        d = DataFrame(r = rand(8),
+                      w = rand(8),
+                      x = repeat([:a, :b], outer = 4),
+                      y = repeat([:c, :d], inner = 2, outer = 2),
+                      z = repeat([:e, :f], inner = 4))
+    
+        f = apply_schema(@formula(r ~ 1 + w*x*y*z), schema(d))
+        modelmatrix(f, d)
+        @test reduce(vcat, last.(model_cols.(Ref(f), rowtable(d)))') == modelmatrix(f,d)
+    end
+
 end
