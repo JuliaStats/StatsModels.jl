@@ -2,7 +2,7 @@
     
     using StatsBase: StatisticalModel
 
-    using SparseArrays, DataFrames
+    using SparseArrays, DataFrames, Tables
 
     sparsetype = SparseMatrixCSC{Float64,Int}
 
@@ -348,7 +348,7 @@
     
         f = apply_schema(@formula(r ~ 1 + w*x*y*z), schema(d))
         modelmatrix(f, d)
-        @test reduce(vcat, last.(model_cols.(Ref(f), rowtable(d)))') == modelmatrix(f,d)
+        @test reduce(vcat, last.(model_cols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)
     end
 
 end
