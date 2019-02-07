@@ -3,7 +3,7 @@ Wrapper that encapsulates a `FormulaTerm`, schema, data table, and model type.
 
 This wrapper encapsulates all the information that's required to transform data
 of the same structure as the wrapped data frame into a model matrix (the
-`FormulaTerm`), as well as the information about how that formula term as
+`FormulaTerm`), as well as the information about how that formula term was
 instantiated (the schema and model type)
 
 Creating a model frame involves first extracting the [`schema`](@ref) for the
@@ -13,7 +13,7 @@ data (using any contrasts provided as hints), and then applying that schema with
 # Constructors
 
 ```julia
-ModelFrame(f::FormulaTerm, data; mod::Type{Mod} = StatisticalModel, contrasts::Dict = Dict())
+ModelFrame(f::FormulaTerm, data; mod::Type{M} = StatisticalModel, contrasts::Dict = Dict())
 ```
 
 # Fields
@@ -76,11 +76,11 @@ missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
     missing_omit(NamedTuple{tuple(termvars(formula)...)}(data))
 
 function ModelFrame(f::FormulaTerm, data::ColumnTable;
-                    mod::Type{Mod}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where Mod
+                    mod::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
     data, _ = missing_omit(data, f)
 
     sch = schema(f, data, contrasts)
-    f = apply_schema(f, sch, Mod)
+    f = apply_schema(f, sch, M)
     
     ModelFrame(f, sch, data, mod)
 end
@@ -91,18 +91,18 @@ ModelFrame(f::FormulaTerm, data; mod=StatisticalModel, contrasts=Dict{Symbol,Any
 StatsBase.modelmatrix(f::FormulaTerm, data; kwargs...) = modelmatrix(f.rhs, data; kwargs...)
 
 function StatsBase.modelmatrix(t::Union{AbstractTerm, TupleTerm}, data;
-                               hints=Dict{Symbol,Any}(), mod::Type{Mod}=StatisticalModel) where Mod
+                               hints=Dict{Symbol,Any}(), mod::Type{M}=StatisticalModel) where M
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
-    t = has_schema(t) ? t : apply_schema(t, schema(t, data, hints), Mod)
+    t = has_schema(t) ? t : apply_schema(t, schema(t, data, hints), M)
     model_cols(extract_matrix_terms(t), columntable(data))
 end
 function StatsBase.response(f::FormulaTerm, data;
                             hints=Dict{Symbol,Any}(),
-                            mod::Type{Mod}=StatisticalModel) where Mod
+                            mod::Type{M}=StatisticalModel) where M
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
-    f = has_schema(f) ? f : apply_schema(f, schema(f, data, hints), Mod)
+    f = has_schema(f) ? f : apply_schema(f, schema(f, data, hints), M)
     model_cols(f.lhs, columntable(data))
 end
 

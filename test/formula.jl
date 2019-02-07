@@ -109,8 +109,8 @@
     form = @formula(foo ~ 1 + bar + baz)
     @test form == @formula(foo ~ 1 + bar + baz)
     @test drop_term(form, term(:bar)) == @formula(foo ~ 1 + baz)
-    # no longer modifies in place:
-    @test_broken form == @formula(foo ~ 1 + baz)
+    # drop_term creates a new formula:
+    @test form != @formula(foo ~ 1 + baz)
 
     # Incorrect formula separator
     @test_throws LoadError @eval @formula(y => x + 1)

@@ -109,12 +109,8 @@ This is intended as a backstop for modeling packages that implement model types
 that are subtypes of `StatsBase.StatisticalModel` but do not explicitly support
 the full StatsModels terms-based interface.  Currently this works by creating a
 [`ModelFrame`](@ref) from the formula and data, and then converting this to a
-[`ModelMatrix`](@ref), but this is an internal implementation 
-
-**Note:** This is *not* the recommended way to support `@formula`/terms-based
-model fitting.  Rather, package authors should specify their own methods for
-fitting based on `<:AbstractTerm`s, and use StatsModels' [`schema`](@ref),
-[`apply_schema`](@ref), and [`model_cols`](@ref) API.
+[`ModelMatrix`](@ref), but this is an internal implementation detail which may
+change in the near future.
 """ fit
 
 # Delegate functions from StatsBase that use our new types
