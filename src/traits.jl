@@ -3,7 +3,7 @@
 """
     implicit_intercept(T::Type)
 
-Returns `true` if model of type `T` should includes an implicit intercept even
+Return `true` if models of type `T` should include an implicit intercept even
 if none is specified in the formula.  Is `true` by default for all
 `T<:StatisticalModel`, and `false` for others.
 

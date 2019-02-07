@@ -86,7 +86,7 @@ Create concrete term from the placeholder `t` based on a data source and
 optional hint.  If `data` is a table, the `getproperty` is used to extract the
 appropriate column.
 
-The `hint` can be a concrete term type (`ContinuouTerm` or `CategoricalTerm`),
+The `hint` can be a concrete term type (`ContinuousTerm` or `CategoricalTerm`),
 or an instance of some `<:AbstractContrasts`, in which case a `CategoricalTerm`
 will be created using those contrasts.
 
@@ -190,7 +190,7 @@ function apply_schema(t::FormulaTerm, schema, Mod::Type{<:StatisticalModel})
             throw(ArgumentError("Model type $Mod doesn't support intercept " *
                                 "specified in formula $t"))
         end
-        # start parsing as if we've already have the intercept
+        # start parsing as if we already had the intercept
         push!(schema.already, InterceptTerm{true}())
     elseif implicit_intercept(Mod) && !hasintercept(t) && !hasnointercept(t)
         t = FormulaTerm(t.lhs, InterceptTerm{true}() + t.rhs)
@@ -273,8 +273,8 @@ standard (reduced rank) or full rank contrasts, based on the context it occurs
 in and the other terms that have already been encountered.
 """
 termsyms(t::AbstractTerm) = Set()
-termsyms(t::InterceptTerm{true}) = Set([1])
-termsyms(t::ConstantTerm) = Set([t.n])
+termsyms(t::InterceptTerm{true}) = Set(1)
+termsyms(t::ConstantTerm) = Set((t.n,))
 termsyms(t::Union{Term, CategoricalTerm, ContinuousTerm}) = Set([t.sym])
 termsyms(t::InteractionTerm) = mapreduce(termsyms, union, t.terms)
 termsyms(t::FunctionTerm) = Set([t.exorig])

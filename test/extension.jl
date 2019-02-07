@@ -9,7 +9,7 @@ struct PolyTerm <: AbstractTerm
 end
 PolyTerm(t::Term, deg::ConstantTerm) = PolyTerm(t.sym, deg.n)
 
-StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, ::Type{PolyModel}) =
+StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, ::Type{<:PolyModel}) =
     PolyTerm(t.args_parsed...)
 
 StatsModels.model_cols(p::PolyTerm, d::NamedTuple) =
@@ -19,7 +19,7 @@ struct NonMatrixTerm{T} <: AbstractTerm
     term::T
 end
 
-StatsModels.is_matrix_term(::Type{NonMatrixTerm{T}}) where T = false
+StatsModels.is_matrix_term(::Type{<:NonMatrixTerm}) = false
 StatsModels.apply_schema(t::NonMatrixTerm, sch, Mod) =
     NonMatrixTerm(apply_schema(t.term, sch, Mod))
 StatsModels.model_cols(t::NonMatrixTerm, d) = model_cols(t.term, d)

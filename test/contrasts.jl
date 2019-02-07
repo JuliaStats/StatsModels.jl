@@ -131,8 +131,8 @@
     @test_throws ArgumentError setcontrasts!(mf, x = ContrastsCoding(contrasts[1:2, :]))
     @test_throws ArgumentError setcontrasts!(mf, x = ContrastsCoding(hcat(contrasts, contrasts)))
 
-    # contrasts types must be instaniated (should throw ArgumentError, currently
-    # MethodError on apply_schema
+    # contrasts types must be instantiated (should throw ArgumentError, currently
+    # MethodError on apply_schema)
     @test_broken setcontrasts!(mf, x = DummyCoding)
 
 end

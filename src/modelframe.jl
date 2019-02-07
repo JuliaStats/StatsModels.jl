@@ -20,7 +20,7 @@ ModelFrame(f::FormulaTerm, data; mod::Type{Mod} = StatisticalModel, contrasts::D
 
 * `f::FormulaTerm`: Formula whose left hand side is the *response* and right hand
   side are the *predictors*.
-* `schema::Any`: The schema applied that was applied to generate `f`.
+* `schema::Any`: The schema that was applied to generate `f`.
 * `data::D`: The data table being modeled.  The only restriction is that `data` 
   is a table (`Tables.istable(data) == true`)
 * `model::Type{M}`: The type of the model that will be fit from this model frame.
@@ -52,7 +52,7 @@ function _nonmissing!(res, col)
 end
 
 function _nonmissing!(res, col::CategoricalArray{>: Missing})
-    for (i, el) in enumerate(col.refs)
+    @inbounds for (i, el) in enumerate(col.refs)
         res[i] &= el > 0
     end
 end
@@ -150,7 +150,7 @@ Convert a `ModelFrame` into a numeric matrix suitable for modeling
 
 # Fields
 
-* `m::T <: AbstractMatrix{<:AbstractFloat}` The generated numeric matrix
+* `m::AbstractMatrix{<:AbstractFloat}`: the generated numeric matrix
 * `assign::Vector{Int}` the index of the term corresponding to each column of `m`.
 
 # Constructors
@@ -158,7 +158,7 @@ Convert a `ModelFrame` into a numeric matrix suitable for modeling
 ```julia
 ModelMatrix(mf::ModelFrame)
 # Specify the type of the resulting matrix (default Matrix{Float64})
-ModelMatrix{T <: AbstractFloatMatrix}(mf::ModelFrame)
+ModelMatrix{T <: AbstractMatrix{<:AbstractFloat}}(mf::ModelFrame)
 ```
 """
 mutable struct ModelMatrix{T <: AbstractMatrix{<:AbstractFloat}}

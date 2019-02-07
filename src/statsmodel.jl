@@ -53,7 +53,7 @@ struct TableStatisticalModel{M,T} <: StatisticalModel
 end
 
 """
-Wrapper for a `RegressioModel` that has been fit from a `@formula` and tabular
+Wrapper for a `RegressionModel` that has been fit from a `@formula` and tabular
 data.  
 
 Most functions from the StatsBase API are simply delegated to the wrapped model,
@@ -103,7 +103,7 @@ end
 Convert tabular data into a numeric response vector and predictor matrix using
 the formula `f`, and then `fit` the specified model type, wrapping the result in
 a [`TableRegressionModel`](@ref) or [`TableStatisticalModel`](@ref) (as
-appropriate)
+appropriate).
 
 This is intended as a backstop for modeling packages that implement model types
 that are subtypes of `StatsBase.StatisticalModel` but do not explicitly support
