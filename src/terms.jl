@@ -2,15 +2,19 @@ abstract type AbstractTerm end
 const TupleTerm = NTuple{N, AbstractTerm} where N
 const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 
-function Base.show(io::IO, terms::TupleTerm)
-    if get(io, :limit, true)
-        join(io, terms, " + ")
-    else
-        for t in terms
-            print(io, get(io, :prefix, ""), t, "\n")
-        end
+function Base.show(io::IO, mime::MIME"text/plain", term::AbstractTerm)
+    print(io, get(io, :prefix, ""), term)
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", terms::TupleTerm)
+    for t in terms
+        show(io, mime, t)
+        # ensure that there are newlines in between each term after the first
+        # if no prefix is specified
+        io = IOContext(io, :prefix => get(io, :prefix, "\n"))
     end
 end
+Base.show(io::IO, terms::TupleTerm) = join(io, terms, " + ")
 
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
@@ -29,13 +33,8 @@ invariants) is not yet known.  This will be converted to a
 struct Term <: AbstractTerm
     sym::Symbol
 end
-function Base.show(io::IO, t::Term)
-    if get(io, :limit, true)
-        print(io, t.sym)
-    else
-        print(io, t.sym, "(unknown)")
-    end
-end
+Base.show(io::IO, ::MIME"text/plain", t::Term) = print(io, get(io, :prefix, ""), t.sym, "(unknown)")
+Base.show(io::IO, t::Term) = print(io, t.sym)
 width(::Term) =
     throw(ArgumentError("Un-typed Terms have undefined width.  " *
                         "Did you forget to apply_schema?"))
@@ -71,16 +70,14 @@ struct FormulaTerm{L,R} <: AbstractTerm
     lhs::L
     rhs::R
 end
-function Base.show(io::IO, t::FormulaTerm)
-    if get(io, :limit, true)
-        print(io, "$(t.lhs) ~ $(t.rhs)")
-    else
-        println(io, "FormulaTerm")
-        println(io, "Response:")
-        print(IOContext(io, :prefix=>"  "), "  ", t.lhs, "\n")
-        println(io, "Predictors:")
-        show(IOContext(io, :prefix=>"  "), t.rhs)
-    end
+Base.show(io::IO, t::FormulaTerm) = print(io, "$(t.lhs) ~ $(t.rhs)")
+function Base.show(io::IO, mime::MIME"text/plain", t::FormulaTerm)
+    println(io, "FormulaTerm")
+    print(io, "Response:")
+    show(IOContext(io, :prefix=>"\n  "), mime, t.lhs)
+    println(io)
+    print(io, "Predictors:")
+    show(IOContext(io, :prefix=>"\n  "), mime, t.rhs)
 end
 
 """
@@ -194,6 +191,12 @@ struct InteractionTerm{Ts} <: AbstractTerm
     terms::Ts
 end
 Base.show(io::IO, it::InteractionTerm) = join(io, it.terms, " & ")
+function Base.show(io::IO, mime::MIME"text/plain", it::InteractionTerm)
+    for t in it.terms
+        show(io, mime, t)
+        io = IOContext(io, :prefix=>" & ")
+    end
+end
 width(ts::InteractionTerm) = prod(width(t) for t in ts.terms)
 
 """
@@ -230,13 +233,9 @@ struct ContinuousTerm{T} <: AbstractTerm
     min::T
     max::T
 end
-function Base.show(io::IO, t::ContinuousTerm)
-    if get(io, :limit, true)
-        print(io, t.sym)
-    else
-        print(io, "$(t.sym)(continuous)")
-    end
-end
+Base.show(io::IO, t::ContinuousTerm) = print(io, t.sym)
+Base.show(io::IO, ::MIME"text/plain", t::ContinuousTerm) =
+    print(io, get(io, :prefix, ""), t.sym, "(continuous)")
 width(::ContinuousTerm) = 1
 
 """
@@ -253,15 +252,9 @@ struct CategoricalTerm{C,T,N} <: AbstractTerm
     sym::Symbol
     contrasts::ContrastsMatrix{C,T}
 end
-function Base.show(io::IO, t::CategoricalTerm{C,T,N}) where {C,T,N}
-    if get(io, :limit, true)
-        print(io, t.sym)
-    else
-        levs = length(t.contrasts.levels)
-        #print(io, t.sym, "($levs×levels→$N×$C)")
-        print(io, t.sym, "($C:$levs→$N)")
-    end
-end
+Base.show(io::IO, t::CategoricalTerm{C,T,N}) where {C,T,N} = print(io, t.sym)
+Base.show(io::IO, ::MIME"text/plain", t::CategoricalTerm{C,T,N}) where {C,T,N} =
+    print(io, get(io, :prefix, ""), t.sym, "($C:$(length(t.contrasts.levels))→$N)")
 width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 
 # constructor that computes the width based on the contrasts matrix
@@ -285,6 +278,7 @@ end
 MatrixTerm(t::AbstractTerm) = MatrixTerm((t, ))
 
 Base.show(io::IO, t::MatrixTerm) = show(io, t.terms)
+Base.show(io::IO, mime::MIME"text/plain", t::MatrixTerm) = show(io, mime, t.terms)
 width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
 
 """
