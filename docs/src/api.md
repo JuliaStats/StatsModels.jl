@@ -1,5 +1,9 @@
 ```@meta
 CurrentModule = StatsModels
+DocTestSetup = quote 
+    using StatsModels, Random
+    Random.seed!(2001)
+end
 ```
 
 # StatsModels.jl API

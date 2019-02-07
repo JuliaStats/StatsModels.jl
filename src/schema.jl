@@ -33,7 +33,7 @@ categorical.
 
 # Example
 
-```julia-repl
+```jldoctest
 julia> d = (x=sample([:a, :b, :c], 10), y=rand(10));
 
 julia> ts = [Term(:x), Term(:y)];
@@ -95,18 +95,18 @@ to be continuous, and all others are assumed to be categorical.
 
 # Example
 
-```julia-repl
+```jldoctest
 julia> schema(term(:a), [1, 2, 3])
-a (continuous)
+a(continuous)
 
 julia> schema(term(:a), [1, 2, 3], CategoricalTerm)
-a (3 levels): DummyCoding(2)
+a(DummyCoding:3→2)
 
 julia> schema(term(:a), [1, 2, 3], EffectsCoding())
-a (3 levels): EffectsCoding(2)
+a(EffectsCoding:3→2)
 
 julia> schema(term(:a), (a = [1, 2, 3], b = rand(3)))
-a (continuous)
+a(continuous)
 ```
 """
 schema(t::Term, dt::ColumnTable) = schema(t, getproperty(dt, t.sym))
