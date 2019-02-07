@@ -63,8 +63,8 @@ macro is expanded is that it makes it much easier to create a formula
 programatically:
 
 ```@repl 1
-f = Term(:y) ~ sum(Term(s) for s in [:a, :b, :c])
-f == @formula(y ~ a + b + c)
+f = Term(:y) ~ sum(term.([1, :a, :b, :c]))
+f == @formula(y ~ 1 + a + b + c)
 ```
 
 The major exception to this is that non-DSL calls **must** be specified using
@@ -100,7 +100,7 @@ schema(Term(:a) + Term(:b), df)
 
 Once a schema is computed, it's _applied_ to the formula with
 [`apply_schema`](@ref).  Among other things, this _instantiates_ placeholder
-terms: 
+terms:
 * `Term`s become `ContinuousTerm`s or `CategoricalTerm`s
 * `ConstantTerm`s become `InterceptTerm`s
 * Tuples of terms [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
@@ -131,9 +131,9 @@ time".  The main API method is [`model_cols`](@ref), which when applied to a
 right-hand (predictor) sides.
 
 ```@repl 1
-response, predictors = model_cols(f, df);
-response
-predictors
+resp, pred = model_cols(f, df);
+resp
+pred
 ```
 
 `model_cols` can also take a single row from a table, as a `NamedTuple`:
@@ -206,6 +206,8 @@ function StatsModels.model_cols(p::PolyTerm, d::NamedTuple)
     reduce(hcat, (col.^n for n in 1:p.deg))
 end
 
+StatsModels.width(p::PolyTerm) = p.deg
+
 StatsBase.coefnames(p::PolyTerm) = coefnames(p.term) .* "^" .* string.(1:p.deg)
 ```
 
@@ -221,29 +223,49 @@ coefnames(f.rhs)
 
 It's also possible to _block_ interpretation of the `poly` syntax as special in
 certain contexts by adding additional (more specific) methods.  For instance, we
-could block for the default model context of `Nothing`:
+could block `PolyTerm`s being generated for `GLM.LinearModel`:
 
 ```@example 1
-StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{Nothing}) = t
+using GLM
+StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+                         sch,
+                         Mod::Type{GLM.LinearModel}) = t
 ```
 
 Now the `poly` is interpreted by default as the "vanilla" function defined
 first, which just raises its first argument to the designated power:
 
 ```@repl 1
-f = apply_schema(@formula(y ~ 1 + poly(b,2) * a), schema(data))
+f = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
+                 schema(data),
+                 GLM.LinearModel)
 model_cols(f.rhs, data)
 coefnames(f.rhs)
 ```
 
-But by using a different context (e.g., `StatisticalModel`) we get the custom
-interpretation:
+But by using a different context (e.g., the more related but more general
+`GLM.GeneralizedLinearModel`) we get the custom interpretation:
 
 ```@repl 1
-f2 = apply_schema(@formula(y ~ 1 + poly(b,2) * a), schema(data), StatisticalModel)
+f2 = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
+                  schema(data),
+                  GLM.GeneralizedLinearModel)
 model_cols(f2.rhs, data)
 coefnames(f2.rhs)
 ```
+
+The definitions of these methods control how models of each type are _fit_ from
+a formula with a call to `poly`:
+
+```@repl 1
+sim_dat = DataFrame(b=randn(100));
+sim_dat[:y] = randn(100) .+ 1 .+ 2*sim_dat[:b] .+ 3*sim_dat[:b].^2;
+fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
+fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
+```
+
+(a `GeneralizeLinearModel` with a `Normal` distribution is equivalent to a
+`LinearModel`)
 
 ### Summary
 

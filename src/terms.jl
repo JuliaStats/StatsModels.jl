@@ -143,6 +143,11 @@ FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
              exorig::Expr, args_parsed) where {Fo,Fa,N}  =
     FunctionTerm{Fo, Fa, names}(forig, fanon, names, exorig, args_parsed)
 Base.show(io::IO, t::FunctionTerm) = print(io, ":($(t.exorig))")
+function Base.show(io::IO, ::MIME"text/plain", t::FunctionTerm)
+    print(io, get(io, :prefix, ""), "(")
+    join(io, t.names, ",")
+    print(io, ")->", t.exorig)
+end
 width(::FunctionTerm) = 1
 
 """
