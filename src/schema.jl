@@ -139,24 +139,24 @@ selective re-setting of a schema to change the contrast coding or levels of a
 categorical term, or to change a continuous term to categorical or vice versa.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
-apply_schema(t, schema, Mod) = t
-apply_schema(terms::TupleTerm, schema, Mod) =
+apply_schema(t, schema, Mod::Type) = t
+apply_schema(terms::TupleTerm, schema, Mod::Type) =
     apply_schema.(terms, Ref(schema), Mod)
-apply_schema(t::Term, schema, Mod) = schema[t]
-apply_schema(ft::FormulaTerm, schema, Mod) =
+apply_schema(t::Term, schema, Mod::Type) = schema[t]
+apply_schema(ft::FormulaTerm, schema, Mod::Type) =
     FormulaTerm(apply_schema(ft.lhs, schema, Mod),
                 extract_matrix_terms(apply_schema(ft.rhs, schema, Mod)))
-apply_schema(it::InteractionTerm, schema, Mod) =
+apply_schema(it::InteractionTerm, schema, Mod::Type) =
     InteractionTerm(apply_schema(it.terms, schema, Mod))
 
 # for re-setting schema (in setcontrasts!)
-apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema, Mod) =
+apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema, Mod::Type) =
     get(schema, term(t.sym), t)
-apply_schema(t::MatrixTerm, sch, Mod) = MatrixTerm(apply_schema.(t.terms, Ref(sch), Mod))
+apply_schema(t::MatrixTerm, sch, Mod::Type) = MatrixTerm(apply_schema.(t.terms, Ref(sch), Mod))
 
 
 # TODO: special case this for <:RegressionModel ?
-function apply_schema(t::ConstantTerm, schema, Mod)
+function apply_schema(t::ConstantTerm, schema, Mod::Type)
     t.n ∈ (-1, 0, 1) ||
         throw(ArgumentError("can't create InterceptTerm from $(t.n) (only -1, 0, and 1 allowed)"))
     InterceptTerm{t.n==1}()
@@ -207,20 +207,20 @@ end
 # to know whether to repair, need to know context a term appears in.  main
 # effects occur in "own" context.
 
-function apply_schema(t::ConstantTerm, schema::FullRank, Mod)
+function apply_schema(t::ConstantTerm, schema::FullRank, Mod::Type)
     push!(schema.already, t)
     apply_schema(t, schema.schema, Mod)
 end
 
-apply_schema(t::InterceptTerm, schema::FullRank, Mod) = (push!(schema.already, t); t)
+apply_schema(t::InterceptTerm, schema::FullRank, Mod::Type) = (push!(schema.already, t); t)
 
-function apply_schema(t::Term, schema::FullRank, Mod)
+function apply_schema(t::Term, schema::FullRank, Mod::Type)
     push!(schema.already, t)
     t = apply_schema(t, schema.schema, Mod) # continuous or categorical now
     apply_schema(t, schema, Mod, t) # repair if necessary
 end
 
-function apply_schema(t::InteractionTerm, schema::FullRank, Mod)
+function apply_schema(t::InteractionTerm, schema::FullRank, Mod::Type)
     push!(schema.already, t)
     terms = apply_schema.(t.terms, Ref(schema.schema), Mod)
     terms = apply_schema.(terms, Ref(schema), Mod, Ref(t))
@@ -231,10 +231,10 @@ end
 
 
 # context doesn't matter for non-categorical terms
-apply_schema(t, schema::FullRank, Mod, context::AbstractTerm) = t
+apply_schema(t, schema::FullRank, Mod::Type, context::AbstractTerm) = t
 # when there's a context, check to see if any of the terms already seen would be
 # aliased by this term _if_ it were full rank.
-function apply_schema(t::CategoricalTerm, schema::FullRank, Mod, context::AbstractTerm)
+function apply_schema(t::CategoricalTerm, schema::FullRank, Mod::Type, context::AbstractTerm)
     aliased = drop_term(context, t)
     @debug "$t in context of $context: aliases $aliased\n  seen already: $(schema.already)"
     for seen in schema.already

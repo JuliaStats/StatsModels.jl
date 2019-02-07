@@ -20,7 +20,7 @@ struct NonMatrixTerm{T} <: AbstractTerm
 end
 
 StatsModels.is_matrix_term(::Type{<:NonMatrixTerm}) = false
-StatsModels.apply_schema(t::NonMatrixTerm, sch, Mod) =
+StatsModels.apply_schema(t::NonMatrixTerm, sch, Mod::Type) =
     NonMatrixTerm(apply_schema(t.term, sch, Mod))
 StatsModels.model_cols(t::NonMatrixTerm, d) = model_cols(t.term, d)
 
