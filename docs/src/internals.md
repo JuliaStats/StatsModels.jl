@@ -131,7 +131,9 @@ time".  The main API method is [`model_cols`](@ref), which when applied to a
 right-hand (predictor) sides.
 
 ```@repl 1
-model_cols(f, df)
+response, predictors = model_cols(f, df);
+response
+predictors
 ```
 
 `model_cols` can also take a single row from a table, as a `NamedTuple`:
