@@ -107,7 +107,7 @@ terms:
   they should be concatenated into a single model matrix
 
 ```@repl 1
-f = @formula(y ~ 1 + a + b + c)
+f = @formula(y ~ 1 + a + b * c)
 typeof(f)
 f = apply_schema(f, schema(f, df))
 typeof(f)
@@ -121,23 +121,6 @@ model type, this stage allows generic context-aware transformations, based on
 _both_ the source (schema) _and_ the destination (model type).  This is the
 primary mechanisms by which the formula DSL can be extended ([see
 below](#Extending-@formula-syntax-1) for more details)
-
-!!! note
-    
-    You can see a more detailed description of any formula or term with an
-    `IOContext` with `:limit=>false`:
-    
-    ```julia-repl
-    julia> show(IOContext(stdout, :limit=>false), f)
-    FormulaTerm
-    Response:
-      y(continuous)
-    Predictors:
-      1
-      a(continuous)
-      b(continuous)
-      c(3 levels): DummyCoding(2)
-    ```
 
 ### Data time
 
@@ -163,6 +146,10 @@ model_cols(f, first(Tables.rowtable(df)))
 Any `AbstractTerm` can be passed to `model_cols` with a table, which returns one or
 more numeric arrays:
 
+```@repl 1
+t = f.rhs.terms[end]
+model_cols(t, df)
+```
 
 
 ## Extending `@formula` syntax
