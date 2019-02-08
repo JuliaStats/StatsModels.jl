@@ -47,9 +47,18 @@ is_matrix_term
 
 ## Schema
 
+```@meta
+DocTestFilters = r"([a-z]*)=>\1"
+```
+
 ```@docs
 schema
+concrete_term
 apply_schema
+```
+
+```@meta
+DocTestFilters = nothing
 ```
 
 ## Modeling

@@ -31,27 +31,48 @@ the appropriate term type will be guessed based on the data type from the data c
 numeric data is assumed to be continuous, and any non-numeric data is assumed to be
 categorical.
 
+Returns a `Dict` mapping `Term`s to their concrete instantiations (`ContinuousTerm` or
+`CategoricalTerm`)
+
 # Example
 
-```jldoctest
+```jldoctest 1
 julia> d = (x=sample([:a, :b, :c], 10), y=rand(10));
 
 julia> ts = [Term(:x), Term(:y)];
 
 julia> schema(ts, d)
 Dict{Any,Any} with 2 entries:
-  x => x (3 levels): DummyCoding(2)
-  y => y (continuous)
+  y => y
+  x => x
 
 julia> schema(ts, d, Dict(:x => HelmertCoding()))
 Dict{Any,Any} with 2 entries:
-  x => x (3 levels): HelmertCoding(2)
-  y => y (continuous)
+  y => y
+  x => x
 
-julia> schema(ts, d, Dict(:y => CategoricalTerm))
+julia> schema(term(:y), d, Dict(:y => CategoricalTerm))
+Dict{Any,Any} with 1 entry:
+  y => y
+```
+
+Note that concrete `ContinuousTerm` and `CategoricalTerm` and un-typed `Term`s print the 
+same in a container, but when printed alone are different:
+
+```jldoctest 1
+julia> sch = schema(ts, d)
 Dict{Any,Any} with 2 entries:
-  x => x (3 levels): DummyCoding(2)
-  y => y (10 levels): DummyCoding(9)
+  y => y
+  x => x
+
+julia> term(:x)
+x(unknown)
+
+julia> sch[term(:x)]
+x(DummyCoding:3→2)
+
+julia> sch[term(:y)]
+y(continuous)
 ```
 """
 schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
@@ -61,18 +82,9 @@ schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
     schema(ts, columntable(data), hints)
 
 # handle hints:
-function schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
-                hints::Dict{Symbol}=Dict{Symbol,Any}())
-    sch = Dict{Any,Any}()
-    for t in ts
-        if t.sym ∈ keys(hints)
-            sch[t] = schema(t, dt, hints[t.sym])
-        else
-            sch[t] = schema(t, dt)
-        end
-    end
-    return sch
-end
+schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
+                hints::Dict{Symbol}=Dict{Symbol,Any}()) =
+    sch = Dict{Any,Any}(t=>concrete_term(t, dt, hints) for t in ts)
 
 schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
     schema(filter(needs_schema, terms(f)), data, hints)
@@ -80,49 +92,63 @@ schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
 schema(f::TermOrTerms, data) = schema(f, data, Dict{Symbol,Any}())
 
 """
-    schema(t::Term, data[, hint])
+    concrete_term(t::Term, data[, hint])
 
 Create concrete term from the placeholder `t` based on a data source and
 optional hint.  If `data` is a table, the `getproperty` is used to extract the
 appropriate column.
 
-The `hint` can be a concrete term type (`ContinuousTerm` or `CategoricalTerm`),
-or an instance of some `<:AbstractContrasts`, in which case a `CategoricalTerm`
-will be created using those contrasts.
+The `hint` can be a `Dict{Symbol}` of hints, or a specific hint, a concrete term
+type (`ContinuousTerm` or `CategoricalTerm`), or an instance of some
+`<:AbstractContrasts`, in which case a `CategoricalTerm` will be created using
+those contrasts.
 
-If no hint is provided, the `eltype` of the data is used: `Number`s are assumed
-to be continuous, and all others are assumed to be categorical.
+If no hint is provided (or `hint==nothing`), the `eltype` of the data is used:
+`Number`s are assumed to be continuous, and all others are assumed to be
+categorical.
 
 # Example
 
 ```jldoctest
-julia> schema(term(:a), [1, 2, 3])
+julia> concrete_term(term(:a), [1, 2, 3])
 a(continuous)
 
-julia> schema(term(:a), [1, 2, 3], CategoricalTerm)
+julia> concrete_term(term(:a), [1, 2, 3], nothing)
+a(continuous)
+
+julia> concrete_term(term(:a), [1, 2, 3], CategoricalTerm)
 a(DummyCoding:3→2)
 
-julia> schema(term(:a), [1, 2, 3], EffectsCoding())
+julia> concrete_term(term(:a), [1, 2, 3], EffectsCoding())
 a(EffectsCoding:3→2)
 
-julia> schema(term(:a), (a = [1, 2, 3], b = rand(3)))
+julia> concrete_term(term(:a), [1, 2, 3], Dict(:a=>EffectsCoding()))
+a(EffectsCoding:3→2)
+
+julia> concrete_term(term(:a), (a = [1, 2, 3], b = rand(3)))
 a(continuous)
 ```
 """
-schema(t::Term, dt::ColumnTable) = schema(t, getproperty(dt, t.sym))
-schema(t::Term, dt::ColumnTable, hint) = schema(t, getproperty(dt, t.sym), hint)
+concrete_term(t::Term, d, hints::Dict{Symbol}) =
+    concrete_term(t, d, get(hints, t.sym, nothing))
+concrete_term(t::Term, dt::ColumnTable, hint) =
+    concrete_term(t, getproperty(dt, t.sym), hint)
+concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol}) =
+    concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
+concrete_term(t::Term, d) = concrete_term(t, d, nothing)
 
-schema(t::Term, xs::AbstractVector{<:Number}) = schema(t, xs, ContinuousTerm)
-function schema(t::Term, xs::AbstractVector, ::Type{ContinuousTerm})
+
+concrete_term(t::Term, xs::AbstractVector{<:Number}, ::Nothing) = concrete_term(t, xs, ContinuousTerm)
+function concrete_term(t::Term, xs::AbstractVector, ::Type{ContinuousTerm})
     μ, σ2 = StatsBase.mean_and_var(xs)
     min, max = extrema(xs)
     ContinuousTerm(t.sym, promote(μ, σ2, min, max)...)
 end
 # default contrasts: dummy coding
-schema(t::Term, xs::AbstractVector) = schema(t, xs, CategoricalTerm)
-schema(t::Term, xs::AbstractArray, ::Type{CategoricalTerm}) = schema(t, xs, DummyCoding())
+concrete_term(t::Term, xs::AbstractVector, ::Nothing) = concrete_term(t, xs, CategoricalTerm)
+concrete_term(t::Term, xs::AbstractArray, ::Type{CategoricalTerm}) = concrete_term(t, xs, DummyCoding())
 
-function schema(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
+function concrete_term(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
     contrmat = ContrastsMatrix(contrasts, sort!(unique(xs)))
     CategoricalTerm(t.sym, contrmat)
 end

@@ -48,6 +48,7 @@ export
     terms,
     drop_term,
     schema,
+    concrete_term,
     apply_schema,
     width,
     model_cols,
