@@ -171,7 +171,7 @@ apply_schema(terms::TupleTerm, schema, Mod::Type) =
 apply_schema(t::Term, schema, Mod::Type) = schema[t]
 apply_schema(ft::FormulaTerm, schema, Mod::Type) =
     FormulaTerm(apply_schema(ft.lhs, schema, Mod),
-                extract_matrix_terms(apply_schema(ft.rhs, schema, Mod)))
+                collect_matrix_terms(apply_schema(ft.rhs, schema, Mod)))
 apply_schema(it::InteractionTerm, schema, Mod::Type) =
     InteractionTerm(apply_schema(it.terms, schema, Mod))
 
@@ -224,7 +224,7 @@ function apply_schema(t::FormulaTerm, schema, Mod::Type{<:StatisticalModel})
 
     # only apply rank-promoting logic to RIGHT hand side
     FormulaTerm(apply_schema(t.lhs, schema.schema, Mod),
-                extract_matrix_terms(apply_schema(t.rhs, schema, Mod)))
+                collect_matrix_terms(apply_schema(t.rhs, schema, Mod)))
 end
 
 # strategy is: apply schema, then "repair" if necessary (promote to full rank

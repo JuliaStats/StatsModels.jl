@@ -95,7 +95,7 @@ function StatsBase.modelmatrix(t::Union{AbstractTerm, TupleTerm}, data;
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
     t = has_schema(t) ? t : apply_schema(t, schema(t, data, hints), M)
-    model_cols(extract_matrix_terms(t), columntable(data))
+    model_cols(collect_matrix_terms(t), columntable(data))
 end
 function StatsBase.response(f::FormulaTerm, data;
                             hints=Dict{Symbol,Any}(),

@@ -1,4 +1,4 @@
-using StatsModels: extract_matrix_terms, MatrixTerm
+using StatsModels: collect_matrix_terms, MatrixTerm
 
 poly(x, n) = x^n
 
@@ -48,18 +48,18 @@ StatsModels.model_cols(t::NonMatrixTerm, d) = model_cols(t.term, d)
         f4 = term(:z) ~ NonMatrixTerm.(f.rhs)
         f5 = term(:z) ~ term(:x) + NonMatrixTerm(term(:y)) + term(:y)
 
-        @test extract_matrix_terms(f.rhs) == MatrixTerm((term(:x) + term(:y)))
-        @test extract_matrix_terms(f2.rhs) ==
+        @test collect_matrix_terms(f.rhs) == MatrixTerm((term(:x) + term(:y)))
+        @test collect_matrix_terms(f2.rhs) ==
             (MatrixTerm((term(:x), )), NonMatrixTerm(term(:y)))
-        @test extract_matrix_terms(f3.rhs) ==
+        @test collect_matrix_terms(f3.rhs) ==
             (MatrixTerm((term(:y), )), NonMatrixTerm(term(:x)))
-        @test extract_matrix_terms(f4.rhs) == f4.rhs
-        @test extract_matrix_terms(f5.rhs) ==
+        @test collect_matrix_terms(f4.rhs) == f4.rhs
+        @test collect_matrix_terms(f5.rhs) ==
             (MatrixTerm((term(:x), term(:y))), NonMatrixTerm(term(:y)))
 
         f = apply_schema(f, sch)
         @test f.rhs isa MatrixTerm
-        @test f.rhs == extract_matrix_terms(f.rhs)
+        @test f.rhs == collect_matrix_terms(f.rhs)
         @test model_cols(f.rhs, d) == hcat(d.x, d.y)
 
         f2 = apply_schema(f2, sch)

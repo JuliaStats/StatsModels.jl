@@ -4,6 +4,7 @@ DocTestSetup = quote
     using StatsModels, Random, StatsBase
     Random.seed!(2001)
 end
+DocTestFilters = [r"([a-z]*)=>\1", r"getfield\(.*##[0-9]+#[0-9]+"]
 ```
 
 # StatsModels.jl API
@@ -41,15 +42,11 @@ ContinuousTerm
 CategoricalTerm
 InterceptTerm
 MatrixTerm
-extract_matrix_terms
+collect_matrix_terms
 is_matrix_term
 ```
 
 ## Schema
-
-```@meta
-DocTestFilters = r"([a-z]*)=>\1"
-```
 
 ```@docs
 schema
