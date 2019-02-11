@@ -92,21 +92,27 @@ The `FunctionTerm` _also_ captures the arguments of the original call and parses
 them _as if_ they were part of a special DSL call, applying the rules to expand
 `*`, distribute `&` over `+`, and wrap symbols in `Term`s.  
 
-By storing the original function as a type parameter _and_
-pessimistically parsing the arguments as if they're part of a special DSL call,
-this allows custom syntax to be supported with minimal extra effort.  Packages
-can simply dispatch on `apply_schema(f::FunctionTerm{typeof(special_syntax)},
-schema, ::Type{<:MyModel})` and pull out the
+By storing the original function as a type parameter _and_ pessimistically
+parsing the arguments as if they're part of a special DSL call, this allows
+custom syntax to be supported with minimal extra effort.  Packages can dispatch
+on `apply_schema(f::FunctionTerm{typeof(special_syntax)}, schema,
+::Type{<:MyModel})` and pull out the arguments parsed as terms from
+`f.args_parsed` to construct their own custom terms.
 
 # Fields
 
 * `forig::Forig`: the original function (e.g., `log`)
 * `fanon::Fanon`: the generated anonymous function (e.g., `(a, b) -> log(1+a+b)`)
-* `names::Tuple{Vararg{Symbol}}`: the names of the arguments to the generated 
-  anonymous function (e.g., `(:a,:b)`)
 * `exorig::Expr`: the original expression passed to `@formula`
 * `args_parsed::Vector`: the arguments of the call passed to `@formula`, each 
   parsed _as if_ the call was a "special" DSL call.
+
+# Type parameters
+
+* `Forig`: the type of the original function (e.g., `typeof(log)`)
+* `Fanon`: the type of the generated anonymous function
+* `Names`: the names of the arguments to the anonymous function (as a
+  `NTuple{N,Symbol}`)
 
 # Example
 
@@ -132,16 +138,15 @@ julia> model_cols(f.rhs, (a=[3, 4], b=[4, 5]))
  2.302585092994046 
 ```
 """
-struct FunctionTerm{Forig,Fanon,Names,N} <: AbstractTerm
+struct FunctionTerm{Forig,Fanon,Names} <: AbstractTerm
     forig::Forig
     fanon::Fanon
-    names::NTuple{N,Symbol}
     exorig::Expr
     args_parsed::Vector
 end
 FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
              exorig::Expr, args_parsed) where {Fo,Fa,N}  =
-    FunctionTerm{Fo, Fa, names}(forig, fanon, names, exorig, args_parsed)
+    FunctionTerm{Fo, Fa, names}(forig, fanon, exorig, args_parsed)
 Base.show(io::IO, t::FunctionTerm) = print(io, ":($(t.exorig))")
 function Base.show(io::IO, ::MIME"text/plain",
                    t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names}
