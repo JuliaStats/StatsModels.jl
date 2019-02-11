@@ -160,7 +160,7 @@
         d = DataFrame(x = repeat([:a, :b], outer = 4),
                       y = repeat([:c, :d], inner = 2, outer = 2),
                       z = repeat([:e, :f], inner = 4))
-        [categorical!(d, name) for name in names(d)]
+        categorical!(d)
         cs = Dict([Pair(name, EffectsCoding()) for name in names(d)])
         d[:n] = 1.:8
     
@@ -282,12 +282,12 @@
         ## (not fully redundant). Ideally, would drop last column. Might make sense
         ## to warn about this, and suggest recoding x and y into a single variable.
         # mf = ModelFrame(n ~ 1 + x&y, d[1:4, :], contrasts=cs)
-        # @test ModelMatrix(mf).m == [1 1 0 0
-        #                             1 0 1 0
-        #                             1 0 0 1
-        #                             1 0 0 0]
-        # @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
-        #                         "x: a & y: d", "x: b & y: d"]
+        @test_broken ModelMatrix(mf).m == [1 1 0 0
+                                           1 0 1 0
+                                           1 0 0 1
+                                           1 0 0 0]
+        @test_broken coefnames(mf) == ["x: a & y: c", "x: b & y: c",
+                                       "x: a & y: d", "x: b & y: d"]
     
         ## note that R also does not detect this automatically. it's left to glm et al.
         ## to detect numerically when the model matrix is rank deficient, which is hard

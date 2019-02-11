@@ -43,11 +43,6 @@
     @test hasintercept(t) == false
     @test t.rhs == term(0, :x1, :x2)
 
-    # subtraction not supported:
-    @test_skip @formula(y ~ -1 + x1 + x2) ==
-        @formula(y ~ x1 - 1 + x2) ==
-        @formula(y ~ x1 + x2 - 1)
-
     t = @formula(y ~ x1 & x2)
     @test t.rhs == x1&x2
     @test issetequal(terms(t), [y, x1, x2])
