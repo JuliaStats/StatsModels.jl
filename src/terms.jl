@@ -504,7 +504,7 @@ function model_cols(t::MatrixTerm, d::ColumnTable)
 end
 
 model_cols(t::MatrixTerm, d::NamedTuple) =
-    reduce(vcat, (model_cols(tt, d) for tt in t.terms))
+    reduce(vcat, [model_cols(tt, d) for tt in t.terms])
 
 vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x

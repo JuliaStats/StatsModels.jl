@@ -203,7 +203,7 @@ end
 
 function StatsModels.model_cols(p::PolyTerm, d::NamedTuple)
     col = model_cols(p.term, d)
-    reduce(hcat, (col.^n for n in 1:p.deg))
+    reduce(hcat, [col.^n for n in 1:p.deg])
 end
 
 StatsModels.width(p::PolyTerm) = p.deg
