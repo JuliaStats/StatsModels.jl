@@ -118,7 +118,11 @@ on `apply_schema(f::FunctionTerm{typeof(special_syntax)}, schema,
 
 ```jldoctest
 julia> f = @formula(y ~ log(1 + a + b))
-y ~ :(log(1 + a + b))
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  (a,b)->log(1 + a + b)
 
 julia> typeof(f.rhs)
 FunctionTerm{typeof(log),getfield(Main, Symbol("##9#10")),(:a, :b)}
