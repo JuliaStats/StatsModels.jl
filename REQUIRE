@@ -4,5 +4,3 @@ Tables
 StatsBase 0.22.0
 DataStructures
 Missings
-SparseArrays
-LinearAlgebra
