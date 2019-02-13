@@ -133,10 +133,10 @@ julia> f.rhs.forig(1 + 3 + 4)
 julia> f.rhs.fanon(3, 4)
 2.0794415416798357
 
-julia> model_cols(f.rhs, (a=3, b=4))
+julia> modelcols(f.rhs, (a=3, b=4))
 2.0794415416798357
 
-julia> model_cols(f.rhs, (a=[3, 4], b=[4, 5]))
+julia> modelcols(f.rhs, (a=[3, 4], b=[4, 5]))
 2-element Array{Float64,1}:
  2.0794415416798357
  2.302585092994046 
@@ -186,7 +186,7 @@ true
 julia> t = apply_schema(t, schema(d))
 a(continuous) & b(continuous) & c(DummyCoding:3→2)
 
-julia> model_cols(t, d)
+julia> modelcols(t, d)
 9×2 Array{Float64,2}:
  0.0      0.0    
  1.09793  0.0    
@@ -198,7 +198,7 @@ julia> model_cols(t, d)
  0.64805  0.0    
  0.0      6.97926
 
-julia> model_cols(t.terms, d)
+julia> modelcols(t.terms, d)
 ([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], [0.88658, 0.548967, 0.898199, 0.504313, 0.935298, 0.745408, 0.489872, 0.0810062, 0.775473], [0.0 0.0; 1.0 0.0; … ; 1.0 0.0; 0.0 1.0])
 ```
 """
@@ -394,7 +394,7 @@ Base.:+(a::AbstractTerm, bs::TupleTerm) = (a, bs...)
 # evaluating terms with data to generate model matrix entries
 
 """
-    model_cols(t::AbstractTerm, data)
+    modelcols(t::AbstractTerm, data)
 
 Create a numerical "model columns" representation of data based on an
 `AbstractTerm`.  `data` can either be a whole table (a property-accessible
@@ -403,15 +403,15 @@ rows, as defined by [Tables.jl](https://github.com/JuliaData/Tables.jl) or a
 single row (in the form of a `NamedTuple` of scalar values).  Tables will be
 converted to a `NamedTuple` of `Vectors` (e.g., a `Tables.ColumnTable`).
 """
-function model_cols(t, d::D) where D
+function modelcols(t, d::D) where D
     Tables.istable(d) || throw(ArgumentError("Data of type $D is not a table!"))
-    model_cols(t, columntable(d))
+    modelcols(t, columntable(d))
 end
 
 """
-    model_cols(ts::NTuple{N, AbstractTerm}, data) where N
+    modelcols(ts::NTuple{N, AbstractTerm}, data) where N
 
-When a tuple of terms is provided, `model_cols` broadcasts over the individual 
+When a tuple of terms is provided, `modelcols` broadcasts over the individual 
 terms.  To create a single matrix, wrap the tuple in a [`MatrixTerm`](@ref).
 
 # Example
@@ -424,7 +424,7 @@ a(continuous)
 b(continuous)
 c(DummyCoding:3→2)
 
-julia> cols = model_cols(ts, d)
+julia> cols = modelcols(ts, d)
 ([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], [0.718418, 0.488167, 0.708161, 0.774301, 0.584296, 0.324937, 0.989408, 0.333175, 0.65323], [0.0 0.0; 1.0 0.0; … ; 1.0 0.0; 0.0 1.0])
 
 julia> reduce(hcat, cols)
@@ -439,7 +439,7 @@ julia> reduce(hcat, cols)
  8.0  0.333175  1.0  0.0
  9.0  0.65323   0.0  1.0
 
-julia> model_cols(MatrixTerm(ts), d)
+julia> modelcols(MatrixTerm(ts), d)
 9×4 Array{Float64,2}:
  1.0  0.718418  0.0  0.0
  2.0  0.488167  1.0  0.0
@@ -452,15 +452,15 @@ julia> model_cols(MatrixTerm(ts), d)
  9.0  0.65323   0.0  1.0
 ```
 """
-model_cols(ts::TupleTerm, d::NamedTuple) = model_cols.(ts, Ref(d))
+modelcols(ts::TupleTerm, d::NamedTuple) = modelcols.(ts, Ref(d))
 
 # TODO: @generated to unroll the getfield stuff
-model_cols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
+modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
     ft.fanon.(getfield.(Ref(d), Names)...)
 
-model_cols(t::ContinuousTerm, d::NamedTuple) = Float64.(d[t.sym])
+modelcols(t::ContinuousTerm, d::NamedTuple) = Float64.(d[t.sym])
 
-model_cols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
+modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
 
 
 """
@@ -490,25 +490,25 @@ end
 
 # two options here: either special-case ColumnTable (named tuple of vectors)
 # vs. vanilla NamedTuple, or reshape and use normal broadcasting
-model_cols(t::InteractionTerm, d::NamedTuple) =
-    kron_insideout(*, (model_cols(term, d) for term in t.terms)...)
+modelcols(t::InteractionTerm, d::NamedTuple) =
+    kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
 
-function model_cols(t::InteractionTerm, d::ColumnTable)
-    row_kron_insideout(*, (model_cols(term, d) for term in t.terms)...)
+function modelcols(t::InteractionTerm, d::ColumnTable)
+    row_kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
 end
 
-model_cols(t::InterceptTerm{true}, d::NamedTuple) = ones(size(first(d)))
-model_cols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1), 0)
+modelcols(t::InterceptTerm{true}, d::NamedTuple) = ones(size(first(d)))
+modelcols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1), 0)
 
-model_cols(t::FormulaTerm, d::NamedTuple) = (model_cols(t.lhs,d), model_cols(t.rhs, d))
+modelcols(t::FormulaTerm, d::NamedTuple) = (modelcols(t.lhs,d), modelcols(t.rhs, d))
 
-function model_cols(t::MatrixTerm, d::ColumnTable)
-    mat = reduce(hcat, [model_cols(tt, d) for tt in t.terms])
+function modelcols(t::MatrixTerm, d::ColumnTable)
+    mat = reduce(hcat, [modelcols(tt, d) for tt in t.terms])
     reshape(mat, size(mat, 1), :)
 end
 
-model_cols(t::MatrixTerm, d::NamedTuple) =
-    reduce(vcat, [model_cols(tt, d) for tt in t.terms])
+modelcols(t::MatrixTerm, d::NamedTuple) =
+    reduce(vcat, [modelcols(tt, d) for tt in t.terms])
 
 vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x

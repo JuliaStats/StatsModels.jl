@@ -126,29 +126,29 @@ below](#Extending-@formula-syntax-1) for more details)
 
 At the end of "schema time", a formula encapsulates all the information needed
 to convert a table into a numeric model matrix.  That is, it is ready for "data
-time".  The main API method is [`model_cols`](@ref), which when applied to a
+time".  The main API method is [`modelcols`](@ref), which when applied to a
 `FormulaTerm` returns a tuple of the numeric forms for the left- (response) and
 right-hand (predictor) sides.
 
 ```@repl 1
-resp, pred = model_cols(f, df);
+resp, pred = modelcols(f, df);
 resp
 pred
 ```
 
-`model_cols` can also take a single row from a table, as a `NamedTuple`:
+`modelcols` can also take a single row from a table, as a `NamedTuple`:
 
 ```@repl 1
 using Tables
-model_cols(f, first(Tables.rowtable(df)))
+modelcols(f, first(Tables.rowtable(df)))
 ```
 
-Any `AbstractTerm` can be passed to `model_cols` with a table, which returns one or
+Any `AbstractTerm` can be passed to `modelcols` with a table, which returns one or
 more numeric arrays:
 
 ```@repl 1
 t = f.rhs.terms[end]
-model_cols(t, df)
+modelcols(t, df)
 ```
 
 
@@ -201,8 +201,8 @@ function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{
     PolyTerm(term, deg.n)
 end
 
-function StatsModels.model_cols(p::PolyTerm, d::NamedTuple)
-    col = model_cols(p.term, d)
+function StatsModels.modelcols(p::PolyTerm, d::NamedTuple)
+    col = modelcols(p.term, d)
     reduce(hcat, [col.^n for n in 1:p.deg])
 end
 
@@ -217,7 +217,7 @@ Now, we can use `poly` in a formula:
 data = DataFrame(y = rand(4), a = rand(4), b = [1:4;])
 f = @formula(y ~ 1 + poly(b, 2) * a)
 f = apply_schema(f, schema(data))
-model_cols(f.rhs, data)
+modelcols(f.rhs, data)
 coefnames(f.rhs)
 ```
 
@@ -239,7 +239,7 @@ first, which just raises its first argument to the designated power:
 f = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
                  schema(data),
                  GLM.LinearModel)
-model_cols(f.rhs, data)
+modelcols(f.rhs, data)
 coefnames(f.rhs)
 ```
 
@@ -250,7 +250,7 @@ But by using a different context (e.g., the more related but more general
 f2 = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
                   schema(data),
                   GLM.GeneralizedLinearModel)
-model_cols(f2.rhs, data)
+modelcols(f2.rhs, data)
 coefnames(f2.rhs)
 ```
 
@@ -278,9 +278,9 @@ of `AbstractTerm`).  This syntax applies in a particular **context** (schema
 plus model type, designated via a method of [`apply_schema`](@ref)),
 transforming a `FunctionTerm{syntax}` into another (often custom) term type.
 This custom term type then specifies special **behavior** at data time (via a
-method for [`model_cols`](@ref)).
+method for [`modelcols`](@ref)).
 
 Finally, note that it's easy for a package to intercept the formula terms and
 manipulate them directly as well, before calling `apply_schema` or
-`model_cols`.  This gives packages great flexibility in how they interpret
+`modelcols`.  This gives packages great flexibility in how they interpret
 formula terms.

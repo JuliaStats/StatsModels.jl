@@ -43,7 +43,7 @@ using StatsModels, DataFrames
 f = @formula(y ~ 1 + a + b + c + b&c)
 df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["d","e","f"], 3))
 f = apply_schema(f, schema(f, df))
-response, predictors = model_cols(f, df); 
+response, predictors = modelcols(f, df); 
 predictors
 coefnames(f)
 ```
@@ -167,10 +167,10 @@ Internally, this is accomplished in three steps:
    [the section on extending the `@formula`
    DSL](@ref Internals-and-extending-the-formula-DSL) for more details).
 3. Numeric arrays are generated for the response and predictors from the full
-   table using `model_cols(term, data)`.
+   table using `modelcols(term, data)`.
 
 The `ModelFrame` and `ModelMatrix` types can still be used to do this
 transformation, but this is only to preserve some backwards compatibility.
 Package authors who would like to include support for fitting models from a
 `@formula` are **strongly** encouraged to directly use `schema`, `apply_schema`,
-and `model_cols` to handle the table-to-matrix transformations they need.
+and `modelcols` to handle the table-to-matrix transformations they need.

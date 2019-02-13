@@ -12,7 +12,7 @@ PolyTerm(t::Term, deg::ConstantTerm) = PolyTerm(t.sym, deg.n)
 StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, ::Type{<:PolyModel}) =
     PolyTerm(t.args_parsed...)
 
-StatsModels.model_cols(p::PolyTerm, d::NamedTuple) =
+StatsModels.modelcols(p::PolyTerm, d::NamedTuple) =
     reduce(hcat, [d[p.term].^n for n in 1:p.deg])
 
 struct NonMatrixTerm{T} <: AbstractTerm
@@ -22,7 +22,7 @@ end
 StatsModels.is_matrix_term(::Type{<:NonMatrixTerm}) = false
 StatsModels.apply_schema(t::NonMatrixTerm, sch, Mod::Type) =
     NonMatrixTerm(apply_schema(t.term, sch, Mod))
-StatsModels.model_cols(t::NonMatrixTerm, d) = model_cols(t.term, d)
+StatsModels.modelcols(t::NonMatrixTerm, d) = modelcols(t.term, d)
 
 @testset "Extended formula/models" begin
     d = (z = rand(10), y = rand(10), x = collect(1:10))
@@ -34,11 +34,11 @@ StatsModels.model_cols(t::NonMatrixTerm, d) = model_cols(t.term, d)
         f_plain = apply_schema(f, sch)
         @test f_plain.rhs.terms[1] isa FunctionTerm
         @test f_plain == apply_schema(f, sch, Nothing)
-        @test last(model_cols(f_plain, d)) == hcat(d[:x].^3)
+        @test last(modelcols(f_plain, d)) == hcat(d[:x].^3)
         
         f_special = apply_schema(f, sch, PolyModel)
         @test f_special.rhs.terms[1] isa PolyTerm
-        @test last(model_cols(f_special, d)) == hcat(d[:x], d[:x].^2, d[:x].^3)
+        @test last(modelcols(f_special, d)) == hcat(d[:x], d[:x].^2, d[:x].^3)
     end
     
     @testset "Non-matrix term" begin
@@ -60,30 +60,30 @@ StatsModels.model_cols(t::NonMatrixTerm, d) = model_cols(t.term, d)
         f = apply_schema(f, sch)
         @test f.rhs isa MatrixTerm
         @test f.rhs == collect_matrix_terms(f.rhs)
-        @test model_cols(f.rhs, d) == hcat(d.x, d.y)
+        @test modelcols(f.rhs, d) == hcat(d.x, d.y)
 
         f2 = apply_schema(f2, sch)
         @test f2.rhs isa Tuple{MatrixTerm, NonMatrixTerm}
         @test f2.rhs == apply_schema((MatrixTerm(term(:x)), NonMatrixTerm(term(:y))), sch)
-        @test model_cols(f2.rhs, d) == (hcat(d.x), d.y)
+        @test modelcols(f2.rhs, d) == (hcat(d.x), d.y)
 
         # matrix term goes first
         f3 = apply_schema(f3, sch)
         @test f3.rhs isa Tuple{MatrixTerm, NonMatrixTerm}
         @test f3.rhs == apply_schema((MatrixTerm(term(:y)), NonMatrixTerm(term(:x))), sch)
-        @test model_cols(f3.rhs, d) == (hcat(d.y), d.x)
+        @test modelcols(f3.rhs, d) == (hcat(d.y), d.x)
 
         f4 = apply_schema(f4, sch)
         @test f4.rhs isa Tuple{NonMatrixTerm, NonMatrixTerm}
         @test f4.rhs == apply_schema((NonMatrixTerm(term(:x)), NonMatrixTerm(term(:y))), sch)
-        @test model_cols(f4.rhs, d) == (d.x, d.y)
+        @test modelcols(f4.rhs, d) == (d.x, d.y)
 
         # matrix terms are gathered
         f5 = apply_schema(f5, sch)
         @test f5.rhs isa Tuple{MatrixTerm, NonMatrixTerm}
         @test f5.rhs ==
             apply_schema((MatrixTerm((term(:x, :y))), NonMatrixTerm(term(:y))), sch)
-        @test model_cols(f5.rhs, d) == (hcat(d.x, d.y), d.y)
+        @test modelcols(f5.rhs, d) == (hcat(d.x, d.y), d.y)
         
     end
 

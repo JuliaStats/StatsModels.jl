@@ -95,7 +95,7 @@ function StatsBase.modelmatrix(t::Union{AbstractTerm, TupleTerm}, data;
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
     t = has_schema(t) ? t : apply_schema(t, schema(t, data, hints), M)
-    model_cols(collect_matrix_terms(t), columntable(data))
+    modelcols(collect_matrix_terms(t), columntable(data))
 end
 function StatsBase.response(f::FormulaTerm, data;
                             hints=Dict{Symbol,Any}(),
@@ -103,12 +103,12 @@ function StatsBase.response(f::FormulaTerm, data;
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
     f = has_schema(f) ? f : apply_schema(f, schema(f, data, hints), M)
-    model_cols(f.lhs, columntable(data))
+    modelcols(f.lhs, columntable(data))
 end
 
 
-StatsBase.modelmatrix(mf::ModelFrame; data=mf.data) = model_cols(mf.f.rhs, data)
-StatsBase.response(mf::ModelFrame; data=mf.data) = model_cols(mf.f.lhs, data)
+StatsBase.modelmatrix(mf::ModelFrame; data=mf.data) = modelcols(mf.f.rhs, data)
+StatsBase.response(mf::ModelFrame; data=mf.data) = modelcols(mf.f.lhs, data)
 
 StatsBase.coefnames(mf::ModelFrame) = vectorize(coefnames(mf.f.rhs))
 

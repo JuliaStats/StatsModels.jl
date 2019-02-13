@@ -90,7 +90,7 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
             ## TODO: consider doing this manually, without the ModelFrame/ModelMatrix
             # schema = schema(data, cols, contrasts)
             # f = apply_schema(f, schema, T)
-            # y, X = model_cols(f, cols)
+            # y, X = modelcols(f, cols)
             # $dfmodeltype(fit(T, X, y, args...; kwargs...))
         end
     end
@@ -137,7 +137,7 @@ function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
 
     f = mm.mf.f
     cols, nonmissings = missing_omit(columntable(data), f)
-    new_x = model_cols(f.rhs, cols)
+    new_x = modelcols(f.rhs, cols)
     y_pred = predict(mm.model, reshape(new_x, size(new_x, 1), :);
                      kwargs...)
     out = missings(eltype(y_pred), size(data, 1))

@@ -15,7 +15,7 @@ DocTestFilters = [r"([a-z]*)=>\1", r"getfield\(.*##[0-9]+#[0-9]+"]
 @formula
 term
 coefnames
-model_cols
+modelcols
 ```
 
 ### Higher-order terms
@@ -86,7 +86,7 @@ StatsModels.drop_intercept
     # instead of ModelMatrix(ModelFrame(f::FormulaTerm, data, mod=MyModel))
     sch = schema(f, data)
     f = apply_schema(f, sch, MyModel)
-    response, predictors = model_cols(f, data)
+    response, predictors = modelcols(f, data)
     ```
 
 ```@docs

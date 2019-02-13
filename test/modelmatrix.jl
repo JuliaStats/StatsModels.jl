@@ -348,7 +348,7 @@
     
         f = apply_schema(@formula(r ~ 1 + w*x*y*z), schema(d))
         modelmatrix(f, d)
-        @test reduce(vcat, last.(model_cols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)
+        @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)
     end
 
 end

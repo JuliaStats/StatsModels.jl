@@ -51,7 +51,7 @@ export
     concrete_term,
     apply_schema,
     width,
-    model_cols,
+    modelcols,
     modelmatrix,
     response
 
