@@ -82,7 +82,7 @@ StatsModels.modelcols(t::NonMatrixTerm, d) = modelcols(t.term, d)
         f5 = apply_schema(f5, sch)
         @test f5.rhs isa Tuple{MatrixTerm, NonMatrixTerm}
         @test f5.rhs ==
-            apply_schema((MatrixTerm((term(:x, :y))), NonMatrixTerm(term(:y))), sch)
+            apply_schema((MatrixTerm((term.((:x, :y)))), NonMatrixTerm(term(:y))), sch)
         @test modelcols(f5.rhs, d) == (hcat(d.x, d.y), d.y)
         
     end

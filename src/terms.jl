@@ -545,15 +545,15 @@ hasresponse(t::FormulaTerm{LHS}) where {LHS} = LHS !== nothing
 
 # convenience converters
 """
-    term(xs...)
+    term(x)
 
-Wrap arguments in an appropriate `AbstractTerm` type: `Symbol`s become `Term`s,
+Wrap argument in an appropriate `AbstractTerm` type: `Symbol`s become `Term`s,
 and `Number`s become `ConstantTerm`s.  Any `AbstractTerm`s are unchanged.
 
 # Example
 
 ```jldoctest
-julia> ts = term(1, :a, :b)
+julia> ts = term.((1, :a, :b))
 1
 a(unknown)
 b(unknown)
@@ -564,5 +564,4 @@ Tuple{ConstantTerm{Int64},Term,Term}
 """
 term(n::Number) = ConstantTerm(n)
 term(s::Symbol) = Term(s)
-term(args...) = term.(args)
 term(t::AbstractTerm) = t

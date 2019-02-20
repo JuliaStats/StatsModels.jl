@@ -2,7 +2,7 @@
 
     using StatsModels: hasresponse, hasintercept
 
-    y, x1, x2, x3, a, b, c, onet = term(:y, :x1, :x2, :x3, :a, :b, :c, 1)
+    y, x1, x2, x3, a, b, c, onet = term.((:y, :x1, :x2, :x3, :a, :b, :c, 1))
 
     ## totally empty
     @test_broken t = @eval @formula $(:($nothing ~ 0))
@@ -15,7 +15,7 @@
     t = @formula(y ~ 0)
     @test hasintercept(t) == false
     @test t.rhs == ConstantTerm(0)
-    @test issetequal(terms(t), term(:y, 0))
+    @test issetequal(terms(t), term.((:y, 0)))
     t = @formula(y ~ -1)
     @test hasintercept(t) == false
 
@@ -41,7 +41,7 @@
     ## no intercept
     t = @formula(y ~ 0 + x1 + x2)
     @test hasintercept(t) == false
-    @test t.rhs == term(0, :x1, :x2)
+    @test t.rhs == term.((0, :x1, :x2))
 
     t = @formula(y ~ x1 & x2)
     @test t.rhs == x1&x2
