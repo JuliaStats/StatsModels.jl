@@ -33,7 +33,6 @@ export
     setcontrasts!,
 
     AbstractTerm,
-    TermOrTerms,
     ConstantTerm,
     Term,
     ContinuousTerm,

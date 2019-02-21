@@ -1,4 +1,6 @@
 """
+    ModelFrame(formula, data; mod=StatisticalModel, contrasts=Dict())
+
 Wrapper that encapsulates a `FormulaTerm`, schema, data table, and model type.
 
 This wrapper encapsulates all the information that's required to transform data
@@ -146,6 +148,8 @@ end
 
 
 """
+    ModelMatrix(mf::ModelFrame)
+
 Convert a `ModelFrame` into a numeric matrix suitable for modeling
 
 # Fields
