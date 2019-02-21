@@ -2,20 +2,6 @@ abstract type AbstractTerm end
 const TupleTerm = NTuple{N, AbstractTerm} where N
 const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 
-function Base.show(io::IO, mime::MIME"text/plain", term::AbstractTerm)
-    print(io, get(io, :prefix, ""), term)
-end
-
-function Base.show(io::IO, mime::MIME"text/plain", terms::TupleTerm)
-    for t in terms
-        show(io, mime, t)
-        # ensure that there are newlines in between each term after the first
-        # if no prefix is specified
-        io = IOContext(io, :prefix => get(io, :prefix, "\n"))
-    end
-end
-Base.show(io::IO, terms::TupleTerm) = join(io, terms, " + ")
-
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
 
@@ -33,8 +19,6 @@ invariants) is not yet known.  This will be converted to a
 struct Term <: AbstractTerm
     sym::Symbol
 end
-Base.show(io::IO, ::MIME"text/plain", t::Term) = print(io, get(io, :prefix, ""), t.sym, "(unknown)")
-Base.show(io::IO, t::Term) = print(io, t.sym)
 width(::Term) =
     throw(ArgumentError("Un-typed Terms have undefined width.  " *
                         "Did you forget to call apply_schema?"))
@@ -52,7 +36,6 @@ Represents a literal number in a formula.  By default will be converted to
 struct ConstantTerm{T<:Number} <: AbstractTerm
     n::T
 end
-Base.show(io::IO, t::ConstantTerm) = print(io, t.n)
 width(::ConstantTerm) = 1
 
 """
@@ -69,15 +52,6 @@ any type (captured by the type parameters).
 struct FormulaTerm{L,R} <: AbstractTerm
     lhs::L
     rhs::R
-end
-Base.show(io::IO, t::FormulaTerm) = print(io, "$(t.lhs) ~ $(t.rhs)")
-function Base.show(io::IO, mime::MIME"text/plain", t::FormulaTerm)
-    println(io, "FormulaTerm")
-    print(io, "Response:")
-    show(IOContext(io, :prefix=>"\n  "), mime, t.lhs)
-    println(io)
-    print(io, "Predictors:")
-    show(IOContext(io, :prefix=>"\n  "), mime, t.rhs)
 end
 
 """
@@ -151,13 +125,6 @@ end
 FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
              exorig::Expr, args_parsed) where {Fo,Fa,N}  =
     FunctionTerm{Fo, Fa, names}(forig, fanon, exorig, args_parsed)
-Base.show(io::IO, t::FunctionTerm) = print(io, ":($(t.exorig))")
-function Base.show(io::IO, ::MIME"text/plain",
-                   t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names}
-    print(io, get(io, :prefix, ""), "(")
-    join(io, names, ",")
-    print(io, ")->", t.exorig)
-end
 width(::FunctionTerm) = 1
 
 """
@@ -205,13 +172,6 @@ julia> modelcols(t.terms, d)
 struct InteractionTerm{Ts} <: AbstractTerm
     terms::Ts
 end
-Base.show(io::IO, it::InteractionTerm) = join(io, it.terms, " & ")
-function Base.show(io::IO, mime::MIME"text/plain", it::InteractionTerm)
-    for t in it.terms
-        show(io, mime, t)
-        io = IOContext(io, :prefix=>" & ")
-    end
-end
 width(ts::InteractionTerm) = prod(width(t) for t in ts.terms)
 
 """
@@ -225,7 +185,6 @@ A `1` yields `InterceptTerm{true}`, and `0` or `-1` yield `InterceptTerm{false}`
 via the [`implicit_intercept`](@ref) trait).
 """
 struct InterceptTerm{HasIntercept} <: AbstractTerm end
-Base.show(io::IO, t::InterceptTerm{H}) where {H} = print(io, H ? "1" : "0")
 width(::InterceptTerm{H}) where {H} = H ? 1 : 0
 
 # Typed terms
@@ -250,9 +209,6 @@ struct ContinuousTerm{T} <: AbstractTerm
     min::T
     max::T
 end
-Base.show(io::IO, t::ContinuousTerm) = print(io, t.sym)
-Base.show(io::IO, ::MIME"text/plain", t::ContinuousTerm) =
-    print(io, get(io, :prefix, ""), t.sym, "(continuous)")
 width(::ContinuousTerm) = 1
 
 """
@@ -271,9 +227,6 @@ struct CategoricalTerm{C,T,N} <: AbstractTerm
     sym::Symbol
     contrasts::ContrastsMatrix{C,T}
 end
-Base.show(io::IO, t::CategoricalTerm{C,T,N}) where {C,T,N} = print(io, t.sym)
-Base.show(io::IO, ::MIME"text/plain", t::CategoricalTerm{C,T,N}) where {C,T,N} =
-    print(io, get(io, :prefix, ""), t.sym, "($C:$(length(t.contrasts.levels))→$N)")
 width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 
 # constructor that computes the width based on the contrasts matrix
@@ -295,9 +248,6 @@ struct MatrixTerm{Ts<:TupleTerm} <: AbstractTerm
 end
 # wrap single terms in a tuple
 MatrixTerm(t::AbstractTerm) = MatrixTerm((t, ))
-
-Base.show(io::IO, t::MatrixTerm) = show(io, t.terms)
-Base.show(io::IO, mime::MIME"text/plain", t::MatrixTerm) = show(io, mime, t.terms)
 width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
 
 """
@@ -375,6 +325,70 @@ extract_symbols(x) = Symbol[]
 extract_symbols(x::Symbol) = [x]
 extract_symbols(ex::Expr) =
     is_call(ex) ? mapreduce(extract_symbols, union, ex.args[2:end]) : Symbol[]
+
+################################################################################
+# showing terms
+
+function Base.show(io::IO, mime::MIME"text/plain", term::AbstractTerm; prefix="")
+    print(io, prefix, term)
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", terms::TupleTerm; prefix="")
+    for t in terms
+        show(io, mime, t; prefix=prefix)
+        # ensure that there are newlines in between each term after the first
+        # if no prefix is specified
+        prefix = '\n'
+    end
+end
+Base.show(io::IO, terms::TupleTerm) = join(io, terms, " + ")
+
+Base.show(io::IO, ::MIME"text/plain", t::Term; prefix="") =
+    print(io, prefix, t.sym, "(unknown)")
+Base.show(io::IO, t::Term) = print(io, t.sym)
+
+Base.show(io::IO, t::ConstantTerm) = print(io, t.n)
+
+Base.show(io::IO, t::FormulaTerm) = print(io, "$(t.lhs) ~ $(t.rhs)")
+function Base.show(io::IO, mime::MIME"text/plain", t::FormulaTerm; prefix="")
+    println(io, "FormulaTerm")
+    print(io, "Response:")
+    show(io, mime, t.lhs, prefix="\n  ")
+    println(io)
+    print(io, "Predictors:")
+    show(io, mime, t.rhs, prefix="\n  ")
+end
+
+Base.show(io::IO, t::FunctionTerm) = print(io, ":($(t.exorig))")
+function Base.show(io::IO, ::MIME"text/plain",
+                   t::FunctionTerm{Fo,Fa,names};
+                   prefix = "") where {Fo,Fa,names}
+    print(io, prefix, "(")
+    join(io, names, ",")
+    print(io, ")->", t.exorig)
+end
+
+Base.show(io::IO, it::InteractionTerm) = join(io, it.terms, " & ")
+function Base.show(io::IO, mime::MIME"text/plain", it::InteractionTerm; prefix="")
+    for t in it.terms
+        show(io, mime, t; prefix=prefix)
+        prefix = " & "
+    end
+end
+
+Base.show(io::IO, t::InterceptTerm{H}) where {H} = print(io, H ? "1" : "0")
+
+Base.show(io::IO, t::ContinuousTerm) = print(io, t.sym)
+Base.show(io::IO, ::MIME"text/plain", t::ContinuousTerm; prefix="") =
+    print(io, prefix, t.sym, "(continuous)")
+
+Base.show(io::IO, t::CategoricalTerm{C,T,N}) where {C,T,N} = print(io, t.sym)
+Base.show(io::IO, ::MIME"text/plain", t::CategoricalTerm{C,T,N}; prefix="") where {C,T,N} =
+    print(io, prefix, t.sym, "($C:$(length(t.contrasts.levels))→$N)")
+
+Base.show(io::IO, t::MatrixTerm) = show(io, t.terms)
+Base.show(io::IO, mime::MIME"text/plain", t::MatrixTerm; prefix="") =
+    show(io, mime, t.terms, prefix=prefix)
 
 ################################################################################
 # operators on Terms that create new terms:
