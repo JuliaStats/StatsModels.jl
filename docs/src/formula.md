@@ -43,8 +43,8 @@ using StatsModels, DataFrames
 f = @formula(y ~ 1 + a + b + c + b&c)
 df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["d","e","f"], 3))
 f = apply_schema(f, schema(f, df))
-response, predictors = modelcols(f, df); 
-predictors
+resp, pred = modelcols(f, df);
+pred
 coefnames(f)
 ```
 
@@ -93,18 +93,46 @@ term separator `+`:
 @formula(y ~ 1 + (a + b) & c)
 ```
 
-## Non-DSL calls
+## Julia functions in a `@formula`
 
-Any calls to functions that are not built into the DSL (or part of an
+Any calls to Julia functions that don't have special meaning (or are part of an
 [extension](@ref Internals-and-extending-the-formula-DSL) provided by a modeling
 package) are treated like normal Julia code, and evaluated elementwise:
 
 ```@repl 1
-modelmatrix(@formula(y ~ 1 + a + log(1+a) + length(c)), df)
+modelmatrix(@formula(y ~ 1 + a + log(1+a)), df)
 ```
 
 Note that the expression `1 + a` is treated differently as part of the formula
 than in the call to `log`, where it's interpreted as normal addition.
+
+This even applies to custom functions.  For instance, if for some reason you
+wanted to include a regressor based on a `String` column that encoded whether
+any character in a string was after `'e'` in the alphabet, you could do
+
+```@repl 1
+gt_e(s) = any(c > 'e' for c in s)
+modelmatrix(@formula(y ~ 1 + gt_e(c)), df)
+```
+
+Julia functions like this are evaluated elementwise when the numeric arrays are
+created for the response and model matrix.  This makes it easy to fit models to
+transformed data _lazily_, without creating temporary columns in your table.
+For instance, to fit a linear regression to a log-transformed response:
+
+```@repl 1
+using GLM
+lm(@formula(log(y) ~ 1 + a + b), df)
+df[:log_y] = log.(df[:y]);
+lm(@formula(log_y ~ 1 + a + b), df)            # equivalent
+```
+
+The no-op function `identity` can be used to block the formula DSL
+interpretation of `+`, `*`, and `&`:
+
+```@repl 1
+modelmatrix(@formula(y ~ 1 + b + identity(1+b)), df)
+```
 
 ## Constructing a formula programatically
 

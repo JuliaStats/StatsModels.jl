@@ -1,6 +1,6 @@
 @testset "formula" begin
 
-    using StatsModels: hasresponse, hasintercept
+    using StatsModels: hasresponse, hasintercept, omitsintercept
 
     y, x1, x2, x3, a, b, c, onet = term.((:y, :x1, :x2, :x3, :a, :b, :c, 1))
 
@@ -14,10 +14,13 @@
     ## empty RHS
     t = @formula(y ~ 0)
     @test hasintercept(t) == false
+    @test omitsintercept(t) == true
     @test t.rhs == ConstantTerm(0)
     @test issetequal(terms(t), term.((:y, 0)))
+
     t = @formula(y ~ -1)
     @test hasintercept(t) == false
+    @test omitsintercept(t) == true
 
     ## intercept-only
     t = @formula(y ~ 1)
@@ -35,20 +38,31 @@
     ## implicit intercept behavior: NO intercept after @formula
     t = @formula(y ~ x1 + x2)
     @test hasintercept(t) == false
+    @test omitsintercept(t) == false
     @test t.rhs == (x1, x2)
     @test issetequal(terms(t), [y, x1, x2])
 
     ## no intercept
     t = @formula(y ~ 0 + x1 + x2)
     @test hasintercept(t) == false
+    @test omitsintercept(t) == true
     @test t.rhs == term.((0, :x1, :x2))
 
+    t = @formula(y ~ -1 + x1 + x2)
+    @test hasintercept(t) == false
+    @test omitsintercept(t) == true
+    @test t.rhs == term.((-1, :x1, :x2))
+
     t = @formula(y ~ x1 & x2)
+    @test hasintercept(t) == false
+    @test omitsintercept(t) == false
     @test t.rhs == x1&x2
     @test issetequal(terms(t), [y, x1, x2])
 
     ## `*` expansion
     t = @formula(y ~ x1 * x2)
+    @test hasintercept(t) == false
+    @test omitsintercept(t) == false
     @test t.rhs == (x1, x2, x1&x2)
     @test issetequal(terms(t), [y, x1, x2])
 

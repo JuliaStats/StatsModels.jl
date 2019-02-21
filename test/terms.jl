@@ -50,13 +50,11 @@ mimestring(x) = mimestring(MIME"text/plain", x)
         @test (a ~ b) == FormulaTerm(a, b)
         @test string(a~b) == "$a ~ $b"
         @test mimestring(a~b) ==
-            strip("""
-FormulaTerm
-Response:
-  a(unknown)
-Predictors:
-  b(unknown)
-""")
+            """FormulaTerm
+               Response:
+                 a(unknown)
+               Predictors:
+                 b(unknown)"""
         @test a & b == InteractionTerm((a,b))
         @test string(a & b) == "$a & $b"
         @test mimestring(a & b) == "a(unknown) & b(unknown)"

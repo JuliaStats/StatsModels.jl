@@ -188,7 +188,13 @@ function apply_schema(t::ConstantTerm, schema, Mod::Type)
     InterceptTerm{t.n==1}()
 end
 
+"""
+    has_schema(t::T) where {T<:AbstractTerm}
+
+Return `true` if `t` has a schema, meaning that `apply_schema` would be a no-op.
+"""
 has_schema(t::AbstractTerm) = true
+has_schema(t::ConstantTerm) = false
 has_schema(t::Term) = false
 has_schema(t::Union{ContinuousTerm,CategoricalTerm}) = true
 has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
@@ -218,7 +224,7 @@ function apply_schema(t::FormulaTerm, schema, Mod::Type{<:StatisticalModel})
         end
         # start parsing as if we already had the intercept
         push!(schema.already, InterceptTerm{true}())
-    elseif implicit_intercept(Mod) && !hasintercept(t) && !hasnointercept(t)
+    elseif implicit_intercept(Mod) && !hasintercept(t) && !omitsintercept(t)
         t = FormulaTerm(t.lhs, InterceptTerm{true}() + t.rhs)
     end
 
