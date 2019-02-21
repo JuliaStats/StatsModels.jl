@@ -86,7 +86,7 @@ schema for every column in the data:
 
 ```@repl 1
 using DataFrames    # for pretty printing---any Table will do
-df = DataFrame(y = rand(9), a = [1:9;], b = rand(9), c = repeat(["a","b","c"], 3))
+df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"], 3))
 schema(df)
 ```
 
@@ -103,7 +103,7 @@ Once a schema is computed, it's _applied_ to the formula with
 terms:
 * `Term`s become `ContinuousTerm`s or `CategoricalTerm`s
 * `ConstantTerm`s become `InterceptTerm`s
-* Tuples of terms [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
+* Tuples of terms become [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
   they should be concatenated into a single model matrix
 
 ```@repl 1

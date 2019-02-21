@@ -83,7 +83,7 @@ schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
 
 # handle hints:
 schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
-                hints::Dict{Symbol}=Dict{Symbol,Any}()) =
+      hints::Dict{Symbol}=Dict{Symbol,Any}()) =
     sch = Dict{Any,Any}(t=>concrete_term(t, dt, hints) for t in ts)
 
 schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
