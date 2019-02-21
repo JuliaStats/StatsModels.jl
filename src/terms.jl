@@ -333,12 +333,12 @@ function Base.show(io::IO, mime::MIME"text/plain", term::AbstractTerm; prefix=""
     print(io, prefix, term)
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", terms::TupleTerm; prefix="")
+function Base.show(io::IO, mime::MIME"text/plain", terms::TupleTerm; prefix=nothing)
     for t in terms
-        show(io, mime, t; prefix=prefix)
+        show(io, mime, t; prefix=something(prefix, ""))
         # ensure that there are newlines in between each term after the first
         # if no prefix is specified
-        prefix = '\n'
+        prefix = something(prefix, '\n')
     end
 end
 Base.show(io::IO, terms::TupleTerm) = join(io, terms, " + ")

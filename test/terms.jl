@@ -55,6 +55,13 @@ mimestring(x) = mimestring(MIME"text/plain", x)
                  a(unknown)
                Predictors:
                  b(unknown)"""
+        @test mimestring(a ~ term(1) + b) ==
+            """FormulaTerm
+               Response:
+                 a(unknown)
+               Predictors:
+                 1
+                 b(unknown)"""
         @test a & b == InteractionTerm((a,b))
         @test string(a & b) == "$a & $b"
         @test mimestring(a & b) == "a(unknown) & b(unknown)"
