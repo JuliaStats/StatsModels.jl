@@ -91,6 +91,7 @@ programatically:
 
 ```jldoctest 1
 julia> f = Term(:y) ~ sum(term.([1, :a, :b, :c]))
+FormulaTerm
 Response:
   y(unknown)
 Predictors:
@@ -125,18 +126,18 @@ julia> using DataFrames    # for pretty printing---any Table will do
 
 julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"], 3))
 9×4 DataFrame
-│ Row │ y          │ a     │ b        │ c      │
-│     │ Float64    │ Int64 │ Float64  │ String │
-├─────┼────────────┼───────┼──────────┼────────┤
-│ 1   │ 0.186771   │ 1     │ 0.283518 │ a      │
-│ 2   │ 0.30541    │ 2     │ 0.334256 │ b      │
-│ 3   │ 0.737966   │ 3     │ 0.85574  │ c      │
-│ 4   │ 0.772443   │ 4     │ 0.06847  │ a      │
-│ 5   │ 0.80497    │ 5     │ 0.13961  │ b      │
-│ 6   │ 0.902381   │ 6     │ 0.612018 │ c      │
-│ 7   │ 0.00567164 │ 7     │ 0.663847 │ a      │
-│ 8   │ 0.94135    │ 8     │ 0.923554 │ b      │
-│ 9   │ 0.860734   │ 9     │ 0.402647 │ c      │
+│ Row │ y          │ a     │ b         │ c      │
+│     │ Float64    │ Int64 │ Float64   │ String │
+├─────┼────────────┼───────┼───────────┼────────┤
+│ 1   │ 0.236033   │ 1     │ 0.986666  │ a      │
+│ 2   │ 0.346517   │ 2     │ 0.555751  │ b      │
+│ 3   │ 0.312707   │ 3     │ 0.437108  │ c      │
+│ 4   │ 0.00790928 │ 4     │ 0.424718  │ a      │
+│ 5   │ 0.488613   │ 5     │ 0.773223  │ b      │
+│ 6   │ 0.210968   │ 6     │ 0.28119   │ c      │
+│ 7   │ 0.951916   │ 7     │ 0.209472  │ a      │
+│ 8   │ 0.999905   │ 8     │ 0.251379  │ b      │
+│ 9   │ 0.251662   │ 9     │ 0.0203749 │ c      │
 
 julia> schema(df)
 Dict{Any,Any} with 4 entries:
@@ -220,8 +221,28 @@ right-hand (predictor) sides.
 julia> resp, pred = modelcols(f, df);
 
 julia> resp
+9-element Array{Float64,1}:
+ 0.23603334566204692
+ 0.34651701419196046
+ 0.3127069683360675
+ 0.00790928339056074
+ 0.4886128300795012
+ 0.21096820215853596
+ 0.951916339835734
+ 0.9999046588986136
+ 0.25166218303197185
 
 julia> pred
+9×7 Array{Float64,2}:
+ 1.0  1.0  0.986666   0.0  0.0  0.0       0.0
+ 1.0  2.0  0.555751   1.0  0.0  0.555751  0.0
+ 1.0  3.0  0.437108   0.0  1.0  0.0       0.437108
+ 1.0  4.0  0.424718   0.0  0.0  0.0       0.0
+ 1.0  5.0  0.773223   1.0  0.0  0.773223  0.0
+ 1.0  6.0  0.28119    0.0  1.0  0.0       0.28119
+ 1.0  7.0  0.209472   0.0  0.0  0.0       0.0
+ 1.0  8.0  0.251379   1.0  0.0  0.251379  0.0
+ 1.0  9.0  0.0203749  0.0  1.0  0.0       0.0203749
 
 ```
 
@@ -231,6 +252,7 @@ julia> pred
 julia> using Tables
 
 julia> modelcols(f, first(Tables.rowtable(df)))
+(0.23603334566204692, [1.0, 1.0, 0.986666, 0.0, 0.0, 0.0, 0.0])
 
 ```
 
@@ -239,8 +261,19 @@ more numeric arrays:
 
 ```jldoctest 1
 julia> t = f.rhs.terms[end]
+b(continuous) & c(DummyCoding:3→2)
 
 julia> modelcols(t, df)
+9×2 Array{Float64,2}:
+ 0.0       0.0
+ 0.555751  0.0
+ 0.0       0.437108
+ 0.0       0.0
+ 0.773223  0.0
+ 0.0       0.28119
+ 0.0       0.0
+ 0.251379  0.0
+ 0.0       0.0203749
 
 ```
 
@@ -268,7 +301,7 @@ The first step is to specify the **syntax** we're going to use.  While it's
 possible to use an existing function, the best practice is to define a new
 function to make dispatch less ambiguous.
 
-```@example 1
+```jldoctest 1
 using StatsBase
 # syntax: best practice to define a _new_ function
 poly(x, n) = x^n
@@ -302,20 +335,60 @@ end
 StatsModels.width(p::PolyTerm) = p.deg
 
 StatsBase.coefnames(p::PolyTerm) = coefnames(p.term) .* "^" .* string.(1:p.deg)
+
+# output
+
+
 ```
 
 Now, we can use `poly` in a formula:
 
 ```jldoctest 1
 julia> data = DataFrame(y = rand(4), a = rand(4), b = [1:4;])
+4×3 DataFrame
+│ Row │ y          │ a        │ b     │
+│     │ Float64    │ Float64  │ Int64 │
+├─────┼────────────┼──────────┼───────┤
+│ 1   │ 0.236033   │ 0.488613 │ 1     │
+│ 2   │ 0.346517   │ 0.210968 │ 2     │
+│ 3   │ 0.312707   │ 0.951916 │ 3     │
+│ 4   │ 0.00790928 │ 0.999905 │ 4     │
 
 julia> f = @formula(y ~ 1 + poly(b, 2) * a)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  (b)->poly(b, 2)
+  a(unknown)
+  (b)->poly(b, 2) & a(unknown)
 
 julia> f = apply_schema(f, schema(data))
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  poly(b, 2)
+  a(continuous)
+  poly(b, 2) & a(continuous)
 
 julia> modelcols(f.rhs, data)
+4×6 Array{Float64,2}:
+ 1.0  1.0   1.0  0.488613  0.488613   0.488613
+ 1.0  2.0   4.0  0.210968  0.421936   0.843873
+ 1.0  3.0   9.0  0.951916  2.85575    8.56725
+ 1.0  4.0  16.0  0.999905  3.99962   15.9985
 
 julia> coefnames(f.rhs)
+6-element Array{String,1}:
+ "(Intercept)"
+ "b^1"
+ "b^2"
+ "a"
+ "b^1 & a"
+ "b^2 & a"
 
 ```
 
@@ -323,11 +396,12 @@ It's also possible to _block_ interpretation of the `poly` syntax as special in
 certain contexts by adding additional (more specific) methods.  For instance, we
 could block `PolyTerm`s being generated for `GLM.LinearModel`:
 
-```@example 1
-using GLM
-StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
-                         sch,
-                         Mod::Type{GLM.LinearModel}) = t
+```jldoctest 1
+julia> using GLM
+
+julia> StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+                                sch,
+                                Mod::Type{GLM.LinearModel}) = t
 ```
 
 Now the `poly` is interpreted by default as the "vanilla" function defined
@@ -337,38 +411,92 @@ first, which just raises its first argument to the designated power:
 julia> f = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
                         schema(data),
                         GLM.LinearModel)
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  (b)->poly(b, 2)
+  a(continuous)
+  (b)->poly(b, 2) & a(continuous)
 
 julia> modelcols(f.rhs, data)
+4×4 Array{Float64,2}:
+ 1.0   1.0  0.488613   0.488613
+ 1.0   4.0  0.210968   0.843873
+ 1.0   9.0  0.951916   8.56725
+ 1.0  16.0  0.999905  15.9985
 
 julia> coefnames(f.rhs)
+4-element Array{String,1}:
+ "(Intercept)"
+ "poly(b, 2)"
+ "a"
+ "poly(b, 2) & a"
 
 ```
 
-But by using a different context (e.g., the more related but more general
+But by using a different context (e.g., the related but more general
 `GLM.GeneralizedLinearModel`) we get the custom interpretation:
 
 ```jldoctest 1
 julia> f2 = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
                          schema(data),
                          GLM.GeneralizedLinearModel)
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  poly(b, 2)
+  a(continuous)
+  poly(b, 2) & a(continuous)
 
 julia> modelcols(f2.rhs, data)
+4×6 Array{Float64,2}:
+ 1.0  1.0   1.0  0.488613  0.488613   0.488613
+ 1.0  2.0   4.0  0.210968  0.421936   0.843873
+ 1.0  3.0   9.0  0.951916  2.85575    8.56725
+ 1.0  4.0  16.0  0.999905  3.99962   15.9985
 
 julia> coefnames(f2.rhs)
+6-element Array{String,1}:
+ "(Intercept)"
+ "b^1"
+ "b^2"
+ "a"
+ "b^1 & a"
+ "b^2 & a"
 ```
 
 The definitions of these methods control how models of each type are _fit_ from
 a formula with a call to `poly`:
 
-```@repl 1
+```jldoctest 1
 julia> sim_dat = DataFrame(b=randn(100));
 
 julia> sim_dat[:y] = randn(100) .+ 1 .+ 2*sim_dat[:b] .+ 3*sim_dat[:b].^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
+StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
 
-julia> fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat,
-Normal())
+y ~ 1 + :(poly(b, 2))
+
+Coefficients:
+             Estimate Std.Error t value Pr(>|t|)
+(Intercept)  0.911363  0.310486 2.93528   0.0042
+poly(b, 2)    2.94442  0.191024 15.4139   <1e-27
+
+julia> fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
+StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1},Normal{Float64},IdentityLink},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+
+y ~ 1 + poly(b, 2)
+
+Coefficients:
+             Estimate Std.Error z value Pr(>|z|)
+(Intercept)  0.829374  0.131582  6.3031    <1e-9
+b^1           2.13096  0.100552 21.1926   <1e-98
+b^2            3.1132 0.0813107 38.2877   <1e-99
 
 ```
 
