@@ -2,6 +2,8 @@
 CurrentModule = StatsModels
 DocTestSetup = quote
     using StatsModels
+    using Random
+    Random.seed!(1)
 end
 ```
 
@@ -37,15 +39,63 @@ top level) `~`.
 
 Here is an example of the `@formula` in action:
 
-```@repl 1
-using Random; Random.seed!(1); # hide
-using StatsModels, DataFrames
-f = @formula(y ~ 1 + a + b + c + b&c)
-df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["d","e","f"], 3))
-f = apply_schema(f, schema(f, df))
-resp, pred = modelcols(f, df);
-pred
-coefnames(f)
+```jldoctest 1
+julia> using StatsModels, DataFrames
+
+julia> f = @formula(y ~ 1 + a + b + c + b&c)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown)
+  b(unknown)
+  c(unknown)
+  b(unknown) & c(unknown)
+
+julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["d","e","f"], 3))
+9×4 DataFrame
+│ Row │ y          │ a     │ b         │ c      │
+│     │ Float64    │ Int64 │ Float64   │ String │
+├─────┼────────────┼───────┼───────────┼────────┤
+│ 1   │ 0.236033   │ 1     │ 0.986666  │ d      │
+│ 2   │ 0.346517   │ 2     │ 0.555751  │ e      │
+│ 3   │ 0.312707   │ 3     │ 0.437108  │ f      │
+│ 4   │ 0.00790928 │ 4     │ 0.424718  │ d      │
+│ 5   │ 0.488613   │ 5     │ 0.773223  │ e      │
+│ 6   │ 0.210968   │ 6     │ 0.28119   │ f      │
+│ 7   │ 0.951916   │ 7     │ 0.209472  │ d      │
+│ 8   │ 0.999905   │ 8     │ 0.251379  │ e      │
+│ 9   │ 0.251662   │ 9     │ 0.0203749 │ f      │
+
+julia> f = apply_schema(f, schema(f, df))
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  a(continuous)
+  b(continuous)
+  c(DummyCoding:3→2)
+  b(continuous) & c(DummyCoding:3→2)
+
+julia> resp, pred = modelcols(f, df);
+
+julia> pred
+9×7 Array{Float64,2}:
+ 1.0  1.0  0.986666   0.0  0.0  0.0       0.0
+ 1.0  2.0  0.555751   1.0  0.0  0.555751  0.0
+ 1.0  3.0  0.437108   0.0  1.0  0.0       0.437108
+ 1.0  4.0  0.424718   0.0  0.0  0.0       0.0
+ 1.0  5.0  0.773223   1.0  0.0  0.773223  0.0
+ 1.0  6.0  0.28119    0.0  1.0  0.0       0.28119
+ 1.0  7.0  0.209472   0.0  0.0  0.0       0.0
+ 1.0  8.0  0.251379   1.0  0.0  0.251379  0.0
+ 1.0  9.0  0.0203749  0.0  1.0  0.0       0.0203749
+
+julia> coefnames(f)
+("y", ["(Intercept)", "a", "b", "c: e", "c: f", "b & c: e", "b & c: f"])
+
 ```
 
 Let's break down the formula expression ` y ~ 1 + a + b + c + b&c`:
@@ -82,15 +132,31 @@ Because we often want to include both "main effects" (`b` and `c`) and
 interactions (`b&c`) of multiple variables, the formula DSL uses the `*`
 operator to denote this:
 
-```@repl 1
-@formula(y ~ 1 + a + b*c)
+```jldoctest 1
+julia> @formula(y ~ 1 + a + b*c)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown)
+  b(unknown)
+  c(unknown)
+  b(unknown) & c(unknown)
 ```
 
 Also note that the interaction operators `&` and `*` are distributive with the
 term separator `+`:
 
-```@repl 1
-@formula(y ~ 1 + (a + b) & c)
+```jldoctest 1
+julia> @formula(y ~ 1 + (a + b) & c)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown) & c(unknown)
+  b(unknown) & c(unknown)
 ```
 
 ## Julia functions in a `@formula`
@@ -99,8 +165,18 @@ Any calls to Julia functions that don't have special meaning (or are part of an
 [extension](@ref Internals-and-extending-the-formula-DSL) provided by a modeling
 package) are treated like normal Julia code, and evaluated elementwise:
 
-```@repl 1
-modelmatrix(@formula(y ~ 1 + a + log(1+a)), df)
+```jldoctest 1
+julia> modelmatrix(@formula(y ~ 1 + a + log(1+a)), df)
+9×3 Array{Float64,2}:
+ 1.0  1.0  0.693147
+ 1.0  2.0  1.09861
+ 1.0  3.0  1.38629
+ 1.0  4.0  1.60944
+ 1.0  5.0  1.79176
+ 1.0  6.0  1.94591
+ 1.0  7.0  2.07944
+ 1.0  8.0  2.19722
+ 1.0  9.0  2.30259
 ```
 
 Note that the expression `1 + a` is treated differently as part of the formula
@@ -110,9 +186,22 @@ This even applies to custom functions.  For instance, if for some reason you
 wanted to include a regressor based on a `String` column that encoded whether
 any character in a string was after `'e'` in the alphabet, you could do
 
-```@repl 1
-gt_e(s) = any(c > 'e' for c in s)
-modelmatrix(@formula(y ~ 1 + gt_e(c)), df)
+```jldoctest 1
+julia> gt_e(s) = any(c > 'e' for c in s)
+gt_e (generic function with 1 method)
+
+julia> modelmatrix(@formula(y ~ 1 + gt_e(c)), df)
+9×2 Array{Float64,2}:
+ 1.0  0.0
+ 1.0  0.0
+ 1.0  1.0
+ 1.0  0.0
+ 1.0  0.0
+ 1.0  1.0
+ 1.0  0.0
+ 1.0  0.0
+ 1.0  1.0
+
 ```
 
 Julia functions like this are evaluated elementwise when the numeric arrays are
@@ -120,18 +209,51 @@ created for the response and model matrix.  This makes it easy to fit models to
 transformed data _lazily_, without creating temporary columns in your table.
 For instance, to fit a linear regression to a log-transformed response:
 
-```@repl 1
-using GLM
-lm(@formula(log(y) ~ 1 + a + b), df)
-df[:log_y] = log.(df[:y]);
-lm(@formula(log_y ~ 1 + a + b), df)            # equivalent
+```jldoctest 1
+julia> using GLM
+WARNING: using GLM.modelmatrix in module Main conflicts with an existing identifier.
+
+julia> lm(@formula(log(y) ~ 1 + a + b), df)
+StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+
+:(log(y)) ~ 1 + a + b
+
+Coefficients:
+             Estimate Std.Error  t value Pr(>|t|)
+(Intercept)  -4.16168   2.98788 -1.39285   0.2131
+a            0.357482  0.342126  1.04489   0.3363
+b             2.32528   3.13735 0.741159   0.4866
+
+julia> df[:log_y] = log.(df[:y]);
+
+julia> lm(@formula(log_y ~ 1 + a + b), df)            # equivalent
+StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+
+log_y ~ 1 + a + b
+
+Coefficients:
+             Estimate Std.Error  t value Pr(>|t|)
+(Intercept)  -4.16168   2.98788 -1.39285   0.2131
+a            0.357482  0.342126  1.04489   0.3363
+b             2.32528   3.13735 0.741159   0.4866
+
 ```
 
 The no-op function `identity` can be used to block the formula DSL
 interpretation of `+`, `*`, and `&`:
 
-```@repl 1
-modelmatrix(@formula(y ~ 1 + b + identity(1+b)), df)
+```jldoctest 1
+julia> modelmatrix(@formula(y ~ 1 + b + identity(1+b)), df)
+9×3 Array{Float64,2}:
+ 1.0  0.986666   1.98667
+ 1.0  0.555751   1.55575
+ 1.0  0.437108   1.43711
+ 1.0  0.424718   1.42472
+ 1.0  0.773223   1.77322
+ 1.0  0.28119    1.28119
+ 1.0  0.209472   1.20947
+ 1.0  0.251379   1.25138
+ 1.0  0.0203749  1.02037
 ```
 
 ## Constructing a formula programatically
@@ -139,23 +261,52 @@ modelmatrix(@formula(y ~ 1 + b + identity(1+b)), df)
 A formula can be constructed at run-time by creating `Term`s and combining them
 with the formula operators `+`, `&`, and `~`:
 
-```@repl 1
-Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) & Term(:b)
+```jldoctest 1
+julia> Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) & Term(:b)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown)
+  b(unknown)
+  a(unknown) & b(unknown)
 ```
 
 The [`term`](@ref) function constructs a term of the appropriate type from
 symbols and numbers, which makes it easy to work with collections of mixed type:
 
-```@repl 1
-ts = term.((1, :a, :b))
+```jldoctest 1
+julia> ts = term.((1, :a, :b))
+1
+a(unknown)
+b(unknown)
 ```
 
 These can then be combined with standard reduction techniques:
 
-```@repl 1
-f1 = term(:y) ~ foldl(+, ts)
-f2 = term(:y) ~ sum(ts)
-f1 == f2 == @formula(y ~ 1 + a + b)
+```jldoctest 1
+julia> f1 = term(:y) ~ foldl(+, ts)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown)
+  b(unknown)
+
+julia> f2 = term(:y) ~ sum(ts)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown)
+  b(unknown)
+
+julia> f1 == f2 == @formula(y ~ 1 + a + b)
+true
+
 ```
 
 ## Fitting a model from a formula
@@ -170,14 +321,35 @@ interaction term, a continuous predictor, a categorical predictor, and the
 interaction of the two, and then fit a `GLM.LinearModel` to recover the
 simulated coefficients.
 
-```@repl 1
-using GLM, DataFrames, StatsModels
-data = DataFrame(a = rand(100), b = repeat(["d", "e", "f", "g"], 25));
-X = modelmatrix(@formula(y ~ 1 + a*b).rhs, data);
-β_true = 1:8;
-ϵ = randn(100)*0.1;
-data[:y] = X*β_true .+ ϵ;
-mod = fit(LinearModel, @formula(y ~ 1 + a*b), data)
+```jldoctest
+julia> using GLM, DataFrames, StatsModels
+
+julia> data = DataFrame(a = rand(100), b = repeat(["d", "e", "f", "g"], 25));
+
+julia> X = StatsModels.modelmatrix(@formula(y ~ 1 + a*b).rhs, data);
+
+julia> β_true = 1:8;
+
+julia> ϵ = randn(100)*0.1;
+
+julia> data[:y] = X*β_true .+ ϵ;
+
+julia> mod = fit(LinearModel, @formula(y ~ 1 + a*b), data)
+StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+
+y ~ 1 + a + b + a & b
+
+Coefficients:
+             Estimate Std.Error t value Pr(>|t|)
+(Intercept)   0.98878 0.0384341 25.7266   <1e-43
+a             2.00843 0.0779388 25.7694   <1e-43
+b: e          3.03726 0.0616371 49.2764   <1e-67
+b: f          4.03909 0.0572857 70.5078   <1e-81
+b: g          5.02948 0.0587224 85.6484   <1e-88
+a & b: e       5.9385   0.10753 55.2264   <1e-71
+a & b: f       6.9073  0.112483 61.4075   <1e-75
+a & b: g      7.93918  0.111285 71.3407   <1e-81
+
 ```
 
 Internally, this is accomplished in three steps:
