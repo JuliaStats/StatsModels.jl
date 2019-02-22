@@ -1,5 +1,5 @@
 """
-    ModelFrame(formula, data; mod=StatisticalModel, contrasts=Dict())
+    ModelFrame(formula, data; model=StatisticalModel, contrasts=Dict())
 
 Wrapper that encapsulates a `FormulaTerm`, schema, data table, and model type.
 
@@ -15,7 +15,7 @@ data (using any contrasts provided as hints), and then applying that schema with
 # Constructors
 
 ```julia
-ModelFrame(f::FormulaTerm, data; mod::Type{M} = StatisticalModel, contrasts::Dict = Dict())
+ModelFrame(f::FormulaTerm, data; model::Type{M} = StatisticalModel, contrasts::Dict = Dict())
 ```
 
 # Fields
@@ -78,17 +78,17 @@ missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
     missing_omit(NamedTuple{tuple(termvars(formula)...)}(data))
 
 function ModelFrame(f::FormulaTerm, data::ColumnTable;
-                    mod::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
+                    model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
     data, _ = missing_omit(data, f)
 
     sch = schema(f, data, contrasts)
     f = apply_schema(f, sch, M)
     
-    ModelFrame(f, sch, data, mod)
+    ModelFrame(f, sch, data, model)
 end
 
-ModelFrame(f::FormulaTerm, data; mod=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
-    ModelFrame(f, columntable(data); mod=mod, contrasts=contrasts)
+ModelFrame(f::FormulaTerm, data; model=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
+    ModelFrame(f, columntable(data); model=model, contrasts=contrasts)
 
 StatsBase.modelmatrix(f::FormulaTerm, data; kwargs...) = modelmatrix(f.rhs, data; kwargs...)
 

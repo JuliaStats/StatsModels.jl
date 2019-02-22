@@ -36,7 +36,7 @@
     f_implint = @formula(y ~ x1 + x2)
     @test ModelMatrix(ModelFrame(f_implint, d)).m == mm.m
 
-    @test ModelMatrix(ModelFrame(f_implint, d, mod=Nothing)).m == hcat(x1, x2)
+    @test ModelMatrix(ModelFrame(f_implint, d, model=Nothing)).m == hcat(x1, x2)
 
     #test_group("expanding a nominal array into a design matrix of indicators for each dummy variable")
 
@@ -179,8 +179,8 @@
         @test mm.m == ModelMatrix{sparsetype}(mf).m
         @test coefnames(mf) == ["x: a", "x: b"]
 
-        ## promotion blocked when we block default mod=StatisticalModel
-        mf = ModelFrame(@formula(n ~ 0 + x), d, mod=Nothing, contrasts=cs)
+        ## promotion blocked when we block default model=StatisticalModel
+        mf = ModelFrame(@formula(n ~ 0 + x), d, model=Nothing, contrasts=cs)
         mm = ModelMatrix(mf)
         @test all(mm.m .== ifelse.(d[:x] .== :a, -1, 1))
         @test coefnames(mf) == ["x: b"]
@@ -304,7 +304,7 @@
 
     @testset "arbitrary functions in formulae" begin
         d = deepcopy(d_orig)
-        mf = ModelFrame(@formula(y ~ log(x1)), d, mod=Nothing)
+        mf = ModelFrame(@formula(y ~ log(x1)), d, model=Nothing)
         @test coefnames(mf) == ["log(x1)"]
         mm = ModelMatrix(mf)
         @test all(mm.m .== log.(x1))

@@ -82,7 +82,7 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
             Tables.istable(data) || throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
             cols = columntable(data)
 
-            mf = ModelFrame(f, cols, mod=T, contrasts=contrasts)
+            mf = ModelFrame(f, cols, model=T, contrasts=contrasts)
             mm = ModelMatrix(mf)
             y = response(mf)
             $dfmodeltype(fit(T, mm.m, y, args...; kwargs...), mf, mm)

@@ -83,7 +83,7 @@ StatsModels.drop_intercept
     replaced by something like 
     
     ```julia
-    # instead of ModelMatrix(ModelFrame(f::FormulaTerm, data, mod=MyModel))
+    # instead of ModelMatrix(ModelFrame(f::FormulaTerm, data, model=MyModel))
     sch = schema(f, data)
     f = apply_schema(f, sch, MyModel)
     response, predictors = modelcols(f, data)
