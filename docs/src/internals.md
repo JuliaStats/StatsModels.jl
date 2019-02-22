@@ -1,3 +1,11 @@
+```@meta
+DocTestSetup = quote
+    using StatsModels
+    using Random
+    Random.seed!(1)
+end
+```
+
 # Internals and extending the formula DSL
 
 This section is intended to help **package developers** understand the internals
@@ -42,11 +50,30 @@ expression returned by the `@formula` macro is evaluated.  At this point, the
 `Term`s are combined to create higher-order terms via overloaded methods for
 `~`, `+`, and `&`:
 
-```@repl 1
-using StatsModels; # hide
-dump(Term(:a) & Term(:b))
-dump(Term(:a) + Term(:b))
-dump(Term(:y) ~ Term(:a))
+```jldoctest 1
+julia> using StatsModels;
+
+julia> dump(Term(:a) & Term(:b))
+InteractionTerm{Tuple{Term,Term}}
+  terms: Tuple{Term,Term}
+    1: Term
+      sym: Symbol a
+    2: Term
+      sym: Symbol b
+
+julia> dump(Term(:a) + Term(:b))
+Tuple{Term,Term}
+  1: Term
+    sym: Symbol a
+  2: Term
+    sym: Symbol b
+
+julia> dump(Term(:y) ~ Term(:a))
+FormulaTerm{Term,Term}
+  lhs: Term
+    sym: Symbol y
+  rhs: Term
+    sym: Symbol a
 ```
 
 !!! note
@@ -55,16 +82,25 @@ dump(Term(:y) ~ Term(:a))
 
     ```julia
     julia> @which Term(:a) & Term(:b)
-    &(terms::AbstractTerm...) in StatsModels at /home/dave/.julia/dev/StatsModels/src/terms.jl:224
+    &(terms::AbstractTerm...) in StatsModels at /home/dave/.julia/dev/StatsModels/src/terms.jl:399
     ```
 
 The reason that the actual construction of higher-order terms is done after the
 macro is expanded is that it makes it much easier to create a formula
 programatically:
 
-```@repl 1
-f = Term(:y) ~ sum(term.([1, :a, :b, :c]))
-f == @formula(y ~ 1 + a + b + c)
+```jldoctest 1
+julia> f = Term(:y) ~ sum(term.([1, :a, :b, :c]))
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown)
+  b(unknown)
+  c(unknown)
+
+julia> f == @formula(y ~ 1 + a + b + c)
+true
 ```
 
 The major exception to this is that non-DSL calls **must** be specified using
@@ -84,18 +120,45 @@ from that column.
 A schema is computed with the `schema` function.  By default, it will create a
 schema for every column in the data:
 
-```@repl 1
-using DataFrames    # for pretty printing---any Table will do
-df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"], 3))
-schema(df)
+```jldoctest 1
+julia> using DataFrames    # for pretty printing---any Table will do
+
+julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"], 3))
+9×4 DataFrame
+│ Row │ y          │ a     │ b        │ c      │
+│     │ Float64    │ Int64 │ Float64  │ String │
+├─────┼────────────┼───────┼──────────┼────────┤
+│ 1   │ 0.186771   │ 1     │ 0.283518 │ a      │
+│ 2   │ 0.30541    │ 2     │ 0.334256 │ b      │
+│ 3   │ 0.737966   │ 3     │ 0.85574  │ c      │
+│ 4   │ 0.772443   │ 4     │ 0.06847  │ a      │
+│ 5   │ 0.80497    │ 5     │ 0.13961  │ b      │
+│ 6   │ 0.902381   │ 6     │ 0.612018 │ c      │
+│ 7   │ 0.00567164 │ 7     │ 0.663847 │ a      │
+│ 8   │ 0.94135    │ 8     │ 0.923554 │ b      │
+│ 9   │ 0.860734   │ 9     │ 0.402647 │ c      │
+
+julia> schema(df)
+Dict{Any,Any} with 4 entries:
+  y => y
+  a => a
+  b => b
+  c => c
 ```
 
 However, if a term (including a `FormulaTerm`) is provided, the schema will be
 computed based only on the necessary variables:
 
-```@repl 1
-schema(@formula(y ~ 1 + a), df)
-schema(Term(:a) + Term(:b), df)
+```jldoctest 1
+julia> schema(@formula(y ~ 1 + a), df)
+Dict{Any,Any} with 2 entries:
+  y => y
+  a => a
+
+julia> schema(Term(:a) + Term(:b), df)
+Dict{Any,Any} with 2 entries:
+  a => a
+  b => b
 ```
 
 Once a schema is computed, it's _applied_ to the formula with
@@ -106,11 +169,34 @@ terms:
 * Tuples of terms become [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
   they should be concatenated into a single model matrix
 
-```@repl 1
-f = @formula(y ~ 1 + a + b * c)
-typeof(f)
-f = apply_schema(f, schema(f, df))
-typeof(f)
+```jldoctest 1
+julia> f = @formula(y ~ 1 + a + b * c)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown)
+  b(unknown)
+  c(unknown)
+  b(unknown) & c(unknown)
+
+julia> typeof(f)
+FormulaTerm{Term,Tuple{ConstantTerm{Int64},Term,Term,Term,InteractionTerm{Tuple{Term,Term}}}}
+
+julia> f = apply_schema(f, schema(f, df))
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  a(continuous)
+  b(continuous)
+  c(DummyCoding:3→2)
+  b(continuous) & c(DummyCoding:3→2)
+
+julia> typeof(f)
+FormulaTerm{ContinuousTerm{Float64},MatrixTerm{Tuple{InterceptTerm{true},ContinuousTerm{Float64},ContinuousTerm{Float64},CategoricalTerm{DummyCoding,String,2},InteractionTerm{Tuple{ContinuousTerm{Float64},CategoricalTerm{DummyCoding,String,2}}}}}}
 ```
 
 This transformation is done by calling `apply_schema(term, schema, modeltype)`
@@ -130,25 +216,32 @@ time".  The main API method is [`modelcols`](@ref), which when applied to a
 `FormulaTerm` returns a tuple of the numeric forms for the left- (response) and
 right-hand (predictor) sides.
 
-```@repl 1
-resp, pred = modelcols(f, df);
-resp
-pred
+```jldoctest 1
+julia> resp, pred = modelcols(f, df);
+
+julia> resp
+
+julia> pred
+
 ```
 
 `modelcols` can also take a single row from a table, as a `NamedTuple`:
 
-```@repl 1
-using Tables
-modelcols(f, first(Tables.rowtable(df)))
+```jldoctest 1
+julia> using Tables
+
+julia> modelcols(f, first(Tables.rowtable(df)))
+
 ```
 
 Any `AbstractTerm` can be passed to `modelcols` with a table, which returns one or
 more numeric arrays:
 
-```@repl 1
-t = f.rhs.terms[end]
-modelcols(t, df)
+```jldoctest 1
+julia> t = f.rhs.terms[end]
+
+julia> modelcols(t, df)
+
 ```
 
 
@@ -213,12 +306,17 @@ StatsBase.coefnames(p::PolyTerm) = coefnames(p.term) .* "^" .* string.(1:p.deg)
 
 Now, we can use `poly` in a formula:
 
-```@repl 1
-data = DataFrame(y = rand(4), a = rand(4), b = [1:4;])
-f = @formula(y ~ 1 + poly(b, 2) * a)
-f = apply_schema(f, schema(data))
-modelcols(f.rhs, data)
-coefnames(f.rhs)
+```jldoctest 1
+julia> data = DataFrame(y = rand(4), a = rand(4), b = [1:4;])
+
+julia> f = @formula(y ~ 1 + poly(b, 2) * a)
+
+julia> f = apply_schema(f, schema(data))
+
+julia> modelcols(f.rhs, data)
+
+julia> coefnames(f.rhs)
+
 ```
 
 It's also possible to _block_ interpretation of the `poly` syntax as special in
@@ -235,33 +333,43 @@ StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
 Now the `poly` is interpreted by default as the "vanilla" function defined
 first, which just raises its first argument to the designated power:
 
-```@repl 1
-f = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
-                 schema(data),
-                 GLM.LinearModel)
-modelcols(f.rhs, data)
-coefnames(f.rhs)
+```jldoctest 1
+julia> f = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
+                        schema(data),
+                        GLM.LinearModel)
+
+julia> modelcols(f.rhs, data)
+
+julia> coefnames(f.rhs)
+
 ```
 
 But by using a different context (e.g., the more related but more general
 `GLM.GeneralizedLinearModel`) we get the custom interpretation:
 
-```@repl 1
-f2 = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
-                  schema(data),
-                  GLM.GeneralizedLinearModel)
-modelcols(f2.rhs, data)
-coefnames(f2.rhs)
+```jldoctest 1
+julia> f2 = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
+                         schema(data),
+                         GLM.GeneralizedLinearModel)
+
+julia> modelcols(f2.rhs, data)
+
+julia> coefnames(f2.rhs)
 ```
 
 The definitions of these methods control how models of each type are _fit_ from
 a formula with a call to `poly`:
 
 ```@repl 1
-sim_dat = DataFrame(b=randn(100));
-sim_dat[:y] = randn(100) .+ 1 .+ 2*sim_dat[:b] .+ 3*sim_dat[:b].^2;
-fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
-fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
+julia> sim_dat = DataFrame(b=randn(100));
+
+julia> sim_dat[:y] = randn(100) .+ 1 .+ 2*sim_dat[:b] .+ 3*sim_dat[:b].^2;
+
+julia> fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
+
+julia> fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat,
+Normal())
+
 ```
 
 (a `GeneralizeLinearModel` with a `Normal` distribution is equivalent to a
