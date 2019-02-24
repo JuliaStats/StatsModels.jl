@@ -21,12 +21,12 @@ At the moment, "tabular data" means a
 materialized as a `Tables.ColumnTable` (a `NamedTuple` of column vectors).  Work
 on first-class support for streaming/row-oriented tables is ongoing.
 
-## The `@formula` DSL
+## The `@formula` language
 
-StatsModels implements the [`@formula`](@ref) domain-specific language (DSL) for
-describing table-to-matrix transformations.  This DSL is designed to be familiar
-to users of other statistical software, while also taking advantage of Julia's
-unique strengths to be fast and flexible.
+StatsModels implements the [`@formula`](@ref) domain-specific language for
+describing table-to-matrix transformations.  This language is designed to be
+familiar to users of other statistical software, while also taking advantage of
+Julia's unique strengths to be fast and flexible.
 
 A basic formula is composed of individual *terms*—symbols which refer to data
 columns, or literal numbers `0` or `1`—combined by `+`, `&`, `*`, and (at the
@@ -129,8 +129,8 @@ generated model matrix:
   `df[:b] .* (df[:c] .== "b")` and `df[:b] .* (df[:c] .== "c")`.
 
 Because we often want to include both "main effects" (`b` and `c`) and
-interactions (`b&c`) of multiple variables, the formula DSL uses the `*`
-operator to denote this:
+interactions (`b&c`) of multiple variables, within a `@formula` the `*`
+operator denotes this "main effects and interactions" operation:
 
 ```jldoctest 1
 julia> @formula(y ~ 1 + a + b*c)
@@ -239,7 +239,7 @@ b             2.32528   3.13735 0.741159   0.4866
 
 ```
 
-The no-op function `identity` can be used to block the formula DSL
+The no-op function `identity` can be used to block the normal formula-specific
 interpretation of `+`, `*`, and `&`:
 
 ```jldoctest 1
@@ -364,8 +364,8 @@ Internally, this is accomplished in three steps:
    ::Type{Model})`, which returns a new formula with each placeholder `Term`
    replaced with a concrete `ContinuousTerm` or `CategoricalTerm` as
    appropriate.  This is also the stage where any custom syntax is applied (see
-   [the section on extending the `@formula`
-   DSL](@ref Internals-and-extending-the-formula-DSL) for more details).
+   [the section on extending the `@formula` language](@ref
+   Internals-and-extending-the-formula-DSL) for more details).
 3. Numeric arrays are generated for the response and predictors from the full
    table using `modelcols(term, data)`.
 
