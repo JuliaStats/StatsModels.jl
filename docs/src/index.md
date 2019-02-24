@@ -9,7 +9,7 @@ developers when dealing with statistical models and tabular data.
 
 * [Formula notation](@ref Modeling-tabular-data) for transforming tabular data
   into numerical arrays for modeling.
-* Mechanisms for [extending the `@formula` DSL](@ref
+* Mechanisms for [extending the `@formula` notation](@ref
   Internals-and-extending-the-formula-DSL) in external modeling packages.
 * [Contrast coding](@ref Modeling-categorical-data) for categorical data
 * Types and [API](@ref Modeling) for fitting and working with statistical
