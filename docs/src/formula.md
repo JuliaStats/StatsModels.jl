@@ -104,7 +104,7 @@ At the top level is the **formula separator** `~`, which separates the left-hand
 (or response) variable `y` from the right-hand size (or predictor) variables on
 the right `1 + a + b + c + b&c`.
 
-The left-hand side has one term `y` which means that the resopnse variable is
+The left-hand side has one term `y` which means that the response variable is
 the column from the data named `:y`.  The response can be accessed with the
 analogous `response(f, df)` function.
 
