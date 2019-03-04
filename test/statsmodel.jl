@@ -39,6 +39,8 @@ StatsBase.coeftable(mod::DummyModNoIntercept) =
               ["'beta' value"],
               ["" for n in 1:size(mod.x,2)],
               0)
+StatsBase.predict(mod::DummyModNoIntercept) = mod.x * mod.beta
+StatsBase.predict(mod::DummyModNoIntercept, newX::Matrix) = newX * mod.beta
 
 ## Another dummy model type to test fall-through show method
 struct DummyModTwo <: RegressionModel
@@ -128,6 +130,8 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     ct2 = coeftable(m2)
     ct3 = coeftable(m3)
     @test ct3.rownms == ct2.rownms == ["x1", "x2", "x1 & x2"]
+    @test predict(m2, d[2:4, :]) == predict(m2)[2:4]
+    @test predict(m3, d[2:4, :]) == predict(m3)[2:4]
 
     f1 = @formula(y ~ 1 + x1p)
     f2 = @formula(y ~ 0 + x1p)
@@ -138,6 +142,10 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     ct2 = coeftable(m2)
     ct3 = coeftable(m3)
     @test ct2.rownms == ct3.rownms == ["x1p: 6", "x1p: 7", "x1p: 8"]
+    m4 = fit(DummyModNoIntercept, f3, d, contrasts = Dict(:x1p => EffectsCoding()))
+    @test predict(m2, d[2:4, :]) == predict(m2)[2:4]
+    @test predict(m3, d[2:4, :]) == predict(m3)[2:4]
+    @test predict(m4, d[2:4, :]) == predict(m4)[2:4]
 
     m2 = fit(DummyModTwo, f, d)
     show(io, m2)

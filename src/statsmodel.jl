@@ -125,10 +125,33 @@ const TableModels = Union{TableStatisticalModel, TableRegressionModel}
 StatsBase.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
     predict(m.model, new_x; kwargs...)
 # Need to define these manually because of ambiguity using @delegate
+
 StatsBase.r2(mm::TableRegressionModel) = r2(mm.model)
 StatsBase.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
 StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
+
+function _return_predictions(yp::AbstractVector, nonmissings, len)
+    out = missings(eltype(yp), len)
+    out[nonmissings] = yp
+    out
+end
+
+function _return_predictions(yp::AbstractMatrix, nonmissings, len)
+    out = missings(eltype(yp), (len, 3))
+    out[nonmissings, :] = yp
+    DataFrame(prediction = out[:,1], lower = out[:,2], upper = out[:,3])
+end
+
+function _return_predictions(yp::NamedTuple, nonmissings, len)
+    y = missings(eltype(yp[:prediction]), len)
+    l, h = similar(y), similar(y)
+    out = (prediction = y, lower = l, upper = h)
+    for key in (:prediction, :lower, :upper)
+        out[key][nonmissings] = yp[key]
+    end
+    DataFrame(out)
+end
 
 # Predict function that takes data table as predictor instead of matrix
 function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
@@ -140,9 +163,7 @@ function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
     new_x = modelcols(f.rhs, cols)
     y_pred = predict(mm.model, reshape(new_x, size(new_x, 1), :);
                      kwargs...)
-    out = missings(eltype(y_pred), size(data, 1))
-    out[nonmissings] = y_pred
-    return out
+    _return_predictions(y_pred, nonmissings, length(nonmissings))
 end
 
 StatsBase.coefnames(model::TableModels) = coefnames(model.mf)
