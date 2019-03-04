@@ -54,10 +54,6 @@ concrete_term
 apply_schema
 ```
 
-```@meta
-DocTestFilters = nothing
-```
-
 ## Modeling
 
 ```@docs

@@ -212,7 +212,6 @@ For instance, to fit a linear regression to a log-transformed response:
 
 ```jldoctest 1
 julia> using GLM
-WARNING: using GLM.modelmatrix in module Main conflicts with an existing identifier.
 
 julia> lm(@formula(log(y) ~ 1 + a + b), df)
 StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}

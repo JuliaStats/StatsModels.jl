@@ -4,6 +4,7 @@ DocTestSetup = quote
     using Random
     Random.seed!(1)
 end
+DocTestFilters = [r"([a-z]*) => \1"]
 ```
 
 # Internals and extending the formula DSL
