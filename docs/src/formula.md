@@ -115,8 +115,9 @@ generated model matrix:
 * The first term `1` generates a constant or "intercept" column full of `1.0`s.
 * The next two terms `a` and `b` correspond to columns from the data table
   called `:a`, `:b`, which both hold numeric data (`Float64` and `Int`
-  respectively).  Such **continuous terms** are converted to `Float64` and
-  copied to the model matrix.
+  respectively).  By default, numerical columns are assumed to correspond to
+  **continuous terms**, and are converted to `Float64` and copied to the model
+  matrix.
 * The term `c` corresponds to the `:c` column in the table, which is _not_
   numeric, so it has been [contrast coded](@ref Modeling-categorical-data):
   there are three unique values or levels, and the default coding scheme
