@@ -281,7 +281,7 @@
         ## FAILS: When both terms are non-redundant and intercept is PRESENT
         ## (not fully redundant). Ideally, would drop last column. Might make sense
         ## to warn about this, and suggest recoding x and y into a single variable.
-        mf = ModelFrame(n ~ 1 + x&y, d[1:4, :], contrasts=cs)
+        mf = ModelFrame(@formula(n ~ 1 + x&y), d[1:4, :], contrasts=cs)
         @test_broken ModelMatrix(mf).m == [1 1 0 0
                                            1 0 1 0
                                            1 0 0 1

@@ -1,4 +1,4 @@
-julia 0.7-beta
+julia 1.0
 CategoricalArrays
 Tables
 StatsBase 0.22.0
