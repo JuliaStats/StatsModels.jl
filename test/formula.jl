@@ -1,134 +1,134 @@
 @testset "formula" begin
 
-    # TODO:
-    # - grouped variables in formulas with interactions
-    # - is it fast?  Can expand() handle DataFrames?
-    # - deal with intercepts
-    # - implement ^2 for datavector's
-    # - support more transformations with I()?
+    using StatsModels: hasresponse, hasintercept, omitsintercept
 
-    ## Formula parsing
-    using StatsModels: @formula, Formula, Terms
+    y, x1, x2, x3, a, b, c, onet = term.((:y, :x1, :x2, :x3, :a, :b, :c, 1))
 
     ## totally empty
-    t = Terms(@eval @formula $(:($nothing ~ 0)))
-    @test t.response == false
-    @test t.intercept == false
-    @test t.terms == []
-    @test t.eterms == []
+    @test_broken t = @eval @formula $(:($nothing ~ 0))
+    @test_broken hasresponse(t) == false
+    @test_broken hasintercept(t) == false
+    @test_broken t.rhs == ConstantTerm(0)
+    @test_broken issetequal(terms(t), [ConstantTerm(0)])
 
     ## empty RHS
-    t = Terms(@formula(y ~ 0))
-    @test t.intercept == false
-    @test t.terms == []
-    @test t.eterms == [:y]
-    t = Terms(@formula(y ~ -1))
-    @test t.intercept == false
-    @test t.terms == []
+    t = @formula(y ~ 0)
+    @test hasintercept(t) == false
+    @test omitsintercept(t) == true
+    @test t.rhs == ConstantTerm(0)
+    @test issetequal(terms(t), term.((:y, 0)))
+
+    t = @formula(y ~ -1)
+    @test hasintercept(t) == false
+    @test omitsintercept(t) == true
 
     ## intercept-only
-    t = Terms(@formula(y ~ 1))
-    @test t.response == true
-    @test t.intercept == true
-    @test t.terms == []
-    @test t.eterms == [:y]
+    t = @formula(y ~ 1)
+    @test hasresponse(t) == true
+    @test hasintercept(t) == true
+    @test t.rhs == onet
+    @test issetequal(terms(t), (onet, y))
 
     ## terms add
-    t = Terms(@formula(y ~ 1 + x1 + x2))
-    @test t.intercept == true
-    @test t.terms == [:x1, :x2]
-    @test t.eterms == [:y, :x1, :x2]
+    t = @formula(y ~ 1 + x1 + x2)
+    @test hasintercept(t) == true
+    @test t.rhs == (onet, x1, x2)
+    @test issetequal(terms(t), [y, onet, x1, x2])
 
-    ## implicit intercept behavior:
-    t = Terms(@formula(y ~ x1 + x2))
-    @test t.intercept == true
-    @test t.terms == [:x1, :x2]
-    @test t.eterms == [:y, :x1, :x2]
+    ## implicit intercept behavior: NO intercept after @formula
+    t = @formula(y ~ x1 + x2)
+    @test hasintercept(t) == false
+    @test omitsintercept(t) == false
+    @test t.rhs == (x1, x2)
+    @test issetequal(terms(t), [y, x1, x2])
 
     ## no intercept
-    t = Terms(@formula(y ~ 0 + x1 + x2))
-    @test t.intercept == false
-    @test t.terms == [:x1, :x2]
+    t = @formula(y ~ 0 + x1 + x2)
+    @test hasintercept(t) == false
+    @test omitsintercept(t) == true
+    @test t.rhs == term.((0, :x1, :x2))
 
-    @test t ==
-        Terms(@formula(y ~ -1 + x1 + x2)) ==
-        Terms(@formula(y ~ x1 - 1 + x2)) ==
-        Terms(@formula(y ~ x1 + x2 -1))
+    t = @formula(y ~ -1 + x1 + x2)
+    @test hasintercept(t) == false
+    @test omitsintercept(t) == true
+    @test t.rhs == term.((-1, :x1, :x2))
 
-    ## can't subtract terms other than 1
-    @test_throws ArgumentError Terms(@formula(y ~ x1 - x2))
-
-    t = Terms(@formula(y ~ x1 & x2))
-    @test t.terms == [:(x1 & x2)]
-    @test t.eterms == [:y, :x1, :x2]
+    t = @formula(y ~ x1 & x2)
+    @test hasintercept(t) == false
+    @test omitsintercept(t) == false
+    @test t.rhs == x1&x2
+    @test issetequal(terms(t), [y, x1, x2])
 
     ## `*` expansion
-    t = Terms(@formula(y ~ x1 * x2))
-    @test t.terms == [:x1, :x2, :(x1 & x2)]
-    @test t.eterms == [:y, :x1, :x2]
+    t = @formula(y ~ x1 * x2)
+    @test hasintercept(t) == false
+    @test omitsintercept(t) == false
+    @test t.rhs == (x1, x2, x1&x2)
+    @test issetequal(terms(t), [y, x1, x2])
 
     ## associative rule:
     ## +
-    t = Terms(@formula(y ~ x1 + x2 + x3))
-    @test t.terms == [:x1, :x2, :x3]
+    t = @formula(y ~ x1 + x2 + x3)
+    @test t.rhs == (x1, x2, x3)
 
     ## &
-    t = Terms(@formula(y ~ x1 & x2 & x3))
-    @test t.terms == [:((&)(x1, x2, x3))]
-    @test t.eterms == [:y, :x1, :x2, :x3]
+    t = @formula(y ~ x1 & x2 & x3)
+    @test t.rhs == x1&x2&x3
+    @test issetequal(terms(t), [y, x1, x2, x3])
 
     ## distributive property of + and &
-    t = Terms(@formula(y ~ x1 & (x2 + x3)))
-    @test t.terms == [:(x1&x2), :(x1&x3)]
-
+    t = @formula(y ~ x1 & (x2 + x3))
+    @test t.rhs == (x1&x2, x1&x3)
+    @test issetequal(terms(t), [y, x1, x2, x3])
+    
     ## ordering of interaction terms is preserved across distributive
-    t = Terms(@formula(y ~ (x2 + x3) & x1))
-    @test t.terms == [:(x2&x1), :(x3&x1)]
+    t = @formula(y ~ (x2 + x3) & x1)
+    @test t.rhs == x2&x1 + x3&x1
 
     ## distributive with *
-    t = Terms(@formula(y ~ (a + b) * c))
-    @test t.terms == [:a, :b, :c, :(a&c), :(b&c)]
+    t = @formula(y ~ (a + b) * c)
+    @test t.rhs == (a, b, c, a&c, b&c)
 
     ## three-way *
-    t = Terms(@formula(y ~ x1 * x2 * x3))
-    @test t.terms == [:x1, :x2, :x3,
-                      :(x1&x2), :(x1&x3), :(x2&x3),
-                      :((&)(x1, x2, x3))]
-    @test t.eterms == [:y, :x1, :x2, :x3]
+    t = @formula(y ~ a * b * c)
+    @test t.rhs == (a, b, c, a&b, a&c, b&c, a&b&c)
+    @test issetequal(terms(t), (y, a, b, c))
 
     ## Interactions with `1` reduce to main effect.
-    t = Terms(@formula(y ~ 1 & x1))
-    @test t.terms == [:x1]
+    t = @formula(y ~ 1 & x1)
+    @test t.rhs == x1
 
-    t = Terms(@formula(y ~ (1 + x1) & x2))
-    @test t.terms == [:x2, :(x1&x2)]
+    t = @formula(y ~ (1 + x1) & x2)
+    @test t.rhs == (x2, x1&x2)
 
     ## PR #54 breaks formula-level equality because original (un-lowered)
     ## expression is kept on Formula struct.  but functional (RHS) equality
     ## should be maintained
-    using StatsModels: dropterm!
+    using StatsModels: drop_term
 
-    @test Terms(dropterm(@formula(foo ~ 1 + bar + baz), :bar)) ==
-        Terms(@formula(foo ~ 1 + baz))
-    @test Terms(dropterm(@formula(foo ~ 1 + bar + baz), 1)) ==
-        Terms(@formula(foo ~ 0 + bar + baz))
+    @test drop_term(@formula(foo ~ 1 + bar + baz), term(:bar)) ==
+        @formula(foo ~ 1 + baz)
+    @test drop_term(@formula(foo ~ 1 + bar + baz), term(1)) ==
+        @formula(foo ~ bar + baz)
 
-    @test_throws ArgumentError dropterm(@formula(foo ~ 0 + bar + baz), 0)
-    @test_throws ArgumentError dropterm(@formula(foo ~ 0 + bar + baz), :boz)
+    # drop_term no longer checks for whether term is found...
+    @test_broken drop_term(@formula(foo ~ bar + baz), term(0))
+    @test_broken drop_term(@formula(foo ~ bar + baz), term(:boz))
 
     form = @formula(foo ~ 1 + bar + baz)
     @test form == @formula(foo ~ 1 + bar + baz)
-    @test Terms(dropterm!(form, :bar)) == Terms(@formula(foo ~ 1 + baz))
-    @test Terms(form) == Terms(@formula(foo ~ 1 + baz))
+    @test drop_term(form, term(:bar)) == @formula(foo ~ 1 + baz)
+    # drop_term creates a new formula:
+    @test form != @formula(foo ~ 1 + baz)
 
     # Incorrect formula separator
-    @test_throws ArgumentError @formula(y => x + 1)
+    @test_throws LoadError @eval @formula(y => x + 1)
 
     # copying formulas
     f = @formula(foo ~ 1 + bar)
-    @test f == copy(f)
+    @test f == deepcopy(f)
 
     f = @formula(foo ~ bar)
-    @test f == copy(f)
+    @test f == deepcopy(f)
 
 end

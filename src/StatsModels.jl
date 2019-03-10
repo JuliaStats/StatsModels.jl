@@ -2,31 +2,64 @@ __precompile__(true)
 
 module StatsModels
 
-using DataFrames
+using Tables
 using StatsBase
+using CategoricalArrays
+using DataStructures
+
 using SparseArrays
 using LinearAlgebra
+using Missings
 
-export @formula,
-       Formula,
-       ModelFrame,
-       ModelMatrix,
+using Tables: ColumnTable
 
-       AbstractContrasts,
-       EffectsCoding,
-       DummyCoding,
-       HelmertCoding,
-       ContrastsCoding,
+export
+    #re-export from StatsBase:
+    StatisticalModel,
+    RegressionModel,
+    
+    @formula,
+    ModelFrame,
+    ModelMatrix,
 
-       coefnames,
-       dropterm,
-       setcontrasts!
+    AbstractContrasts,
+    EffectsCoding,
+    DummyCoding,
+    HelmertCoding,
+    ContrastsCoding,
 
+    coefnames,
+    dropterm,
+    setcontrasts!,
+
+    AbstractTerm,
+    ConstantTerm,
+    Term,
+    ContinuousTerm,
+    CategoricalTerm,
+    InteractionTerm,
+    FormulaTerm,
+    InterceptTerm,
+    FunctionTerm,
+    MatrixTerm,
+
+    term,
+    terms,
+    drop_term,
+    schema,
+    concrete_term,
+    apply_schema,
+    width,
+    modelcols,
+    modelmatrix,
+    response
+
+include("traits.jl")
 include("contrasts.jl")
+include("terms.jl")
+include("schema.jl")
 include("formula.jl")
 include("modelframe.jl")
-include("modelmatrix.jl")
 include("statsmodel.jl")
-include("deprecated.jl")
 
 end # module StatsModels

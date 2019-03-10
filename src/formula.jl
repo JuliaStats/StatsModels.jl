@@ -20,13 +20,6 @@ check_call(ex) = is_call(ex) || throw(ArgumentError("non-call expression encount
 catch_dollar(ex::Expr) =
     Meta.isexpr(ex, :$) && throw(ArgumentError("interpolation with \$ not supported in @formula.  Use @eval @formula(...) instead."))
 
-mutable struct Formula
-    ex_orig::Expr
-    ex::Expr
-    lhs::Union{Symbol, Expr, Nothing}
-    rhs::Union{Symbol, Expr, Integer}
-end
-
 """
     @formula(ex)
 
@@ -65,46 +58,10 @@ The rules that are applied are
 * Single-argument `&` calls are stripped, so `&(x)` becomes the main effect `x`.
 """
 macro formula(ex)
-    try
-        is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
-        length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
-        ex_orig = Meta.quot(copy(ex))
-        sort_terms!(parse!(ex))
-        lhs = Meta.quot(ex.args[2])
-        rhs = Meta.quot(ex.args[3])
-        return Expr(:call, :Formula, ex_orig, Meta.quot(ex), lhs, rhs)
-    catch e
-        return :(throw($e))
-    end
+    is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
+    length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
+    terms!(sort_terms!(parse!(ex)))
 end
-
-Base.:(==)(f1::Formula, f2::Formula) = all(getfield(f1, f)==getfield(f2, f) for f in fieldnames(typeof(f1)))
-
-"""
-Representation of parsed `Formula`
-
-This is an internal type whose implementation is likely to change in the near
-future.
-"""
-mutable struct Terms
-    terms::Vector
-    eterms::Vector        # evaluation terms
-    factors::Matrix{Bool} # maps terms to evaluation terms
-    ## An eterms x terms matrix which is true for terms that need to be "promoted"
-    ## to full rank in constructing a model matrx
-    is_non_redundant::Matrix{Bool}
-# order can probably be dropped.  It is vec(sum(factors, 1))
-    order::Vector{Int}    # orders of rhs terms
-    response::Bool        # indicator of a response, which is eterms[1] if present
-    intercept::Bool       # is there an intercept column in the model matrix?
-end
-
-Base.:(==)(t1::Terms, t2::Terms) = all(getfield(t1, f)==getfield(t2, f) for f in fieldnames(typeof(t1)))
-
-function Base.show(io::IO, f::Formula)
-    print(io, "Formula: ", something(f.lhs, ""), " ~ ", f.rhs)
-end
-
 
 """
     abstract type FormulaRewrite end
@@ -145,12 +102,11 @@ Apply associative rule: if in an expression headed by an associative operator
 splice that child's children into it's location.
 """
 struct AssociativeRule <: FormulaRewrite end
-const ASSOCIATIVE = Set([:+, :&, :*])
+const ASSOCIATIVE = (:+, :&, :*)
 applies(ex::Expr, child_idx::Int, ::Type{AssociativeRule}) =
     is_call(ex) &&
-    is_call(ex.args[child_idx]) &&
     ex.args[1] in ASSOCIATIVE &&
-    ex.args[1] == ex.args[child_idx].args[1]
+    is_call(ex.args[child_idx], ex.args[1])
 function rewrite!(ex::Expr, child_idx::Int, ::Type{AssociativeRule})
     @debug "    associative: $ex -> "
     splice!(ex.args, child_idx, ex.args[child_idx].args[2:end])
@@ -188,22 +144,6 @@ function rewrite!(ex::Expr, child_idx::Int, ::Type{Distributive})
 end
 
 """
-    Subtraction <: FormulaRewrite
-
-Correct `x - 1` to `x + -1`
-"""
-struct Subtraction <: FormulaRewrite end
-applies(ex::Expr, child_idx::Int, ::Type{Subtraction}) =
-    is_call(ex.args[child_idx], :-)
-function rewrite!(ex::Expr, child_idx::Int, ::Type{Subtraction})
-    child = ex.args[child_idx]
-    child.args[3] == 1 || throw(ArgumentError("Can only subtract 1, got $child"))
-    child.args[1] = :+
-    child.args[3] = -1
-    child_idx
-end
-
-"""
     And1 <: FormulaRewrite
 
 Remove numbers from interaction terms, so `1&x` becomes `&(x)` (which is later 
@@ -221,21 +161,6 @@ function rewrite!(ex::Expr, child_idx::Int, ::Type{And1})
     child_idx
 end
 
-"""
-    EmptyAnd <: FormulaRewrite
-
-Convert single-argument interactions to symbols: `&(x)` to `x` (cleanup after
-`And1`.
-"""
-struct EmptyAnd <: FormulaRewrite end
-applies(ex::Expr, child_idx::Int, ::Type{EmptyAnd}) =
-    is_call(ex.args[child_idx], :&) &&
-    length(ex.args[child_idx].args) == 2
-function rewrite!(ex::Expr, child_idx::Int, ::Type{EmptyAnd})
-    ex.args[child_idx] = ex.args[child_idx].args[2]
-    child_idx
-end
-
 # default re-write is a no-op (go to next child)
 rewrite!(ex::Expr, child_idx::Int, ::Nothing) = child_idx+1
 
@@ -246,30 +171,81 @@ function filterfirst(f::Function, a::AbstractArray)
     idx === nothing ? nothing : a[idx]
 end
 
+const SPECIALS = (:+, :&, :*, :~)
 
-parse!(x) = parse!(x, [And1, EmptyAnd, Subtraction, Star, AssociativeRule, Distributive])
+parse!(x) = parse!(x, [And1, Star, AssociativeRule, Distributive])
 parse!(x, rewrites) = x
-function parse!(i::Integer, rewrites)
-    i ∈ [-1, 0, 1] || throw(ArgumentError("invalid integer term $i (only -1, 0, and 1 allowed)"))
-    i
-end
 function parse!(ex::Expr, rewrites::Vector)
     @debug "parsing $ex"
     catch_dollar(ex)
     check_call(ex)
+
+    # don't recurse into captured calls
+    if is_call(ex, :capture_call) || is_call(ex, :(StatsModels.capture_call))
+        @debug "  skipping capture_call"
+        return ex
+    end
+
+    # parse a copy of non-special calls
+    ex_parsed = ex.args[1] ∉ SPECIALS ? deepcopy(ex) : ex
+    
     # iterate over children, checking for special rules
     child_idx = 2
-    while child_idx <= length(ex.args)
-        @debug "  ($(ex.args[1])) i=$child_idx: $(ex.args[child_idx])"
+    while child_idx <= length(ex_parsed.args)
+        @debug "  ($(ex_parsed.args[1])) i=$child_idx: $(ex_parsed.args[child_idx])"
         # depth first: parse each child first
-        parse!(ex.args[child_idx], rewrites)
+        parse!(ex_parsed.args[child_idx], rewrites)
         # find first rewrite rule that applies
-        rule = filterfirst(r->applies(ex, child_idx, r), rewrites)
-        # re-write according to that rule and update the child to position rewrite next
-        child_idx = rewrite!(ex, child_idx, rule)
+        rule = filterfirst(r->applies(ex_parsed, child_idx, r), rewrites)
+        # re-write according to that rule and update the child to position rewrite nex_parsedt
+        child_idx = rewrite!(ex_parsed, child_idx, rule)
     end
-    @debug "done: $ex"
-    ex
+    @debug "done: $ex_parsed"
+
+    if ex.args[1] ∈ SPECIALS
+        return ex_parsed
+    else
+        @debug "  capturing non-special call $ex"
+        return capture_call_ex!(ex, ex_parsed)
+    end
+end
+
+"""
+    capture_call_ex!(ex::Expr, ex_parsed::Expr)
+
+Capture a call to a function that is not part of the formula DSL.  This replaces
+`ex` with a call to [`capture_call`](@ref).  `ex_parsed` is a copy of `ex` whose
+arguments have been parsed according to the normal formula DSL rules and which 
+will be passed as the final argument to `capture_call`.
+"""
+function capture_call_ex!(ex::Expr, ex_parsed::Expr)
+    symbols = extract_symbols(ex)
+    symbols_ex = Expr(:tuple, symbols...)
+    f_anon_ex = esc(Expr(:(->), symbols_ex, copy(ex)))
+    f_orig = ex.args[1]
+    ex.args = [:capture_call,
+               esc(f_orig),
+               f_anon_ex,
+               tuple(symbols...),
+               Meta.quot(deepcopy(ex)),
+               :[$(ex_parsed.args[2:end]...)]]
+    return ex
+end
+
+
+# generate Term expressions for symbols (including parsed args of non-special calls
+terms!(::Nothing) = :(nothing)
+terms!(s::Symbol) = :(Term($(Meta.quot(s))))
+terms!(n::Number) = :(ConstantTerm($n))
+function terms!(ex::Expr)
+    if ex.args[1] ∈ SPECIALS
+        ex.args[1] = esc(ex.args[1])
+        ex.args[2:end] .= terms!.(ex.args[2:end])
+    elseif is_call(ex, :capture_call)
+        # final argument of capture_call holds parsed terms
+        ex.args[end].args .= terms!.(ex.args[end].args)
+    end
+    return ex
 end
 
 
@@ -277,6 +253,8 @@ function sort_terms!(ex::Expr)
     check_call(ex)
     if ex.args[1] ∈ ASSOCIATIVE
         sort!(view(ex.args, 2:length(ex.args)), by=degree)
+    elseif is_call(ex, :capture_call)
+        sort_terms!.(ex.args[end].args)
     else
         # recursively sort children
         sort_terms!.(ex.args)
@@ -298,103 +276,4 @@ function degree(ex::Expr)
         # arbitrary functions are treated as main effect terms
         1
     end
-end
-
-
-################################################################################
-
-
-
-## always return an ARRAY of terms
-getterms(ex::Expr) = is_call(ex, :+) ? ex.args[2:end] : Expr[ex]
-getterms(a::Any) = Any[a]
-
-const nonevaluation = Set([:&,:|])        # operators constructed from other evaluations
-## evaluation terms - the (filtered) arguments for :& and :|, otherwise the term itself
-function evt(ex::Expr)
-    check_call(ex)
-    if !(ex.args[1] in nonevaluation) return ex end
-    filter(x->!isa(x,Number), vcat(map(getterms, ex.args[2:end])...))
-end
-evt(a) = Any[a]
-
-function Terms(f::Formula)
-    rhs = f.rhs
-    tt = unique(getterms(rhs))
-    filter!(t -> t != 1, tt)                          # drop any explicit 1's
-    noint = BitArray(map(t -> t == 0 || t == -1, tt)) # should also handle :(-(expr,1))
-    tt = tt[map(!, noint)]
-    oo = Int[degree(t) for t in tt] # orders of interaction terms
-    if !issorted(oo)                # sort terms by increasing order
-        pp = sortperm(oo)
-        tt = tt[pp]
-        oo = oo[pp]
-    end
-    etrms = map(evt, tt)
-    haslhs = f.lhs != nothing
-    if haslhs
-        pushfirst!(etrms, Any[f.lhs])
-        pushfirst!(oo, 1)
-    end
-    ev = unique(vcat(etrms...))
-    sets = [Set(x) for x in etrms]
-    facs = Bool[t in s for t in ev, s in sets]
-    non_redundants = fill(false, size(facs)) # initialize to false
-    Terms(tt, ev, facs, non_redundants, oo, haslhs, !any(noint))
-end
-
-
-"""
-    Formula(t::Terms)
-
-Reconstruct a Formula from Terms.
-"""
-function Formula(t::Terms)
-    lhs = t.response ? t.eterms[1] : nothing
-    rhs = Expr(:call,:+)
-    if t.intercept
-        push!(rhs.args,1)
-    end
-    append!(rhs.args,t.terms)
-    ex = :($lhs ~ $rhs)
-    Formula(ex, ex, lhs,rhs)
-end
-
-copyside(s) = copy(s)
-copyside(s::Symbol) = s
-
-function Base.copy(f::Formula)
-    return Formula(copy(f.ex_orig), copy(f.ex), copyside(f.lhs), copyside(f.rhs))
-end
-
-"""
-    dropterm(f::Formula, trm::Symbol)
-
-Return a copy of `f` without the term `trm`.
-
-# Examples
-```jl
-julia> dropterm(@formula(foo ~ 1 + bar + baz), :bar)
-Formula: foo ~ 1 + baz
-
-julia> dropterm(@formula(foo ~ 1 + bar + baz), 1)
-Formula: foo ~ 0 + bar + baz
-```
-"""
-dropterm(f::Formula, trm::Union{Number, Symbol, Expr}) = dropterm!(copy(f), trm)
-
-function dropterm!(f::Formula, trm::Union{Number, Symbol, Expr})
-    rhs = f.rhs
-    if !(is_call(rhs, :+) && (tpos = findlast(isequal(trm), rhs.args)) !== nothing)
-        throw(ArgumentError("$trm is not a summand of '$(f.rhs)'"))
-    end
-    if isa(trm, Number)
-        if trm ≠ one(trm)
-            throw(ArgumentError("Cannot drop $trm from a formula"))
-        end
-        rhs.args[tpos] = 0
-    else
-        deleteat!(rhs.args, [tpos])
-    end
-    return f
 end

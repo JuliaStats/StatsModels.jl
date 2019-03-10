@@ -12,7 +12,7 @@ StatsBase.predict(mod::DummyMod, newX::Matrix) = newX * mod.beta
 ## dumb fit method: just copy the x and y input over
 StatsBase.fit(::Type{DummyMod}, x::Matrix, y::Vector) =
     DummyMod(collect(1:size(x, 2)), x, y)
-StatsBase.model_response(mod::DummyMod) = mod.y
+StatsBase.response(mod::DummyMod) = mod.y
 ## dumb coeftable: just prints the "beta" values
 StatsBase.coeftable(mod::DummyMod) =
     CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
@@ -32,7 +32,7 @@ StatsModels.drop_intercept(::Type{DummyModNoIntercept}) = true
 ## dumb fit method: just copy the x and y input over
 StatsBase.fit(::Type{DummyModNoIntercept}, x::Matrix, y::Vector) =
     DummyModNoIntercept(collect(1:size(x, 2)), x, y)
-StatsBase.model_response(mod::DummyModNoIntercept) = mod.y
+StatsBase.response(mod::DummyModNoIntercept) = mod.y
 ## dumb coeftable: just prints the "beta" values
 StatsBase.coeftable(mod::DummyModNoIntercept) =
     CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
@@ -59,10 +59,11 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     d[:x2] = [9:12;]
     d[:x3] = [13:16;]
     d[:x4] = [17:20;]
+    d[:x1p] = CategoricalArray{Union{Missing, Int}}(d[:x1])
 
     f = @formula(y ~ x1 * x2)
     m = fit(DummyMod, f, d)
-    @test model_response(m) == Array(d[:y])
+    @test response(m) == Array(d[:y])
 
     ## coefnames delegated to model frame by default
     @test coefnames(m) == coefnames(ModelFrame(f, d)) == ["(Intercept)", "x1", "x2", "x1 & x2"]
@@ -91,7 +92,6 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     show(io, m)
 
     ## with categorical variables
-    d[:x1p] = CategoricalArray{Union{Missing, Int}}(d[:x1])
     f2 = @formula(y ~ x1p)
     m2 = fit(DummyMod, f2, d)
 
@@ -104,7 +104,11 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     d3 = deepcopy(d)
     d3[1, :x1] = 0
     d3[:x1p] = CategoricalVector{Union{Missing, Int}}(d3[:x1])
-    @test_throws ArgumentError predict(m2, d3)
+    # TODO: check for level mismatch earlier...this throws a KeyError when it
+    # goes to do the lookup in the contrasts matrix from the previously
+    # generated categorical term.
+    @test_throws KeyError predict(m2, d3)
+    # @test_throws ArgumentError predict(m2, d3)
 
     ## fit with contrasts specified
     d[:x2p] = CategoricalVector{Union{Missing, Int}}(d[:x2])
@@ -119,25 +123,29 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     f1 = @formula(y ~ 1 + x1 * x2)
     f2 = @formula(y ~ 0 + x1 * x2)
-    m1 = fit(DummyModNoIntercept, f1, d)
+    f3 = @formula(y ~ x1 * x2)
+    @test_throws ArgumentError m1 = fit(DummyModNoIntercept, f1, d)
     m2 = fit(DummyModNoIntercept, f2, d)
-    ct1 = coeftable(m1)
+    m3 = fit(DummyModNoIntercept, f3, d)
     ct2 = coeftable(m2)
-    @test ct1.rownms == ct2.rownms == ["x1", "x2", "x1 & x2"]
-    @test predict(m1, d[2:4, :]) == predict(m1)[2:4]
+    ct3 = coeftable(m3)
+    @test ct3.rownms == ct2.rownms == ["x1", "x2", "x1 & x2"]
     @test predict(m2, d[2:4, :]) == predict(m2)[2:4]
+    @test predict(m3, d[2:4, :]) == predict(m3)[2:4]
 
     f1 = @formula(y ~ 1 + x1p)
     f2 = @formula(y ~ 0 + x1p)
-    m1 = fit(DummyModNoIntercept, f1, d)
+    f3 = @formula(y ~ x1p)
+    @test_throws ArgumentError m1 = fit(DummyModNoIntercept, f1, d)
     m2 = fit(DummyModNoIntercept, f2, d)
-    m3 = fit(DummyModNoIntercept, f3, d, contrasts = Dict(:x1p => EffectsCoding()))
-    ct1 = coeftable(m1)
+    m3 = fit(DummyModNoIntercept, f3, d)
     ct2 = coeftable(m2)
-    @test ct1.rownms == ct2.rownms == ["x1p: 6", "x1p: 7", "x1p: 8"]
-    @test predict(m1, d[2:4, :]) == predict(m1)[2:4]
+    ct3 = coeftable(m3)
+    @test ct2.rownms == ct3.rownms == ["x1p: 6", "x1p: 7", "x1p: 8"]
+    m4 = fit(DummyModNoIntercept, f3, d, contrasts = Dict(:x1p => EffectsCoding()))
     @test predict(m2, d[2:4, :]) == predict(m2)[2:4]
     @test predict(m3, d[2:4, :]) == predict(m3)[2:4]
+    @test predict(m4, d[2:4, :]) == predict(m4)[2:4]
 
     m2 = fit(DummyModTwo, f, d)
     show(io, m2)

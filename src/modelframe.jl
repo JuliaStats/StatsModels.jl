@@ -1,261 +1,182 @@
 """
-Wrapper which combines Formula (Terms) and an AbstractDataFrame
+    ModelFrame(formula, data; model=StatisticalModel, contrasts=Dict())
+
+Wrapper that encapsulates a `FormulaTerm`, schema, data table, and model type.
 
 This wrapper encapsulates all the information that's required to transform data
-of the same structure as the wrapped data frame into a model matrix.  This goes
-above and beyond what's expressed in the `Formula` itself, for instance
-including information on how each categorical variable should be coded.
+of the same structure as the wrapped data frame into a model matrix (the
+`FormulaTerm`), as well as the information about how that formula term was
+instantiated (the schema and model type)
 
-Creating a `ModelFrame` first parses the `Formula` into `Terms`, checks which
-variables are categorical and determines the appropriate contrasts to use, and
-then creates the necessary contrasts matrices and stores the results.
+Creating a model frame involves first extracting the [`schema`](@ref) for the
+data (using any contrasts provided as hints), and then applying that schema with
+[`apply_schema`](@ref) to the formula in the context of the provided model type.
 
 # Constructors
 
 ```julia
-ModelFrame(f::Formula, df::AbstractDataFrame; contrasts::Dict = Dict())
-ModelFrame(ex::Expr, d::AbstractDataFrame; contrasts::Dict = Dict())
-ModelFrame(terms::Terms, df::AbstractDataFrame; contrasts::Dict = Dict())
-# Inner constructors:
-ModelFrame(df::AbstractDataFrame, terms::Terms, nonmissing::BitArray)
-ModelFrame(df::AbstractDataFrame, terms::Terms, nonmissing::BitArray, contrasts::Dict{Symbol, ContrastsMatrix})
+ModelFrame(f::FormulaTerm, data; model::Type{M} = StatisticalModel, contrasts::Dict = Dict())
 ```
 
-# Arguments
+# Fields
 
-* `f::Formula`: Formula whose left hand side is the *response* and right hand
+* `f::FormulaTerm`: Formula whose left hand side is the *response* and right hand
   side are the *predictors*.
-* `df::AbstractDataFrame`: The data being modeled.  This is used at this stage
-  to determine which variables are categorical, and otherwise held for
-  [`ModelMatrix`](@ref).
-* `contrasts::Dict`: An optional Dict of contrast codings for each categorical
-  variable.  Any unspecified variables will have [`DummyCoding`](@ref).  As a
-  keyword argument, these can be either instances of a subtype of
-  [`AbstractContrasts`](@ref), or a [`ContrastsMatrix`](@ref).  For the inner
-  constructor, they must be [`ContrastsMatrix`](@ref)es.
-* `ex::Expr`: An expression which will be converted into a `Formula`.
-* `terms::Terms`: For inner constructor, the parsed `Terms` from the `Formula`.
-* `nonmissing::BitArray`: For inner constructor, indicates the rows of `df` that
-  contain no missing data.
+* `schema::Any`: The schema that was applied to generate `f`.
+* `data::D`: The data table being modeled.  The only restriction is that `data` 
+  is a table (`Tables.istable(data) == true`)
+* `model::Type{M}`: The type of the model that will be fit from this model frame.
 
 # Examples
 
 ```julia
-julia> df = DataFrame(x = 1:4, y = 5:8)
+julia> df = (x = 1:4, y = 5:8)
 julia> mf = ModelFrame(@formula(y ~ 1 + x), df)
 ```
+"""
+mutable struct ModelFrame{D,M}
+    f::FormulaTerm
+    schema
+    data::D
+    model::Type{M}
+end
+
+
+
+## copied from DataFrames:
+function _nonmissing!(res, col)
+    # workaround until JuliaLang/julia#21256 is fixed
+    eltype(col) >: Missing || return
+    
+    @inbounds for (i, el) in enumerate(col)
+        res[i] &= !ismissing(el)
+    end
+end
+
+function _nonmissing!(res, col::CategoricalArray{>: Missing})
+    @inbounds for (i, el) in enumerate(col.refs)
+        res[i] &= el > 0
+    end
+end
+
+function missing_omit(d::T) where T<:ColumnTable
+    nonmissings = trues(length(first(d)))
+    for col in d
+        _nonmissing!(nonmissings, col)
+    end
+
+    rows = findall(nonmissings)
+    d_nonmissing =
+        NamedTuple{Tables.names(T)}(tuple((copyto!(similar(col,
+                                                           Missings.T(eltype(col)),
+                                                           length(rows)),
+                                                   view(col, rows)) for col in d)...))
+    d_nonmissing, nonmissings
+end
+
+missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
+    missing_omit(NamedTuple{tuple(termvars(formula)...)}(data))
+
+function ModelFrame(f::FormulaTerm, data::ColumnTable;
+                    model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
+    data, _ = missing_omit(data, f)
+
+    sch = schema(f, data, contrasts)
+    f = apply_schema(f, sch, M)
+    
+    ModelFrame(f, sch, data, model)
+end
+
+ModelFrame(f::FormulaTerm, data; model=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
+    ModelFrame(f, columntable(data); model=model, contrasts=contrasts)
+
+StatsBase.modelmatrix(f::FormulaTerm, data; kwargs...) = modelmatrix(f.rhs, data; kwargs...)
+
+function StatsBase.modelmatrix(t::Union{AbstractTerm, TupleTerm}, data;
+                               hints=Dict{Symbol,Any}(), mod::Type{M}=StatisticalModel) where M
+    Tables.istable(data) ||
+        throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
+    t = has_schema(t) ? t : apply_schema(t, schema(t, data, hints), M)
+    modelcols(collect_matrix_terms(t), columntable(data))
+end
+function StatsBase.response(f::FormulaTerm, data;
+                            hints=Dict{Symbol,Any}(),
+                            mod::Type{M}=StatisticalModel) where M
+    Tables.istable(data) ||
+        throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
+    f = has_schema(f) ? f : apply_schema(f, schema(f, data, hints), M)
+    modelcols(f.lhs, columntable(data))
+end
+
+
+StatsBase.modelmatrix(mf::ModelFrame; data=mf.data) = modelcols(mf.f.rhs, data)
+StatsBase.response(mf::ModelFrame; data=mf.data) = modelcols(mf.f.lhs, data)
+
+StatsBase.coefnames(mf::ModelFrame) = vectorize(coefnames(mf.f.rhs))
 
 """
-mutable struct ModelFrame
-    df::AbstractDataFrame
-    terms::Terms
-    nonmissing::BitArray
-    ## mapping from df keys to contrasts matrices
-    contrasts::Dict{Symbol, ContrastsMatrix}
-end
+    setcontrasts!(mf::ModelFrame; kwargs...)
+    setcontrasts!(mf::ModelFrame, contrasts::Dict{Symbol})
 
-is_categorical(::AbstractArray{<:Union{Missing, Real}}) = false
-is_categorical(::AbstractArray) = true
+Update the contrasts used for coding categorical variables in
+[`ModelFrame`](@ref) in place.  This is accomplished by computing a new schema
+based on the provided contrasts and the `ModelFrame`'s data, and applying it to
+the `ModelFrame`'s `FormulaTerm`.
 
-## Check for non-redundancy of columns.  For instance, if x is a factor with two
-## levels, it should be expanded into two columns in y~0+x but only one column
-## in y~1+x.  The default is the rank-reduced form (contrasts for n levels only
-## produce n-1 columns).  In general, an evaluation term x within a term
-## x&y&... needs to be "promoted" to full rank if y&... hasn't already been
-## included (either explicitly in the Terms or implicitly by promoting another
-## term like z in z&y&...).
-##
-## This modifies the Terms, setting `trms.is_non_redundant = true` for all non-
-## redundant evaluation terms.
-function check_non_redundancy!(trms::Terms, df::AbstractDataFrame)
-
-    (n_eterms, n_terms) = size(trms.factors)
-
-    encountered_columns = Vector{eltype(trms.factors)}[]
-
-    if trms.intercept
-        push!(encountered_columns, zeros(eltype(trms.factors), n_eterms))
-    end
-
-    for i_term in 1:n_terms
-        for i_eterm in 1:n_eterms
-            ## only need to check eterms that are included and can be promoted
-            ## (e.g., categorical variables that expand to multiple mm columns)
-            if Bool(trms.factors[i_eterm, i_term]) && is_categorical(df[trms.eterms[i_eterm]])
-                dropped = trms.factors[:,i_term]
-                dropped[i_eterm] = 0
-
-                if dropped ∉ encountered_columns
-                    trms.is_non_redundant[i_eterm, i_term] = true
-                    push!(encountered_columns, dropped)
-                end
-
-            end
-        end
-        ## once we've checked all the eterms in this term, add it to the list
-        ## of encountered terms/columns
-        push!(encountered_columns, view(trms.factors, :, i_term))
-    end
-
-    return trms.is_non_redundant
-end
-
-const DEFAULT_CONTRASTS = DummyCoding
-
-# get unique values, honoring levels order
-_unique(x::AbstractCategoricalArray) = intersect(levels(x), unique(x))
-_unique(x::AbstractCategoricalArray{T}) where {T>:Missing} =
-    convert(Array{Missings.T(T)}, filter!(!ismissing, intersect(levels(x), unique(x))))
-
-function _unique(x::AbstractArray{T}) where T
-    levs = T >: Missing ?
-           convert(Array{Missings.T(T)}, filter!(!ismissing, unique(x))) :
-           unique(x)
-    try; sort!(levs); catch; end
-    return levs
-end
-
-## Set up contrasts:
-## Combine actual DF columns and contrast types if necessary to compute the
-## actual contrasts matrices, levels, and term names (using DummyCoding
-## as the default)
-function evalcontrasts(df::AbstractDataFrame, contrasts::Dict = Dict())
-    evaledContrasts = Dict()
-    for (term, col) in eachcol(df, true)
-        is_categorical(col) || continue
-        evaledContrasts[term] = ContrastsMatrix(haskey(contrasts, term) ?
-                                                contrasts[term] :
-                                                DEFAULT_CONTRASTS(),
-                                                _unique(col))
-    end
-    return evaledContrasts
-end
-
-## Default NULL handler.  Others can be added as keyword arguments
-function missing_omit(df::DataFrame)
-    cc = completecases(df)
-    df[cc,:], cc
-end
-
-_droplevels!(x::Any) = x
-_droplevels!(x::AbstractCategoricalArray) = droplevels!(x)
-
-function ModelFrame(trms::Terms, d::AbstractDataFrame;
-                    contrasts::Dict = Dict())
-    df, nonmissing = missing_omit(DataFrame(map(x -> d[x], trms.eterms), Symbol.(trms.eterms)))
-    names!(df, Symbol.(string.(trms.eterms)))
-
-    evaledContrasts = evalcontrasts(df, contrasts)
-
-    ## Check for non-redundant terms, modifying terms in place
-    check_non_redundancy!(trms, df)
-
-    ModelFrame(df, trms, nonmissing, evaledContrasts)
-end
-
-ModelFrame(df::AbstractDataFrame, term::Terms, nonmissing::BitArray) = ModelFrame(df, term, nonmissing, evalcontrasts(df))
-ModelFrame(f::Formula, d::AbstractDataFrame; kwargs...) = ModelFrame(Terms(f), d; kwargs...)
-ModelFrame(ex::Expr, d::AbstractDataFrame; kwargs...) = ModelFrame(Formula(ex), d; kwargs...)
+Note that only the `ModelFrame` itself is mutated: because `AbstractTerm`s are
+immutable, any changes will produce a copy.
 
 """
-    setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
-
-Modify the contrast coding system of a ModelFrame in place.
-"""
-function setcontrasts!(mf::ModelFrame, new_contrasts::Dict)
-    for (col, contr) in new_contrasts
-        haskey(mf.df, col) || continue
-        mf.contrasts[col] = ContrastsMatrix(contr, _unique(mf.df[col]))
-    end
-    return mf
-end
 setcontrasts!(mf::ModelFrame; kwargs...) = setcontrasts!(mf, Dict(kwargs))
+function setcontrasts!(mf::ModelFrame, contrasts::Dict{Symbol})
+    # TODO: don't consume the whole table again if it's not needed
+    new_schema = schema([term(k) for k in keys(contrasts)], mf.data, contrasts)
 
-"""
-    StatsBase.model_response(mf::ModelFrame)
-Extract the response column, if present.  `DataVector` or
-`PooledDataVector` columns are converted to `Array`s
-"""
-function StatsBase.model_response(mf::ModelFrame)
-    if mf.terms.response
-        _response = mf.df[mf.terms.eterms[1]]
-        T = Missings.T(eltype(_response))
-        convert(Array{T}, _response)
-    else
-        error("Model formula one-sided")
+    # warn of no-op for keys that dont correspond to known terms from old schema
+    unknown_keys = [k for k in keys(new_schema) if !haskey(mf.schema, k)]
+    if !isempty(unknown_keys)
+        unknown_keys_str = join(unknown_keys, ", ", " and ")
+        @warn "setcontrasts! for terms " * unknown_keys_str *
+            " has no effect since they are not found in original schema"
     end
+
+    # apply only the re-mapped terms
+    mf.f = apply_schema(mf.f, new_schema, mf.model)
+    merge!(mf.schema, new_schema)
+    mf
 end
 
 
 """
-    termnames(term::Symbol, col)
-Returns a vector of strings with the names of the coefficients
-associated with a term.  If the column corresponding to the term
-is not categorical, a one-element vector is returned.
+    ModelMatrix(mf::ModelFrame)
+
+Convert a `ModelFrame` into a numeric matrix suitable for modeling
+
+# Fields
+
+* `m::AbstractMatrix{<:AbstractFloat}`: the generated numeric matrix
+* `assign::Vector{Int}` the index of the term corresponding to each column of `m`.
+
+# Constructors
+
+```julia
+ModelMatrix(mf::ModelFrame)
+# Specify the type of the resulting matrix (default Matrix{Float64})
+ModelMatrix{T <: AbstractMatrix{<:AbstractFloat}}(mf::ModelFrame)
+```
 """
-termnames(term::Symbol, col) = [string(term)]
-function termnames(term::Symbol, mf::ModelFrame; non_redundant::Bool = false)
-    if haskey(mf.contrasts, term)
-        termnames(term, mf.df[term],
-                  non_redundant ?
-                  convert(ContrastsMatrix{FullDummyCoding}, mf.contrasts[term]) :
-                  mf.contrasts[term])
-    else
-        termnames(term, mf.df[term])
-    end
+mutable struct ModelMatrix{T <: AbstractMatrix{<:AbstractFloat}}
+    m::T
+    assign::Vector{Int}
 end
 
-termnames(term::Symbol, col::Any, contrast::ContrastsMatrix) =
-    ["$term: $name" for name in contrast.termnames]
+Base.size(mm::ModelMatrix, dim...) = size(mm.m, dim...)
 
-
-function expandtermnames(term::Vector)
-    if length(term) == 1
-        return term[1]
-    else
-        return foldr((a,b) -> vec([string(lev1, " & ", lev2) for
-                                   lev1 in a,
-                                   lev2 in b]),
-                     term)
-    end
+function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractMatrix{<:AbstractFloat}
+    mat = modelmatrix(mf)
+    asgn = mapreduce((it)->first(it)*ones(width(last(it))), append!,
+                     enumerate(vectorize(mf.f.rhs)), init=Int[])
+    ModelMatrix(convert(T, mat), asgn)
 end
 
-
-"""
-    coefnames(mf::ModelFrame)
-Returns a vector of coefficient names constructed from the Terms
-member and the types of the evaluation columns.
-"""
-function StatsBase.coefnames(mf::ModelFrame)
-    terms = droprandomeffects(dropresponse!(mf.terms))
-
-    ## strategy mirrors ModelMatrx constructor:
-    eterm_names = Dict{Tuple{Symbol,Bool}, Vector{String}}()
-    term_names = Vector{Vector{String}}()
-
-    if terms.intercept
-        push!(term_names, String["(Intercept)"])
-    end
-
-    factors = terms.factors
-
-    for (i_term, term) in enumerate(terms.terms)
-
-        ## names for columns for eval terms
-        names = Vector{Vector{String}}()
-
-        ff = view(factors, :, i_term)
-        eterms = view(terms.eterms, ff)
-        non_redundants = view(terms.is_non_redundant, ff, i_term)
-
-        for (et, nr) in zip(eterms, non_redundants)
-            if !haskey(eterm_names, (et, nr))
-                eterm_names[(et, nr)] = termnames(et, mf, non_redundant=nr)
-            end
-            push!(names, eterm_names[(et, nr)])
-        end
-        push!(term_names, expandtermnames(names))
-    end
-
-    reduce(vcat, term_names, init=Vector{String}())
-end
+ModelMatrix(mf::ModelFrame) = ModelMatrix{Matrix{Float64}}(mf)

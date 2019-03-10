@@ -82,11 +82,19 @@ termnames(C::MyCoding, levels, baseind) = ...
 abstract type AbstractContrasts end
 
 # Contrasts + Levels (usually from data) = ContrastsMatrix
-mutable struct ContrastsMatrix{C <: AbstractContrasts, T}
+struct ContrastsMatrix{C <: AbstractContrasts, T}
     matrix::Matrix{Float64}
     termnames::Vector{T}
     levels::Vector{T}
     contrasts::C
+    invindex::Dict{T,Int}
+    function ContrastsMatrix{C,T}(matrix,
+                                  termnames::Vector{T},
+                                  levels::Vector{T},
+                                  contrasts::C) where {T,C <: AbstractContrasts}
+        invindex = Dict{T,Int}(x=>i for (i,x) in enumerate(levels))
+        new(matrix, termnames, levels, contrasts, invindex)
+    end
 end
 
 # only check equality of matrix, termnames, and levels, and that the type is the
@@ -127,7 +135,7 @@ ContrastsMatrix(contrasts_matrix::ContrastsMatrix, levels::AbstractVector)
   constructing a model matrix from a `ModelFrame` using different data.
 
 """
-function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
+function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:AbstractContrasts, T}
 
     # if levels are defined on contrasts, use those, validating that they line up.
     # what does that mean? either:
@@ -172,7 +180,7 @@ function ContrastsMatrix(contrasts::AbstractContrasts, levels::AbstractVector)
 
     mat = contrasts_matrix(contrasts, baseind, n)
 
-    ContrastsMatrix(mat, tnames, c_levels, contrasts)
+    ContrastsMatrix{C,T}(mat, tnames, c_levels, contrasts)
 end
 
 ContrastsMatrix(c::Type{<:AbstractContrasts}, levels::AbstractVector) =
@@ -198,6 +206,9 @@ function termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Intege
     not_base = [1:(baseind-1); (baseind+1):length(levels)]
     levels[not_base]
 end
+
+Base.getindex(contrasts::ContrastsMatrix{C,T}, rowinds, colinds) where {C,T} =
+    getindex(contrasts.matrix, getindex.(Ref(contrasts.invindex), rowinds), colinds)
 
 # Making a contrast type T only requires that there be a method for
 # contrasts_matrix(T,  baseind, n) and optionally termnames(T, levels, baseind)
@@ -240,8 +251,9 @@ mutable struct FullDummyCoding <: AbstractContrasts
 # Dummy contrasts have no base level (since all levels produce a column)
 end
 
-ContrastsMatrix(C::FullDummyCoding, levels::AbstractVector) =
-    ContrastsMatrix(Matrix(1.0I, length(levels), length(levels)), levels, levels, C)
+ContrastsMatrix(C::FullDummyCoding, levels::AbstractVector{T}) where {T} =
+    ContrastsMatrix{FullDummyCoding,T}(Matrix(1.0I, length(levels), length(levels)),
+                                       levels, levels, C)
 
 "Promote contrasts matrix to full rank version"
 Base.convert(::Type{ContrastsMatrix{FullDummyCoding}}, C::ContrastsMatrix) =

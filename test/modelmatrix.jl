@@ -1,7 +1,8 @@
 @testset "Model matrix" begin
+    
+    using StatsBase: StatisticalModel
 
-    # for testing while DataFrames still exports these:
-    import StatsModels: @formula, Formula, ModelMatrix, ModelFrame, DummyCoding, EffectsCoding, HelmertCoding, ContrastsCoding, setcontrasts!, coefnames
+    using SparseArrays, DataFrames, Tables
 
     sparsetype = SparseMatrixCSC{Float64,Int}
 
@@ -11,15 +12,18 @@
     d[:x2] = [9:12;]
     d[:x3] = [13:16;]
     d[:x4] = [17:20;]
+    d[:x1p] = CategoricalArray(d[:x1])
 
+    d_orig = deepcopy(d)
+    
     x1 = [5.:8;]
     x2 = [9.:12;]
     x3 = [13.:16;]
     x4 = [17.:20;]
-    f = @formula(y ~ x1 + x2)
+    f = @formula(y ~ 1 + x1 + x2)
     mf = ModelFrame(f, d)
     @test coefnames(mf) == ["(Intercept)","x1","x2"]
-    @test model_response(mf) == [1:4;]
+    @test response(mf) == [1:4;]
     mm = ModelMatrix(mf)
     smm = ModelMatrix{sparsetype}(mf)
     @test mm.m[:,1] == ones(4)
@@ -29,10 +33,14 @@
     @test isa(mm.m, Matrix{Float64})
     @test isa(smm.m, sparsetype)
 
+    f_implint = @formula(y ~ x1 + x2)
+    @test ModelMatrix(ModelFrame(f_implint, d)).m == mm.m
+
+    @test ModelMatrix(ModelFrame(f_implint, d, model=Nothing)).m == hcat(x1, x2)
+
     #test_group("expanding a nominal array into a design matrix of indicators for each dummy variable")
 
-    d[:x1p] = CategoricalArray(d[:x1])
-    mf = ModelFrame(@formula(y ~ x1p), d)
+    mf = ModelFrame(@formula(y ~ 1 + x1p), d)
     mm = ModelMatrix(mf)
 
     @test mm.m[:,2] == [0, 1., 0, 0]
@@ -41,100 +49,46 @@
     @test coefnames(mf)[2:end] == ["x1p: 6", "x1p: 7", "x1p: 8"]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-    #test_group("create a design matrix from interactions from two DataFrames")
-    ## this was removed in commit dead4562506badd7e84a2367086f5753fa49bb6a
-
-    ## b = DataFrame()
-    ## b["x2"] = DataVector(x2)
-    ## df = interaction_design_matrix(a,b)
-    ## @test df[:,1] == DataVector([0, 10., 0, 0])
-    ## @test df[:,2] == DataVector([0, 0, 11., 0])
-    ## @test df[:,3] == DataVector([0, 0, 0, 12.])
-
-    #test_group("expanding an singleton expression/symbol into a DataFrame")
-    ## generalized expand was dropped, too
-    ## df = deepcopy(d)
-    ## r = expand(:x2, df)
-    ## @test isa(r, DataFrame)
-    ## @test r[:,1] == DataVector([9,10,11,12])  # TODO: test float vs int return
-
-    ## df = deepcopy(d)
-    ## ex = :(log(x2))
-    ## r = expand(ex, df)
-    ## @test isa(r, DataFrame)
-    ## @test r[:,1] == DataVector(log([9,10,11,12]))
-
-    # ex = :(x1 & x2)
-    # r = expand(ex, df)
-    # @test isa(r, DataFrame)
-    # @test ncol(r) == 1
-    # @test r[:,1] == DataArray([45, 60, 77, 96])
-
-    ## r = expand(:(x1 + x2), df)
-    ## @test isa(r, DataFrame)
-    ## @test ncol(r) == 2
-    ## @test r[:,1] == DataVector(df["x1"])
-    ## @test r[:,2] == DataVector(df["x2"])
-
-    ## df["x1"] = CategoricalArray(x1)
-    ## r = expand(:x1, df)
-    ## @test isa(r, DataFrame)
-    ## @test ncol(r) == 3
-    ## @test r == expand(CategoricalArray(x1), "x1", DataFrame())
-
-    ## r = expand(:(x1 + x2), df)
-    ## @test isa(r, DataFrame)
-    ## @test ncol(r) == 4
-    ## @test r[:,1:3] == expand(CategoricalArray(x1), "x1", DataFrame())
-    ## @test r[:,4] == DataVector(df["x2"])
-
-    ## df["x2"] = CategoricalArray(x2)
-    ## r = expand(:(x1 + x2), df)
-    ## @test isa(r, DataFrame)
-    ## @test ncol(r) == 6
-    ## @test r[:,1:3] == expand(CategoricalArray(x1), "x1", DataFrame())
-    ## @test r[:,4:6] == expand(CategoricalArray(x2), "x2", DataFrame())
-
     #test_group("Creating a model matrix using full formulas: y => x1 + x2, etc")
 
-    df = deepcopy(d)
-    f = @formula(y ~ x1 & x2)
-    mf = ModelFrame(f, df)
+    d = deepcopy(d_orig)
+    f = @formula(y ~ 1 + x1 & x2)
+    mf = ModelFrame(f, d)
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x1.*x2]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-    f = @formula(y ~ x1 * x2)
-    mf = ModelFrame(f, df)
+    f = @formula(y ~ 1 + x1 * x2)
+    mf = ModelFrame(f, d)
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x1 x2 x1.*x2]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-    df[:x1] = CategoricalArray(x1)
+    d[:x1] = CategoricalArray(x1)
     x1e = [[0, 1, 0, 0] [0, 0, 1, 0] [0, 0, 0, 1]]
-    f = @formula(y ~ x1 * x2)
-    mf = ModelFrame(f, df)
+    f = @formula(y ~ 1 + x1 * x2)
+    mf = ModelFrame(f, d)
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x1e x2 [0, 10, 0, 0] [0, 0, 11, 0] [0, 0, 0, 12]]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
     # additional tests from Tom
     y = [1., 2, 3, 4]
-    mf = ModelFrame(@formula(y ~ x2), d)
+    mf = ModelFrame(@formula(y ~ 1 + x2), d)
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x2]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
-    ## @test model_response(mf) == y''     # fails: Int64 vs. Float64
+    @test response(mf) == y''
 
-    df = deepcopy(d)
-    df[:x1] = CategoricalArray{Union{Missing, Float64}}(df[:x1])
+    d = deepcopy(d_orig)
+    d[:x1] = CategoricalArray{Union{Missing, Float64}}(d[:x1])
 
-    f = @formula(y ~ x2 + x3 + x3*x2)
-    mm = ModelMatrix(ModelFrame(f, df))
+    f = @formula(y ~ 1 + x2 + x3 + x3*x2)
+    mm = ModelMatrix(ModelFrame(f, d))
     @test mm.m == [ones(4) x2 x3 x2.*x3]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x3*x2 + x2 + x3), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x3*x2 + x2 + x3), d))
     @test mm.m == [ones(4) x3 x2 x2.*x3]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x1 + x2 + x3 + x4), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x1 + x2 + x3 + x4), d))
     @test mm.m[:,2] == [0, 1., 0, 0]
     @test mm.m[:,3] == [0, 0, 1., 0]
     @test mm.m[:,4] == [0, 0, 0, 1.]
@@ -142,88 +96,48 @@
     @test mm.m[:,6] == x3
     @test mm.m[:,7] == x4
 
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x2 + x3 + x4), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x2 + x3 + x4), d))
     @test mm.m == [ones(4) x2 x3 x4]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x2 + x2), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x2 + x2), d))
     @test mm.m == [ones(4) x2]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x2*x3 + x2&x3), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x2*x3 + x2&x3), d))
     @test mm.m == [ones(4) x2 x3 x2.*x3]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x2*x3*x4), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x2*x3*x4), d))
     @test mm.m == [ones(4) x2 x3 x4 x2.*x3 x2.*x4 x3.*x4 x2.*x3.*x4]
-    mm = ModelMatrix(ModelFrame(@formula(y ~ x2&x3 + x2*x3), df))
+    mm = ModelMatrix(ModelFrame(@formula(y ~ 1 + x2&x3 + x2*x3), d))
     @test mm.m == [ones(4) x2 x3 x2.*x3]
 
-    f = @formula(y ~ x2 & x3 & x4)
-    mf = ModelFrame(f, df)
+    f = @formula(y ~ 1 + x2 & x3 & x4)
+    mf = ModelFrame(f, d)
     mm = ModelMatrix(mf)
     @test mm.m == [ones(4) x2.*x3.*x4]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-    f = @formula(y ~ x1 & x2 & x3)
-    mf = ModelFrame(f, df)
+    f = @formula(y ~ 1 + x1 & x2 & x3)
+    mf = ModelFrame(f, d)
     mm = ModelMatrix(mf)
     @test mm.m[:, 2:end] == Matrix(Diagonal(x2.*x3))
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-    #test_group("Column groups in formulas")
-    ## set_group was removed in The Great Purge (55e47cd)
-
-    ## set_group(d, "odd_predictors", ["x1","x3"])
-    ## @test expand(:odd_predictors, d) == d["odd_predictors"]
-    ## mf = ModelFrame(Formula(:(y ~ odd_predictors)), d)
-    ## @test mf.df[:,1] == d["y"]
-    ## @test mf.df[:,2] == d["x1"]
-    ## @test mf.df[:,3] == d["x3"]
-    ## @test ncol(mf.df) == 3
-    ## mf = ModelFrame(Formula(:(y ~ odd_predictors * x2)), d)
-    ## mm = ModelMatrix(mf)
-    ## @test mm.model == [ones(4) x1 x3 x2 x1.*x2 x3.*x2]
-
-    ## Interactions between three PDA columns
-    ##
-    ## FAILS: behavior is wrong when no lower-order terms (1+x1+x2+x1&x2...)
-    ##
-    ## df = DataFrame(y=1:27,
-    ##                x1 = CategoricalArray(vec([x for x in 1:3, y in 4:6, z in 7:9])),
-    ##                x2 = CategoricalArray(vec([y for x in 1:3, y in 4:6, z in 7:9])),
-    ##                x3 = CategoricalArray(vec([z for x in 1:3, y in 4:6, z in 7:9])))
-    ## f = y ~ x1 & x2 & x3
-    ## mf = ModelFrame(f, df)
-    ## @test coefnames(mf)[2:end] ==
-    ##     vec([string("x1: ", x, " & x2: ", y, " & x3: ", z) for
-    ##          x in 2:3,
-    ##          y in 5:6,
-    ##          z in 8:9])
-
-    ## mm = ModelMatrix(mf)
-    ## @test mm.m[:,2] == 0. + (df[:x1] .== 2) .* (df[:x2] .== 5) .* (df[:x3].==8)
-    ## @test mm.m[:,3] == 0. + (df[:x1] .== 3) .* (df[:x2] .== 5) .* (df[:x3].==8)
-    ## @test mm.m[:,4] == 0. + (df[:x1] .== 2) .* (df[:x2] .== 6) .* (df[:x3].==8)
-    ## @test mm.m[:,5] == 0. + (df[:x1] .== 3) .* (df[:x2] .== 6) .* (df[:x3].==8)
-    ## @test mm.m[:,6] == 0. + (df[:x1] .== 2) .* (df[:x2] .== 5) .* (df[:x3].==9)
-    ## @test mm.m[:,7] == 0. + (df[:x1] .== 3) .* (df[:x2] .== 5) .* (df[:x3].==9)
-    ## @test mm.m[:,8] == 0. + (df[:x1] .== 2) .* (df[:x2] .== 6) .* (df[:x3].==9)
-    ## @test mm.m[:,9] == 0. + (df[:x1] .== 3) .* (df[:x2] .== 6) .* (df[:x3].==9)
-
     ## Distributive property of :& over :+
-    df = deepcopy(d)
-    f = @formula(y ~ (x1+x2) & (x3+x4))
-    mf = ModelFrame(f, df)
+    d = deepcopy(d_orig)
+    f = @formula(y ~ 1 + (x1+x2) & (x3+x4))
+    mf = ModelFrame(f, d)
     mm = ModelMatrix(mf)
     @test mm.m == hcat(ones(4), x1.*x3, x1.*x4, x2.*x3, x2.*x4)
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
     ## Condensing nested :+ calls
-    f = @formula(y ~ x1 + (x2 + (x3 + x4)))
-    @test ModelMatrix(ModelFrame(f, df)).m == hcat(ones(4), x1, x2, x3, x4)
+    f = @formula(y ~ 1 + x1 + (x2 + (x3 + x4)))
+    @test ModelMatrix(ModelFrame(f, d)).m == hcat(ones(4), x1, x2, x3, x4)
 
 
     ## Extra levels in categorical column
-    mf_full = ModelFrame(@formula(y ~ x1p), d)
+    mf_full = ModelFrame(@formula(y ~ 1 + x1p), d)
     mm_full = ModelMatrix(mf_full)
     @test size(mm_full) == (4,4)
 
-    mf_sub = ModelFrame(@formula(y ~ x1p), d[2:4, :])
+    mf_sub = ModelFrame(@formula(y ~ 1 + x1p), d[2:4, :])
     mm_sub = ModelMatrix(mf_sub)
     ## should have only three rows, and only three columns (intercept plus two
     ## levels of factor)
@@ -231,181 +145,210 @@
 
     ## Missing data
     d[:x1m] = [5, 6, missing, 7]
-    mf = ModelFrame(@formula(y ~ x1m), d)
+    mf = ModelFrame(@formula(y ~ 1 + x1m), d)
     mm = ModelMatrix(mf)
     @test mm.m[:, 2] == d[completecases(d), :x1m]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
     ## Same variable on left and right side
-    mf = ModelFrame(@formula(x1 ~ x1), df)
+    mf = ModelFrame(@formula(x1 ~ x1), d)
     mm = ModelMatrix(mf)
-    mm.m == model_response(mf)
+    mm.m == response(mf)
 
     ## Promote non-redundant categorical terms to full rank
+    @testset "non-redundant categorical terms" begin
+        d = DataFrame(x = repeat([:a, :b], outer = 4),
+                      y = repeat([:c, :d], inner = 2, outer = 2),
+                      z = repeat([:e, :f], inner = 4))
+        categorical!(d)
+        cs = Dict([Pair(name, EffectsCoding()) for name in names(d)])
+        d[:n] = 1.:8
+    
+    
+        ## No intercept
+        mf = ModelFrame(@formula(n ~ 0 + x), d, contrasts=cs)
+        mm = ModelMatrix(mf)
+        @test mm.m == [1 0
+                       0 1
+                       1 0
+                       0 1
+                       1 0
+                       0 1
+                       1 0
+                       0 1]
+        @test mm.m == ModelMatrix{sparsetype}(mf).m
+        @test coefnames(mf) == ["x: a", "x: b"]
 
-    d = DataFrame(x = repeat([:a, :b], outer = 4),
-                  y = repeat([:c, :d], inner = 2, outer = 2),
-                  z = repeat([:e, :f], inner = 4))
-    [categorical!(d, name) for name in names(d)]
-    cs = Dict([Pair(name, EffectsCoding()) for name in names(d)])
-    d[:n] = 1.:8
+        ## promotion blocked when we block default model=StatisticalModel
+        mf = ModelFrame(@formula(n ~ 0 + x), d, model=Nothing, contrasts=cs)
+        mm = ModelMatrix(mf)
+        @test all(mm.m .== ifelse.(d[:x] .== :a, -1, 1))
+        @test coefnames(mf) == ["x: b"]
+        
+    
+        ## No first-order term for interaction
+        mf = ModelFrame(@formula(n ~ 1 + x + x&y), d, contrasts=cs)
+        mm = ModelMatrix(mf)
+        @test mm.m[:, 2:end] == [-1 -1  0
+                                 1  0 -1
+                                 -1  1  0
+                                 1  0  1
+                                 -1 -1  0
+                                 1  0 -1
+                                 -1  1  0
+                                 1  0  1]
+        @test mm.m == ModelMatrix{sparsetype}(mf).m
+        @test coefnames(mf) == ["(Intercept)", "x: b", "x: a & y: d", "x: b & y: d"]
+    
+        ## When both terms of interaction are non-redundant:
+        mf = ModelFrame(@formula(n ~ 0 + x&y), d, contrasts=cs)
+        mm = ModelMatrix(mf)
+        @test mm.m == [1 0 0 0
+                       0 1 0 0
+                       0 0 1 0
+                       0 0 0 1
+                       1 0 0 0
+                       0 1 0 0
+                       0 0 1 0
+                       0 0 0 1]
+        @test mm.m == ModelMatrix{sparsetype}(mf).m
+        @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
+                                "x: a & y: d", "x: b & y: d"]
 
+        # only a three-way interaction: every term is promoted.
+        mf = ModelFrame(@formula(n ~ 0 + x&y&z), d, contrasts=cs)
+        mm = ModelMatrix(mf)
+        @test mm.m == Matrix(1.0I, 8, 8)
+        @test mm.m == ModelMatrix{sparsetype}(mf).m
+    
+        # two two-way interactions, with no lower-order term. both are promoted in
+        # first (both x and y), but only the old term (x) in the second (because
+        # dropping x gives z which isn't found elsewhere, but dropping z gives x
+        # which is found (implicitly) in the promoted interaction x&y).
+        mf = ModelFrame(@formula(n ~ 0 + x&y + x&z), d, contrasts=cs)
+        mm = ModelMatrix(mf)
+        @test mm.m == [1 0 0 0 -1  0
+                       0 1 0 0  0 -1
+                       0 0 1 0 -1  0
+                       0 0 0 1  0 -1
+                       1 0 0 0  1  0
+                       0 1 0 0  0  1
+                       0 0 1 0  1  0
+                       0 0 0 1  0  1]
+        @test mm.m == ModelMatrix{sparsetype}(mf).m
+        @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
+                                "x: a & y: d", "x: b & y: d",
+                                "x: a & z: f", "x: b & z: f"]
+    
+        # ...and adding a three-way interaction, only the shared term (x) is promoted.
+        # this is because dropping x gives y&z which isn't present, but dropping y or z
+        # gives x&z or x&z respectively, which are both present.
+        mf = ModelFrame(@formula(n ~ 0 + x&y + x&z + x&y&z), d, contrasts=cs)
+        mm = ModelMatrix(mf)
+        @test mm.m == [1 0 0 0 -1  0  1  0
+                       0 1 0 0  0 -1  0  1
+                       0 0 1 0 -1  0 -1  0
+                       0 0 0 1  0 -1  0 -1
+                       1 0 0 0  1  0 -1  0
+                       0 1 0 0  0  1  0 -1
+                       0 0 1 0  1  0  1  0
+                       0 0 0 1  0  1  0  1]
+        @test mm.m == ModelMatrix{sparsetype}(mf).m
+        @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
+                                "x: a & y: d", "x: b & y: d",
+                                "x: a & z: f", "x: b & z: f",
+                                "x: a & y: d & z: f", "x: b & y: d & z: f"]
+    
+        # two two-way interactions, with common lower-order term. the common term x is
+        # promoted in both (along with lower-order term), because in every case, when
+        # x is dropped, the remaining terms (1, y, and z) aren't present elsewhere.
+        mf = ModelFrame(@formula(n ~ 0 + x + x&y + x&z), d, contrasts=cs)
+        mm = ModelMatrix(mf)
+        @test mm.m == [1 0 -1  0 -1  0
+                       0 1  0 -1  0 -1
+                       1 0  1  0 -1  0
+                       0 1  0  1  0 -1
+                       1 0 -1  0  1  0
+                       0 1  0 -1  0  1
+                       1 0  1  0  1  0
+                       0 1  0  1  0  1]
+        @test mm.m == ModelMatrix{sparsetype}(mf).m
+        @test coefnames(mf) == ["x: a", "x: b",
+                                "x: a & y: d", "x: b & y: d",
+                                "x: a & z: f", "x: b & z: f"]
+    
+    
+        ## FAILS: When both terms are non-redundant and intercept is PRESENT
+        ## (not fully redundant). Ideally, would drop last column. Might make sense
+        ## to warn about this, and suggest recoding x and y into a single variable.
+        mf = ModelFrame(@formula(n ~ 1 + x&y), d[1:4, :], contrasts=cs)
+        @test_broken ModelMatrix(mf).m == [1 1 0 0
+                                           1 0 1 0
+                                           1 0 0 1
+                                           1 0 0 0]
+        @test_broken coefnames(mf) == ["x: a & y: c", "x: b & y: c",
+                                       "x: a & y: d", "x: b & y: d"]
+    
+        ## note that R also does not detect this automatically. it's left to glm et al.
+        ## to detect numerically when the model matrix is rank deficient, which is hard
+        ## to do correctly.
+        # > d = data.frame(x = factor(c(1, 2, 1, 2)), y = factor(c(3, 3, 4, 4)))
+        # > model.matrix(~ 1 + x:y, d)
+        #   (Intercept) x1:y3 x2:y3 x1:y4 x2:y4
+        # 1           1     1     0     0     0
+        # 2           1     0     1     0     0
+        # 3           1     0     0     1     0
+        # 4           1     0     0     0     1
 
-    ## No intercept
-    mf = ModelFrame(@formula(n ~ 0 + x), d, contrasts=cs)
-    mm = ModelMatrix(mf)
-    @test mm.m == [1 0
-                   0 1
-                   1 0
-                   0 1
-                   1 0
-                   0 1
-                   1 0
-                   0 1]
-    @test mm.m == ModelMatrix{sparsetype}(mf).m
-    @test coefnames(mf) == ["x: a", "x: b"]
+    end
 
-    ## No first-order term for interaction
-    mf = ModelFrame(@formula(n ~ 1 + x + x&y), d, contrasts=cs)
-    mm = ModelMatrix(mf)
-    @test mm.m[:, 2:end] == [-1 -1  0
-                             1  0 -1
-                             -1  1  0
-                             1  0  1
-                             -1 -1  0
-                             1  0 -1
-                             -1  1  0
-                             1  0  1]
-    @test mm.m == ModelMatrix{sparsetype}(mf).m
-    @test coefnames(mf) == ["(Intercept)", "x: b", "x: a & y: d", "x: b & y: d"]
+    @testset "arbitrary functions in formulae" begin
+        d = deepcopy(d_orig)
+        mf = ModelFrame(@formula(y ~ log(x1)), d, model=Nothing)
+        @test coefnames(mf) == ["log(x1)"]
+        mm = ModelMatrix(mf)
+        @test all(mm.m .== log.(x1))
 
-    ## When both terms of interaction are non-redundant:
-    mf = ModelFrame(@formula(n ~ 0 + x&y), d, contrasts=cs)
-    mm = ModelMatrix(mf)
-    @test mm.m == [1 0 0 0
-                   0 1 0 0
-                   0 0 1 0
-                   0 0 0 1
-                   1 0 0 0
-                   0 1 0 0
-                   0 0 1 0
-                   0 0 0 1]
-    @test mm.m == ModelMatrix{sparsetype}(mf).m
-    @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
-                            "x: a & y: d", "x: b & y: d"]
+        # | is not special in base formula:
+        d = DataFrame(x = [1,2,3], y = [4,5,6])
+        mf = ModelFrame(@formula(y ~ 1 + (1 | x)), d)
+        @test coefnames(mf) == ["(Intercept)", "1 | x"]
 
-    # only a three-way interaction: every term is promoted.
-    mf = ModelFrame(@formula(n ~ 0 + x&y&z), d, contrasts=cs)
-    mm = ModelMatrix(mf)
-    @test mm.m == Matrix(1.0I, 8, 8)
-    @test mm.m == ModelMatrix{sparsetype}(mf).m
+        mf = ModelFrame(@formula(y ~ 0 + (1 | x)), d)
+        @test all(ModelMatrix(mf).m .== float.(1 .| d[:x]))
+        @test coefnames(mf) == ["1 | x"]
+    end
 
-    # two two-way interactions, with no lower-order term. both are promoted in
-    # first (both x and y), but only the old term (x) in the second (because
-    # dropping x gives z which isn't found elsewhere, but dropping z gives x
-    # which is found (implicitly) in the promoted interaction x&y).
-    mf = ModelFrame(@formula(n ~ 0 + x&y + x&z), d, contrasts=cs)
-    mm = ModelMatrix(mf)
-    @test mm.m == [1 0 0 0 -1  0
-                   0 1 0 0  0 -1
-                   0 0 1 0 -1  0
-                   0 0 0 1  0 -1
-                   1 0 0 0  1  0
-                   0 1 0 0  0  1
-                   0 0 1 0  1  0
-                   0 0 0 1  0  1]
-    @test mm.m == ModelMatrix{sparsetype}(mf).m
-    @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
-                            "x: a & y: d", "x: b & y: d",
-                            "x: a & z: f", "x: b & z: f"]
-
-    # ...and adding a three-way interaction, only the shared term (x) is promoted.
-    # this is because dropping x gives y&z which isn't present, but dropping y or z
-    # gives x&z or x&z respectively, which are both present.
-    mf = ModelFrame(@formula(n ~ 0 + x&y + x&z + x&y&z), d, contrasts=cs)
-    mm = ModelMatrix(mf)
-    @test mm.m == [1 0 0 0 -1  0  1  0
-                   0 1 0 0  0 -1  0  1
-                   0 0 1 0 -1  0 -1  0
-                   0 0 0 1  0 -1  0 -1
-                   1 0 0 0  1  0 -1  0
-                   0 1 0 0  0  1  0 -1
-                   0 0 1 0  1  0  1  0
-                   0 0 0 1  0  1  0  1]
-    @test mm.m == ModelMatrix{sparsetype}(mf).m
-    @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
-                            "x: a & y: d", "x: b & y: d",
-                            "x: a & z: f", "x: b & z: f",
-                            "x: a & y: d & z: f", "x: b & y: d & z: f"]
-
-    # two two-way interactions, with common lower-order term. the common term x is
-    # promoted in both (along with lower-order term), because in every case, when
-    # x is dropped, the remaining terms (1, y, and z) aren't present elsewhere.
-    mf = ModelFrame(@formula(n ~ 0 + x + x&y + x&z), d, contrasts=cs)
-    mm = ModelMatrix(mf)
-    @test mm.m == [1 0 -1  0 -1  0
-                   0 1  0 -1  0 -1
-                   1 0  1  0 -1  0
-                   0 1  0  1  0 -1
-                   1 0 -1  0  1  0
-                   0 1  0 -1  0  1
-                   1 0  1  0  1  0
-                   0 1  0  1  0  1]
-    @test mm.m == ModelMatrix{sparsetype}(mf).m
-    @test coefnames(mf) == ["x: a", "x: b",
-                            "x: a & y: d", "x: b & y: d",
-                            "x: a & z: f", "x: b & z: f"]
-
-
-    ## FAILS: When both terms are non-redundant and intercept is PRESENT
-    ## (not fully redundant). Ideally, would drop last column. Might make sense
-    ## to warn about this, and suggest recoding x and y into a single variable.
-    # mf = ModelFrame(n ~ 1 + x&y, d[1:4, :], contrasts=cs)
-    # @test ModelMatrix(mf).m == [1 1 0 0
-    #                             1 0 1 0
-    #                             1 0 0 1
-    #                             1 0 0 0]
-    # @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
-    #                         "x: a & y: d", "x: b & y: d"]
-
-    ## note that R also does not detect this automatically. it's left to glm et al.
-    ## to detect numerically when the model matrix is rank deficient, which is hard
-    ## to do correctly.
-    # > d = data.frame(x = factor(c(1, 2, 1, 2)), y = factor(c(3, 3, 4, 4)))
-    # > model.matrix(~ 1 + x:y, d)
-    #   (Intercept) x1:y3 x2:y3 x1:y4 x2:y4
-    # 1           1     1     0     0     0
-    # 2           1     0     1     0     0
-    # 3           1     0     0     1     0
-    # 4           1     0     0     0     1
-
-
-    # Ensure that random effects terms are dropped from coefnames
-    df = DataFrame(x = [1,2,3], y = [4,5,6])
-    mf = ModelFrame(@formula(y ~ 1 + (1 | x)), df)
-    @test coefnames(mf) == ["(Intercept)"]
-
-    mf = ModelFrame(@formula(y ~ 0 + (1 | x)), df)
-    @test_throws ErrorException ModelMatrix(mf)
-    @test coefnames(mf) == Vector{String}()
 
 
     # Ensure X is not a view on df column
-    df = DataFrame(x = [1.0,2.0,3.0], y = [4.0,5.0,6.0])
-    mf = ModelFrame(@formula(y ~ 0 + x), df)
+    d = DataFrame(x = [1.0,2.0,3.0], y = [4.0,5.0,6.0])
+    mf = ModelFrame(@formula(y ~ 0 + x), d)
     X = ModelMatrix(mf).m
     X[1] = 0.0
-    @test mf.df[1, :x] === 1.0
+    @test mf.data[:x][1] === 1.0
 
     # Ensure string columns are supported
-    df1 = DataFrame(A = 1:4, B = categorical(["M", "F", "F", "M"]))
-    df2 = DataFrame(A = 1:4, B = ["M", "F", "F", "M"])
-    df3 = DataFrame(Any[1:4, ["M", "F", "F", "M"]], [:A, :B])
+    d1 = DataFrame(A = 1:4, B = categorical(["M", "F", "F", "M"]))
+    d2 = DataFrame(A = 1:4, B = ["M", "F", "F", "M"])
+    d3 = DataFrame(Any[1:4, ["M", "F", "F", "M"]], [:A, :B])
 
-    M1 = ModelMatrix(ModelFrame(@formula(A ~ B), df1))
-    M2 = ModelMatrix(ModelFrame(@formula(A ~ B), df2))
-    M3 = ModelMatrix(ModelFrame(@formula(A ~ B), df3))
+    M1 = ModelMatrix(ModelFrame(@formula(A ~ B), d1))
+    M2 = ModelMatrix(ModelFrame(@formula(A ~ B), d2))
+    M3 = ModelMatrix(ModelFrame(@formula(A ~ B), d3))
 
     @test (M1.m, M1.assign) == (M2.m, M2.assign) == (M3.m, M3.assign)
+
+    @testset "row-wise model matrix construction" begin
+        d = DataFrame(r = rand(8),
+                      w = rand(8),
+                      x = repeat([:a, :b], outer = 4),
+                      y = repeat([:c, :d], inner = 2, outer = 2),
+                      z = repeat([:e, :f], inner = 4))
+    
+        f = apply_schema(@formula(r ~ 1 + w*x*y*z), schema(d))
+        modelmatrix(f, d)
+        @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)
+    end
 
 end
