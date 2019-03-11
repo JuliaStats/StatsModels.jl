@@ -228,7 +228,8 @@ end
     FullDummyCoding()
 
 Full-rank dummy coding generates one indicator (1 or 0) column for each level,
-**including** the base level.
+**including** the base level. This is sometimes known as 
+[one-hot encoding](https://en.wikipedia.org/wiki/One-hot).
 
 Not exported but included here for the sake of completeness.
 Needed internally for some situations where a categorical variable with ``k``
