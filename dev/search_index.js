@@ -229,7 +229,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Contrast coding categorical variables",
     "title": "StatsModels.FullDummyCoding",
     "category": "type",
-    "text": "FullDummyCoding()\n\nFull-rank dummy coding generates one indicator (1 or 0) column for each level, including the base level.\n\nNot exported but included here for the sake of completeness. Needed internally for some situations where a categorical variable with k levels needs to be converted into k model matrix columns instead of the standard k-1.  This occurs when there are missing lower-order terms, as in discussed below in Categorical variables in Formulas.\n\nExamples\n\njulia> StatsModels.ContrastsMatrix(StatsModels.FullDummyCoding(), [\"a\", \"b\", \"c\", \"d\"]).matrix\n4×4 Array{Float64,2}:\n 1.0  0.0  0.0  0.0\n 0.0  1.0  0.0  0.0\n 0.0  0.0  1.0  0.0\n 0.0  0.0  0.0  1.0\n\n\n\n\n\n"
+    "text": "FullDummyCoding()\n\nFull-rank dummy coding generates one indicator (1 or 0) column for each level, including the base level. This is sometimes known as  one-hot encoding.\n\nNot exported but included here for the sake of completeness. Needed internally for some situations where a categorical variable with k levels needs to be converted into k model matrix columns instead of the standard k-1.  This occurs when there are missing lower-order terms, as in discussed below in Categorical variables in Formulas.\n\nExamples\n\njulia> StatsModels.ContrastsMatrix(StatsModels.FullDummyCoding(), [\"a\", \"b\", \"c\", \"d\"]).matrix\n4×4 Array{Float64,2}:\n 1.0  0.0  0.0  0.0\n 0.0  1.0  0.0  0.0\n 0.0  0.0  1.0  0.0\n 0.0  0.0  0.0  1.0\n\n\n\n\n\n"
 },
 
 {
