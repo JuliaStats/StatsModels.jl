@@ -140,7 +140,7 @@
     mf_sub = ModelFrame(@formula(y ~ 1 + x1p), d[2:4, :])
     mm_sub = ModelMatrix(mf_sub)
     ## should have only three rows, and only three columns (intercept plus two
-    ## levels of factor)
+    ## levels of factor) - it also catches when some levels do not occur in the data
     @test size(mm_sub) == (3,3)
 
     ## Missing data
