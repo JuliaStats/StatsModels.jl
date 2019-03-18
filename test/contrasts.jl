@@ -81,6 +81,17 @@
                                 1 -1 -1
                                 1  0  1]
     @test coefnames(mf) == ["(Intercept)"; "x: c"; "x: b"]
+    
+    # Ordinal factors
+    
+    data = DataFrame(x = levels!(categorical(['A', 'B', 'C', 'C'],
+                                             ordered = true),
+                                 ['C', 'B', 'A']))
+    f = @formula(x ~ 1)
+    f = apply_schema(f, schema(data))
+    y = modelcols(f.lhs, data)
+    f = apply_schema(f, schema(data, Dict(:x => DummyCoding(levels = levels(data.x)))))
+    @test == y = modelcols(f.lhs, data)
 
     # Helmert coded contrasts
     setcontrasts!(mf, x = HelmertCoding())
