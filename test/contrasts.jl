@@ -81,6 +81,12 @@
                                 1 -1 -1
                                 1  0  1]
     @test coefnames(mf) == ["(Intercept)"; "x: c"; "x: b"]
+    
+    # respect order of levels
+    
+    data = DataFrame(x = levels!(categorical(['A', 'B', 'C', 'C', 'D']), ['C', 'B', 'A', 'D']))
+    f = apply_schema(@formula(x ~ 1), schema(data))
+    @test modelcols(f.lhs, data) == [0 1 0; 1 0 0; 0 0 0; 0 0 0; 0 0 1]
 
     # Helmert coded contrasts
     setcontrasts!(mf, x = HelmertCoding())
