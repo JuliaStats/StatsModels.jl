@@ -169,8 +169,8 @@ end
 StatsBase.coefnames(model::TableModels) = coefnames(model.mf)
 
 # coeftable implementation
-function StatsBase.coeftable(model::TableModels)
-    ct = coeftable(model.model)
+function StatsBase.coeftable(model::TableModels; kwargs...)
+    ct = coeftable(model.model, kwargs...)
     cfnames = coefnames(model.mf)
     if length(ct.rownms) == length(cfnames)
         ct.rownms = cfnames
