@@ -336,10 +336,6 @@ end
 StatsModels.width(p::PolyTerm) = p.deg
 
 StatsBase.coefnames(p::PolyTerm) = coefnames(p.term) .* "^" .* string.(1:p.deg)
-
-# output
-
-
 ```
 
 Now, we can use `poly` in a formula:
