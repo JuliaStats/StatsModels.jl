@@ -252,7 +252,7 @@ width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
 
 """
     collect_matrix_terms(ts::TupleTerm)
-    collect_matrix_terms(t::AbstractTerm) = extract_matrix_term((t, ))
+    collect_matrix_terms(t::AbstractTerm) = collect_matrix_term((t, ))
 
 Depending on whether the component terms are matrix terms (meaning they have
 [`is_matrix_term(T) == true`](@ref is_matrix_term)), `collect_matrix_terms` will
