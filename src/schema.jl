@@ -250,7 +250,9 @@ end
 
 apply_schema(t::InterceptTerm, schema::FullRank, Mod::Type) = (push!(schema.already, t); t)
 
-function apply_schema(t::Term, schema::FullRank, Mod::Type)
+# TODO: maybe change this to t::Any of ::AbstractTerm to catch
+# categorical/continuous terms?
+function apply_schema(t::AbstractTerm, schema::FullRank, Mod::Type)
     push!(schema.already, t)
     t = apply_schema(t, schema.schema, Mod) # continuous or categorical now
     apply_schema(t, schema, Mod, t) # repair if necessary
