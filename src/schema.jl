@@ -21,9 +21,26 @@ needs_schema(t) = false
 # first possible fix for #97
 needs_schema(::Union{CategoricalTerm, ContinuousTerm, InterceptTerm}) = false
 
+"""
+    StatsModels.Schema
 
+Struct that wraps a `Dict` mapping `Term`s to their concrete forms.  This exists
+mainly for dispatch purposes and to support possibly more sophisticated behavior
+in the future.
+
+A `Schema` behaves for all intents and purposes like an immutable `Dict`, and
+delegates the constructor as well as `getindex`, `get`, `merge!`, `merge`,
+`keys`, and `haskey` to the wrapped `Dict`.
+"""
 struct Schema
     schema::Dict{Term,AbstractTerm}
+end
+
+function Base.show(io::IO, schema::Schema)
+    println(io, "StatsModels.Schema with $(length(schema.schema)) entries:")
+    for (k,v) in schema.schema
+        println(io, "  ", k, " => ", v)
+    end
 end
 
 Schema(x) = Schema(Dict{Term,AbstractTerm}(x))
@@ -31,6 +48,10 @@ Schema(x) = Schema(Dict{Term,AbstractTerm}(x))
 Base.getindex(schema::Schema, key) = getindex(schema.schema, key)
 Base.get(schema::Schema, key, default) = get(schema.schema, key, default)
 Base.merge(a::Schema, b::Schema) = Schema(merge(a.schema, b.schema))
+Base.merge!(a::Schema, b::Schema) = (merge!(a.schema, b.schema); a)
+
+Base.keys(schema::Schema) = keys(schema.schema)
+Base.haskey(schema::Schema, key) = haskey(schema.schema, key)
 
 """
     schema([terms::AbstractVector{<:AbstractTerm}, ]data, hints::Dict{Symbol})
@@ -44,8 +65,9 @@ the appropriate term type will be guessed based on the data type from the data c
 numeric data is assumed to be continuous, and any non-numeric data is assumed to be
 categorical.
 
-Returns a `Dict` mapping `Term`s to their concrete instantiations (`ContinuousTerm` or
-`CategoricalTerm`)
+Returns a [`StatsModels.Schema`](@ref), which is a wrapper around a `Dict`
+mapping `Term`s to their concrete instantiations (`ContinuousTerm` or
+`CategoricalTerm`).
 
 # Example
 
@@ -55,17 +77,17 @@ julia> d = (x=sample([:a, :b, :c], 10), y=rand(10));
 julia> ts = [Term(:x), Term(:y)];
 
 julia> schema(ts, d)
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   y => y
   x => x
 
 julia> schema(ts, d, Dict(:x => HelmertCoding()))
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   y => y
   x => x
 
 julia> schema(term(:y), d, Dict(:y => CategoricalTerm))
-Dict{Any,Any} with 1 entry:
+StatsModels.Schema with 1 entry:
   y => y
 ```
 
@@ -74,7 +96,7 @@ same in a container, but when printed alone are different:
 
 ```jldoctest 1
 julia> sch = schema(ts, d)
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   y => y
   x => x
 
@@ -169,7 +191,7 @@ function concrete_term(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
 end
 
 """
-    apply_schema(t, schema[, Mod::Type = Nothing])
+    apply_schema(t, schema::StatsModels.Schema[, Mod::Type = Nothing])
 
 Return a new term that is the result of applying `schema` to term `t` with
 destination model (type) `Mod`.  If `Mod` is omitted, `Nothing` will be used.
@@ -178,28 +200,34 @@ When `t` is a `ContinuousTerm` or `CategoricalTerm` already, the term will be re
 unchanged _unless_ a matching term is found in the schema.  This allows 
 selective re-setting of a schema to change the contrast coding or levels of a 
 categorical term, or to change a continuous term to categorical or vice versa.
+
+When defining behavior for custom term types, it's best to dispatch on
+[`StatsModels.Schema`](@ref) for the second argument.  Leaving it as `::Any` will work
+in _most_ cases, but cause method ambiguity in some.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 apply_schema(t, schema, Mod::Type) = t
 apply_schema(terms::TupleTerm, schema, Mod::Type) =
     apply_schema.(terms, Ref(schema), Mod)
-apply_schema(t::Term, schema, Mod::Type) = schema[t]
-apply_schema(ft::FormulaTerm, schema, Mod::Type) =
+
+apply_schema(t::Term, schema::Schema, Mod::Type) = schema[t]
+apply_schema(ft::FormulaTerm, schema::Schema, Mod::Type) =
     FormulaTerm(apply_schema(ft.lhs, schema, Mod),
                 collect_matrix_terms(apply_schema(ft.rhs, schema, Mod)))
-apply_schema(it::InteractionTerm, schema, Mod::Type) =
+apply_schema(it::InteractionTerm, schema::Schema, Mod::Type) =
     InteractionTerm(apply_schema(it.terms, schema, Mod))
 
 # for re-setting schema (in setcontrasts!)
-apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema, Mod::Type) =
+apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema::Schema, Mod::Type) =
     get(schema, term(t.sym), t)
-apply_schema(t::MatrixTerm, sch, Mod::Type) = MatrixTerm(apply_schema.(t.terms, Ref(sch), Mod))
-
+apply_schema(t::MatrixTerm, sch::Schema, Mod::Type) =
+    MatrixTerm(apply_schema.(t.terms, Ref(sch), Mod))
 
 # TODO: special case this for <:RegressionModel ?
-function apply_schema(t::ConstantTerm, schema, Mod::Type)
+function apply_schema(t::ConstantTerm, schema::Schema, Mod::Type)
     t.n ∈ (-1, 0, 1) ||
-        throw(ArgumentError("can't create InterceptTerm from $(t.n) (only -1, 0, and 1 allowed)"))
+        throw(ArgumentError("can't create InterceptTerm from $(t.n) " *
+                            "(only -1, 0, and 1 allowed)"))
     InterceptTerm{t.n==1}()
 end
 
@@ -217,7 +245,7 @@ has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
 
 struct FullRank
-    schema::Dict{Term,AbstractTerm}
+    schema::Schema
     already::Set{AbstractTerm}
 end
 
@@ -227,7 +255,7 @@ Base.get(schema::FullRank, key, default) = get(schema.schema, key, default)
 Base.merge(a::FullRank, b::FullRank) = FullRank(merge(a.schema, b.schema),
                                                 union(a.already, b.already))
 
-function apply_schema(t::FormulaTerm, schema, Mod::Type{<:StatisticalModel})
+function apply_schema(t::FormulaTerm, schema::Schema, Mod::Type{<:StatisticalModel})
     schema = FullRank(schema)
 
     # Models with the drop_intercept trait do not support intercept terms,
@@ -254,6 +282,24 @@ end
 # to know whether to repair, need to know context a term appears in.  main
 # effects occur in "own" context.
 
+"""
+    apply_schema(t::AbstractTerm, schema::StatsModels.FullRank, Mod::Type)
+
+Apply a schema, under the assumption that when a less-than-full rank model
+matrix would be produce, categorical terms should be "promoted" to full rank
+(where a categorical variable with ``k`` levels would produce ``k`` columns,
+instead of ``k-1`` in the standard contrast coding schemes).  This step is
+applied automatically when `Mod <: StatisticalModel`, but other types of models
+can opt-in by adding a method like
+
+```
+StatsModels.apply_schema(t::FormulaTerm, schema::StatsModels.Schema, Mod::Type{<:MyModelType}) =
+    apply_schema(t, StatsModels.FullRank(schema), mod)
+```
+
+See the section on [Modeling categorical data](@ref) in the docs for more
+information on how promotion of categorical variables works.
+"""
 function apply_schema(t::ConstantTerm, schema::FullRank, Mod::Type)
     push!(schema.already, t)
     apply_schema(t, schema.schema, Mod)

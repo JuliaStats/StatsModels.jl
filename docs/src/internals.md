@@ -152,7 +152,7 @@ julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"
 │ 9   │ 0.251662   │ 9     │ 0.0203749 │ c      │
 
 julia> schema(df)
-Dict{Any,Any} with 4 entries:
+StatsModels.Schema with 4 entries:
   y => y
   a => a
   b => b
@@ -164,12 +164,12 @@ computed based only on the necessary variables:
 
 ```jldoctest 1
 julia> schema(@formula(y ~ 1 + a), df)
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   y => y
   a => a
 
 julia> schema(Term(:a) + Term(:b), df)
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   a => a
   b => b
 ```
@@ -403,7 +403,9 @@ end
 
 Base.show(io::IO, p::PolyTerm) = print(io, "poly($(p.term), $(p.deg))")
 
-function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{<:POLY_CONTEXT})
+function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+                                  sch::StatsModels.Schema,
+                                  Mod::Type{<:POLY_CONTEXT})
     term = apply_schema(t.args_parsed[1], sch, Mod)
     isa(term, ContinuousTerm) ||
         throw(ArgumentError("PolyTerm only works with continuous terms (got $term)"))
@@ -486,7 +488,7 @@ could block `PolyTerm`s being generated for `GLM.LinearModel`:
 julia> using GLM
 
 julia> StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
-                                sch,
+                                sch::StatsModels.Schema,
                                 Mod::Type{GLM.LinearModel}) = t
 ```
 
