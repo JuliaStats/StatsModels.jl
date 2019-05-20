@@ -16,9 +16,10 @@ terms(t::MatrixTerm) = terms(t.terms)
 terms(t::TupleTerm) = mapreduce(terms, union, t)
 
 needs_schema(::AbstractTerm) = true
-needs_schema(::Union{CategoricalTerm, ContinuousTerm, InterceptTerm}) = false
 needs_schema(::ConstantTerm) = false
 needs_schema(t) = false
+# first possible fix for #97
+needs_schema(::Union{CategoricalTerm, ContinuousTerm, InterceptTerm}) = false
 
 """
     schema([terms::AbstractVector{<:AbstractTerm}, ]data, hints::Dict{Symbol})
@@ -138,6 +139,8 @@ concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol}) =
     concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
 concrete_term(t::Term, d) = concrete_term(t, d, nothing)
 
+# second possible fix for #97
+concrete_term(t, d, hint) = t
 
 concrete_term(t::Term, xs::AbstractVector{<:Number}, ::Nothing) = concrete_term(t, xs, ContinuousTerm)
 function concrete_term(t::Term, xs::AbstractVector, ::Type{ContinuousTerm})
