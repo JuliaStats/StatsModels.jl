@@ -21,6 +21,17 @@ needs_schema(t) = false
 # first possible fix for #97
 needs_schema(::Union{CategoricalTerm, ContinuousTerm, InterceptTerm}) = false
 
+
+struct Schema
+    schema::Dict{Term,AbstractTerm}
+end
+
+Schema(x) = Schema(Dict{Term,AbstractTerm}(x))
+
+Base.getindex(schema::Schema, key) = getindex(schema.schema, key)
+Base.get(schema::Schema, key, default) = get(schema.schema, key, default)
+Base.merge(a::Schema, b::Schema) = Schema(merge(a.schema, b.schema))
+
 """
     schema([terms::AbstractVector{<:AbstractTerm}, ]data, hints::Dict{Symbol})
     schema(term::AbstractTerm, data, hints::Dict{Symbol})
@@ -86,7 +97,7 @@ schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
 # handle hints:
 schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
       hints::Dict{Symbol}=Dict{Symbol,Any}()) =
-    sch = Dict{Any,Any}(t=>concrete_term(t, dt, hints) for t in ts)
+    sch = Schema(t=>concrete_term(t, dt, hints) for t in ts)
 
 schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
     schema(filter(needs_schema, terms(f)), data, hints)
