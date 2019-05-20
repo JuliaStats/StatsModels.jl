@@ -16,6 +16,7 @@ terms(t::MatrixTerm) = terms(t.terms)
 terms(t::TupleTerm) = mapreduce(terms, union, t)
 
 needs_schema(::AbstractTerm) = true
+needs_schema(::Union{CategoricalTerm, ContinuousTerm, InterceptTerm}) = false
 needs_schema(::ConstantTerm) = false
 needs_schema(t) = false
 
