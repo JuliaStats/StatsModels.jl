@@ -571,9 +571,12 @@ StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredC
 y ~ 1 + :(poly(b, 2))
 
 Coefficients:
-             Estimate Std.Error t value Pr(>|t|)
-(Intercept)  0.911363  0.310486 2.93528   0.0042
-poly(b, 2)    2.94442  0.191024 15.4139   <1e-27
+────────────────────────────────────────────────────
+             Estimate  Std.Error   t value  Pr(>|t|)
+────────────────────────────────────────────────────
+(Intercept)  0.911363   0.310486   2.93528    0.0042
+poly(b, 2)   2.94442    0.191024  15.4139     <1e-27
+────────────────────────────────────────────────────
 
 julia> fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
 StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1},Normal{Float64},IdentityLink},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
@@ -581,10 +584,13 @@ StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1}
 y ~ 1 + poly(b, 2)
 
 Coefficients:
-             Estimate Std.Error z value Pr(>|z|)
-(Intercept)  0.829374  0.131582  6.3031    <1e-9
-b^1           2.13096  0.100552 21.1926   <1e-98
-b^2            3.1132 0.0813107 38.2877   <1e-99
+───────────────────────────────────────────────────
+             Estimate  Std.Error  z value  Pr(>|z|)
+───────────────────────────────────────────────────
+(Intercept)  0.829374  0.131582    6.3031    <1e-9
+b^1          2.13096   0.100552   21.1926    <1e-98
+b^2          3.1132    0.0813107  38.2877    <1e-99
+───────────────────────────────────────────────────
 
 ```
 
