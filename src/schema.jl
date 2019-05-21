@@ -37,7 +37,8 @@ struct Schema
 end
 
 function Base.show(io::IO, schema::Schema)
-    println(io, "StatsModels.Schema with $(length(schema.schema)) entries:")
+    n = length(schema.schema)
+    println(io, "StatsModels.Schema with $n ", n==1 ? "entry:" : "entries:")
     for (k,v) in schema.schema
         println(io, "  ", k, " => ", v)
     end
