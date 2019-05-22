@@ -34,6 +34,7 @@ delegates the constructor as well as `getindex`, `get`, `merge!`, `merge`,
 """
 struct Schema
     schema::Dict{Term,AbstractTerm}
+    Schema(x) = new(Dict{Term,AbstractTerm}(x))
 end
 
 function Base.show(io::IO, schema::Schema)
@@ -43,8 +44,6 @@ function Base.show(io::IO, schema::Schema)
         println(io, "  ", k, " => ", v)
     end
 end
-
-Schema(x) = Schema(Dict{Term,AbstractTerm}(x))
 
 Base.getindex(schema::Schema, key) = getindex(schema.schema, key)
 Base.get(schema::Schema, key, default) = get(schema.schema, key, default)
