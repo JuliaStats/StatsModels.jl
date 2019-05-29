@@ -473,9 +473,10 @@ modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
     ft.fanon.(getfield.(Ref(d), Names)...)
 
 modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
+modelcols!(dest::AbstractArray, t::ContinuousTerm, d::NamedTuple) = dest .= d[t.sym]
 
 modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
-
+modelcols!(dest, t::CategoricalTerm, d::NamedTuple) = dest .= t.contrasts[d[t.sym], :]
 
 """
     reshape_last_to_i(i::Int, a)
@@ -506,6 +507,12 @@ end
 # vs. vanilla NamedTuple, or reshape and use normal broadcasting
 modelcols(t::InteractionTerm, d::NamedTuple) =
     kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
+
+# hard to do this without allocating temporaries for the individual terms :-/
+function modelcols!(dest, t::InteractionTerm, d::NamedTuple)
+    dest_r = reshape(dest, width.(t.terms))
+    # ... PROFIT?
+end
 
 function modelcols(t::InteractionTerm, d::ColumnTable)
     row_kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
