@@ -35,7 +35,7 @@ function apply_schema(t::FunctionTerm{typeof(lag)}, sch, mod::Type{<:LAG_CONTEXT
     term = apply_schema(term_parsed, sch, mod)
 
     (nsteps_parsed isa ConstantTerm) ||
-        throw(ArgumentError("Lag step must be a number (got $step_parsed)"))
+        throw(ArgumentError("Lag step must be a number (got $nstep_parsed)"))
 
     nsteps = nsteps_parsed.n
     return LagTerm(term, nsteps)
