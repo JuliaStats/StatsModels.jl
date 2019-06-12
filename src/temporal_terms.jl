@@ -2,16 +2,17 @@
 
 # syntax:
 """
-    lag(term, nsteps)
+    lag(term, nsteps::Integer)
+
 This `@formula` term is used to introduce lagged variables.
 For example `lag(x,1)` effectively adds a new column containing
 the value of the `x` column from the previous row.
-If there are no such row (e.g. because this is the first row), then the lagged column will
+If there is no such row (e.g. because this is the first row), then the lagged column will
 contain `missing`.
 
 Note: this is only a basic row-wise lag operation.
-It is up to the user to ensure that that there data is sorted by the temporal variable,
-and that their observations are spaced with regular time-steps.
+It is up to the user to ensure that data is sorted by the temporal variable,
+and that observations are spaced with regular time-steps.
 (Which may require adding extra-rows filled with `missing` values.)
 """
 lag(term, nsteps) = error("`lag`  should only be used within a @formula");
@@ -51,6 +52,5 @@ end
 width(lag::LagTerm) = width(lag.term)
 
 function StatsBase.coefnames(lag::LagTerm)
-    # Possible Hack: Reset memory here.
     return coefnames(lag.term) .* "_lagged_by_$(lag.nsteps)"
 end
