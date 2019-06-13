@@ -15,7 +15,7 @@ using DataStructures
         @test isequal(pred[:, 3], [missing; missing; missing; 1.0:7])
         @test isequal(pred[:, 4], fill(missing, 10))
 
-        @test coefnames(f)[2] == ["x_lagged_by_0", "x_lagged_by_1", "x_lagged_by_3", "x_lagged_by_11"]
+        @test coefnames(f)[2] == ["x_lag0", "x_lag1", "x_lag3", "x_lag11"]
     end
 
     @testset "1 arg form" begin
@@ -25,7 +25,7 @@ using DataStructures
         resp, pred = modelcols(f, df)
 
         @test isequal(pred[:, 1], [missing; 1.0:9])
-        @test coefnames(f)[2] == "x_lagged_by_1"
+        @test coefnames(f)[2] == "x_lag1"
     end
 
     @testset "Nested Use" begin

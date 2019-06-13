@@ -54,5 +54,5 @@ end
 width(lag::LagTerm) = width(lag.term)
 
 function StatsBase.coefnames(lag::LagTerm)
-    return coefnames(lag.term) .* "_lagged_by_$(lag.nsteps)"
+    return coefnames(lag.term) .* "_lag$(lag.nsteps)"
 end
