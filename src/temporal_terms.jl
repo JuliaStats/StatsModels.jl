@@ -17,7 +17,7 @@ lead_lag_docstring(op, opped, prevnext, firstlast) = """\n
 """
 
 @doc lead_lag_docstring("lag", "lagged", "previous", "first") lag
-@doc (lead_lag_docstring("lead", "lead", "next", "last")) lead
+@doc lead_lag_docstring("lead", "lead", "next", "last") lead
 
 
 # struct for behavior
@@ -26,8 +26,6 @@ struct LeadLagTerm{T<:AbstractTerm, F<:Union{typeof(lead), typeof(lag)}} <: Abst
     nsteps::Int
 end
 
-op(::LeadLagTerm{<:Any, typeof(lag)}) = lag
-op(::LeadLagTerm{<:Any, typeof(lead)}) = lead
 opname(::LeadLagTerm{<:Any, typeof(lag)}) = "lag"
 opname(::LeadLagTerm{<:Any, typeof(lead)}) = "lead"
 
@@ -50,9 +48,9 @@ function apply_schema(t::FunctionTerm{F}, sch, ctx::Type) where F<:Union{typeof(
     return LeadLagTerm{typeof(term), F}(term, nsteps)
 end
 
-function modelcols(ll::LeadLagTerm, d::Tables.ColumnTable)
+function modelcols(ll::LeadLagTerm{<:Any, F}, d::Tables.ColumnTable) where F
     original_cols = modelcols(ll.term, d)
-    return op(ll)(original_cols, ll.nsteps)
+    return F.instance(original_cols, ll.nsteps)
 end
 
 width(ll::LeadLagTerm) = width(ll.term)
