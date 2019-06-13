@@ -2,7 +2,7 @@ module StatsModels
 
 using Tables
 using StatsBase
-import ShiftedArrays: lag, lead  # need to use import, not using, to add docstrings
+using ShiftedArrays: lag, lead
 using CategoricalArrays
 using DataStructures
 

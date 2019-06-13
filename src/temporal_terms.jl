@@ -1,7 +1,7 @@
 # Basic Lead/Lag:
 
 # syntax:
-lead_lag_docstring(op, opped, prevnext, firstlast) = """
+lead_lag_docstring(op, opped, prevnext, firstlast) = """\n
         $op(term, nsteps::Integer)
 
     This `@formula` term is used to introduce $opped variables.
@@ -16,15 +16,8 @@ lead_lag_docstring(op, opped, prevnext, firstlast) = """
     (Which may require adding extra-rows filled with `missing` values.)
 """
 
-"""
-    $(lead_lag_docstring("lag", "lagged", "previous", "first"))"
-"""
-function lag end
-
-"""
-    $(lead_lag_docstring("lead", "lead", "next", "last"))"
-"""
-function lag end
+@doc lead_lag_docstring("lag", "lagged", "previous", "first") lag
+@doc (lead_lag_docstring("lead", "lead", "next", "last")) lead
 
 
 # struct for behavior
