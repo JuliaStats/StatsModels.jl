@@ -2,6 +2,7 @@ module StatsModels
 
 using Tables
 using StatsBase
+import ShiftedArrays: lag, lead  # need to use import, not using, to add docstrings
 using CategoricalArrays
 using DataStructures
 
@@ -42,7 +43,7 @@ export
     LagTerm,
     MatrixTerm,
 
-    lag,
+    lag, lead, # Rexported from ShiftedArrays
 
     term,
     terms,
