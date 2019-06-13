@@ -43,7 +43,7 @@ function apply_schema(t::FunctionTerm{typeof(lag)}, sch, ctx::Type)
     return LagTerm(term, nsteps)
 end
 
-function modelcols(lag::LagTerm, d::NamedTuple)
+function modelcols(lag::LagTerm, d::Tables.ColumnTable)
     original_cols = modelcols(lag.term, d)
     n_cols = size(original_cols, 2)
     padding = fill(missing, (lag.nsteps, n_cols))

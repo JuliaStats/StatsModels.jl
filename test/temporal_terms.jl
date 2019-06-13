@@ -4,21 +4,29 @@ using StatsModels: width
 using DataStructures
 
 @testset "Temporal Terms" begin
-    #==
-    @testset "Basic Use" begin
+    @testset "Basic use" begin
         df = (y=1:10, x = 1:10)
         f = @formula(y ~ lag(x, 0) + lag(x, 1) + lag(x, 3) + lag(x, 11))
         f = apply_schema(f, schema(f, df))
-        resp, pred = modelcols(f, df);
+        resp, pred = modelcols(f, df)
 
-        @test pred[:, 1] == 1.0:10
-        @test pred[:, 2] == [missing; 1.0:9]
-        @test pred[:, 3] == [missing; missing; missing; 1.0:7]
-        @test pred[:, 4] == fill(10, missing)
+        @test isequal(pred[:, 1], 1.0:10)
+        @test isequal(pred[:, 2], [missing; 1.0:9])
+        @test isequal(pred[:, 3], [missing; missing; missing; 1.0:7])
+        @test isequal(pred[:, 4], fill(missing, 10))
 
         @test coefnames(f)[2] == ["x_lagged_by_0", "x_lagged_by_1", "x_lagged_by_3", "x_lagged_by_11"]
     end
-    ==#
+
+    @testset "1 arg form" begin
+        df = (y=1:10, x = 1:10)
+        f = @formula(y ~ lag(x))
+        f = apply_schema(f, schema(f, df))
+        resp, pred = modelcols(f, df)
+
+        @test isequal(pred[:, 1], [missing; 1.0:9])
+        @test coefnames(f)[2] == "x_lagged_by_1"
+    end
 
     @testset "Nested Use" begin
         df = (y=1:10, x = 1:10)
@@ -53,5 +61,4 @@ using DataStructures
             @test_throws MethodError apply_schema(bad_f, schema(bad_f, df))
         end
     end
-
 end
