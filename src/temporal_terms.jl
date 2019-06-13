@@ -17,9 +17,6 @@ and that observations are spaced with regular time-steps.
 """
 lag(term, nsteps) = error("`lag`  should only be used within a @formula");
 
-# type of model where syntax applies:
-const LAG_CONTEXT = Any
-
 # struct for behavior
 struct LagTerm{T<:AbstractTerm} <: AbstractTerm
     term::T
@@ -28,16 +25,21 @@ end
 
 Base.show(io::IO, lag::LagTerm) = print(io, "lag($(lag.term), $(lag.nsteps))")
 
-function apply_schema(t::FunctionTerm{typeof(lag)}, sch, mod::Type{<:LAG_CONTEXT})
-    @assert length(t.args_parsed) == 2
-    term_parsed, nsteps_parsed = t.args_parsed
+function apply_schema(t::FunctionTerm{typeof(lag)}, sch, ctx::Type)
+    if length(t.args_parsed) == 1  # lag(term)
+        term_parsed = first(t.args_parsed)
+        nsteps = 1
+    elseif length(t.args_parsed) == 2  # lag(term, nsteps)
+        term_parsed, nsteps_parsed = t.args_parsed
+        (nsteps_parsed isa ConstantTerm) ||
+            throw(ArgumentError("Lag step must be a number (got $nsteps_parsed)"))
+        nsteps = nsteps_parsed.n
+    else
+        throw(ArgumentError("`lag` terms require 1 or 2 arguments."))
+    end
 
-    term = apply_schema(term_parsed, sch, mod)
+    term = apply_schema(term_parsed, sch, ctx)
 
-    (nsteps_parsed isa ConstantTerm) ||
-        throw(ArgumentError("Lag step must be a number (got $nstep_parsed)"))
-
-    nsteps = nsteps_parsed.n
     return LagTerm(term, nsteps)
 end
 

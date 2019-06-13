@@ -10,6 +10,7 @@ using StatsModels: ContrastsMatrix
 
 my_tests = ["formula.jl",
             "terms.jl",
+            "temporal_terms.jl",
             "modelmatrix.jl",
             "statsmodel.jl",
             "contrasts.jl",
