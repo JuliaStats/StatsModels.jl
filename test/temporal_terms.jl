@@ -48,6 +48,19 @@ using DataStructures
             @test coefnames(neg_f)[2] == "x_lag-2"
         end
 
+        @testset "Categorical Term use" begin
+            df = (y=1:4, x = ["A", "B", "A", "C"])
+            f = @formula(y ~ lag(x, 2))
+            f = apply_schema(f, schema(f, df))
+            resp, pred = modelcols(f, df)
+
+            # Note the even though "C" is lagged out of the data, we still get 2 columns
+            @test isequal(pred[:, 1], [missing; missing; 0; 1])
+            @test isequal(pred[:, 2], [missing; missing; 0; 0])
+
+            @test coefnames(f)[2] == ["x: B_lag2", "x: C_lag2"]
+        end
+
         @testset "Diff Demo" begin
             df = (y=1:10, x = 1:10)
             f = @formula(y ~ (x - lag(x)))
