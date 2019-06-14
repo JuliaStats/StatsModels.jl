@@ -10,10 +10,12 @@
 
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
-terms(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
+terms(t::FunctionCallTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
+terms(t::CallTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
 terms(t::AbstractTerm) = [t]
 terms(t::MatrixTerm) = terms(t.terms)
 terms(t::TupleTerm) = mapreduce(terms, union, t)
+
 
 needs_schema(::AbstractTerm) = true
 needs_schema(::ConstantTerm) = false
@@ -26,7 +28,7 @@ needs_schema(t) = false
 Compute all the invariants necessary to fit a model with `terms`.  A schema is a dict that
 maps `Term`s to their concrete instantiations (either `CategoricalTerm`s or
 `ContinuousTerm`s.  "Hints" may optionally be supplied in the form of a `Dict` mapping term
-names (as `Symbol`s) to term or contrast types.  If a hint is not provided for a variable, 
+names (as `Symbol`s) to term or contrast types.  If a hint is not provided for a variable,
 the appropriate term type will be guessed based on the data type from the data column: any
 numeric data is assumed to be continuous, and any non-numeric data is assumed to be
 categorical.
@@ -56,7 +58,7 @@ Dict{Any,Any} with 1 entry:
   y => y
 ```
 
-Note that concrete `ContinuousTerm` and `CategoricalTerm` and un-typed `Term`s print the 
+Note that concrete `ContinuousTerm` and `CategoricalTerm` and un-typed `Term`s print the
 same in a container, but when printed alone are different:
 
 ```jldoctest 1
@@ -159,9 +161,9 @@ end
 Return a new term that is the result of applying `schema` to term `t` with
 destination model (type) `Mod`.  If `Mod` is omitted, `Nothing` will be used.
 
-When `t` is a `ContinuousTerm` or `CategoricalTerm` already, the term will be returned 
-unchanged _unless_ a matching term is found in the schema.  This allows 
-selective re-setting of a schema to change the contrast coding or levels of a 
+When `t` is a `ContinuousTerm` or `CategoricalTerm` already, the term will be returned
+unchanged _unless_ a matching term is found in the schema.  This allows
+selective re-setting of a schema to change the contrast coding or levels of a
 categorical term, or to change a continuous term to categorical or vice versa.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
@@ -179,6 +181,23 @@ apply_schema(it::InteractionTerm, schema, Mod::Type) =
 apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema, Mod::Type) =
     get(schema, term(t.sym), t)
 apply_schema(t::MatrixTerm, sch, Mod::Type) = MatrixTerm(apply_schema.(t.terms, Ref(sch), Mod))
+
+
+function apply_schema(ct::CallTerm{Fo, names}, schema, Mod::Type) where {Fo, Fa, names}
+    # First we apply schema to all terms inside the CallTerm arguments.
+    # Thus allowing them to have overloaded `apply_schema` behavour
+    name2term = Dict(map(zip(names,a ct.args_parsed)) do (name, arg)
+        name => apply_schema(arg, schema, Mod)
+    end
+
+    ft = FunctionCallTerm(forig, name2term, args_parsed)
+
+    # Last, we apply the schema to the FunctionCallTerm, so it can have overloaded
+    # apply_schema behavour -- but the fallback it to leave it as is
+    # which will result in a FunctionCallTerm in the final formula
+    # so the function will be called in `modelcols`
+    return apply_schema(ft, schema, Mod)
+end
 
 
 # TODO: special case this for <:RegressionModel ?
@@ -234,7 +253,7 @@ function apply_schema(t::FormulaTerm, schema, Mod::Type{<:StatisticalModel})
 end
 
 # strategy is: apply schema, then "repair" if necessary (promote to full rank
-# contrasts).  
+# contrasts).
 #
 # to know whether to repair, need to know context a term appears in.  main
 # effects occur in "own" context.
@@ -309,7 +328,9 @@ termsyms(t::InterceptTerm{true}) = Set(1)
 termsyms(t::ConstantTerm) = Set((t.n,))
 termsyms(t::Union{Term, CategoricalTerm, ContinuousTerm}) = Set([t.sym])
 termsyms(t::InteractionTerm) = mapreduce(termsyms, union, t.terms)
-termsyms(t::FunctionTerm) = Set([t.exorig])
+termsyms(t::CallTerm) = Set([t.exorig])
+termsyms(t::FunctionCallTerm) = Set([t.exorig])
+
 
 symequal(t1::AbstractTerm, t2::AbstractTerm) = issetequal(termsyms(t1), termsyms(t2))
 

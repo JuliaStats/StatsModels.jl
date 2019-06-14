@@ -15,7 +15,7 @@ export
     #re-export from StatsBase:
     StatisticalModel,
     RegressionModel,
-    
+
     @formula,
     ModelFrame,
     ModelMatrix,
@@ -38,7 +38,8 @@ export
     InteractionTerm,
     FormulaTerm,
     InterceptTerm,
-    FunctionTerm,
+    CallTerm,
+    FunctionCallTerm,
     MatrixTerm,
 
     term,
