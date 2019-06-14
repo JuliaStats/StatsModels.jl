@@ -35,7 +35,7 @@ StatsModels.modelcols(t::NonMatrixTerm, d) = modelcols(t.term, d)
         f = @formula(y ~ poly(x, 3))
 
         f_plain = apply_schema(f, sch)
-        @test f_plain.rhs.terms[1] isa FunctionTerm
+        @test f_plain.rhs.terms[1] isa FunctionCallTerm
         @test f_plain == apply_schema(f, sch, Nothing)
         # Default behavour when evaluated as a function is to error
         @test_throws NotAllowedToCallError modelcols(f_plain, d) == hcat(d[:x].^3)

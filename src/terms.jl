@@ -80,7 +80,8 @@ them _as if_ they were part of a special DSL call, applying the rules to expand
 """
 struct FunctionCallTerm{F} <: AbstractTerm
     funct::F
-    name2term::Dict{Symbol, AbstractTerm}
+    names::Vector{Symbol}
+    terms::Vector{<:AbstractTerm}
     exorig::Expr
 end
 width(::FunctionCallTerm) = 1
@@ -379,12 +380,14 @@ function Base.show(io::IO, mime::MIME"text/plain", t::FormulaTerm; prefix="")
     show(io, mime, t.rhs, prefix="\n  ")
 end
 
+
+
 Base.show(io::IO, t::Union{CallTerm, FunctionCallTerm}) = print(io, ":($(t.exorig))")
 function Base.show(io::IO, ::MIME"text/plain",
-                   t::Union{CallTerm{Fo,Fa,names}, FunctionCallTerm{Fo,Fa,names}};
-                   prefix = "") where {Fo,Fa,names}
+                   t::Union{CallTerm, FunctionCallTerm};
+                   prefix = "")
     print(io, prefix, "(")
-    join(io, names, ",")
+    join(io, termnames(t), ",")
     print(io, ")->", t.exorig)
 end
 
@@ -488,14 +491,26 @@ julia> modelcols(MatrixTerm(ts), d)
 """
 modelcols(ts::TupleTerm, d::NamedTuple) = modelcols.(ts, Ref(d))
 
+
 # TODO: @generated to unroll the accessing of fields stuff
-function modelcols(ft::FunctionCallTerm, d::NamedTuple)
-    cols = (modelcols(term, d[name]) for (name, term) in ft.name2term)
+function modelcols(ft::FunctionCallTerm, d::ColumnTable)
+    @show ft
+    @show ft.terms
+    cols = Base.Generator(ft.terms) do term
+        modelcols(term, d)
+    end
+
+    @show collect(cols)
     return ft.funct.(cols...)
 end
+#==
+const OneColumnTable = NamedTuple{Names, Tuple{T}} where {Names, T}
+function modelcols(ft::FunctionCallTerm, d::OneColumnTable)
+    return ft.funct.(d[1])
+end
+==#
 
 modelcols(t::ContinuousTerm, d::NamedTuple) = Float64.(d[t.sym])
-
 modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
 
 
@@ -540,11 +555,21 @@ modelcols(t::FormulaTerm, d::NamedTuple) = (modelcols(t.lhs,d), modelcols(t.rhs,
 
 function modelcols(t::MatrixTerm, d::ColumnTable)
     mat = reduce(hcat, [modelcols(tt, d) for tt in t.terms])
-    reshape(mat, size(mat, 1), :)
+    @assert(
+        mat isa AbstractArray,
+        """
+        mat is not an array
+        mat: $(mat),
+        d: $(d),
+        t: $(t),
+        [modelcols(tt, d) for tt in t.terms] = $([modelcols(tt, d) for tt in t.terms])
+        """
+    )
+    return reshape(mat, size(mat, 1), :)
 end
 
 modelcols(t::MatrixTerm, d::NamedTuple) =
-    reduce(vcat, [modelcols(tt, d) for tt in t.terms])
+reduce(vcat, [modelcols(tt, d) for tt in t.terms])
 
 vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x
@@ -561,7 +586,7 @@ StatsBase.coefnames(::InterceptTerm{H}) where {H} = H ? "(Intercept)" : []
 StatsBase.coefnames(t::ContinuousTerm) = string(t.sym)
 StatsBase.coefnames(t::CategoricalTerm) =
     ["$(t.sym): $name" for name in t.contrasts.termnames]
-StatsBase.coefnames(t::FunctionTerm) = string(t.exorig)
+StatsBase.coefnames(t::Union{FunctionCallTerm, CallTerm}) = string(t.exorig)
 StatsBase.coefnames(ts::TupleTerm) = reduce(vcat, coefnames.(ts))
 StatsBase.coefnames(t::MatrixTerm) = mapreduce(coefnames, vcat, t.terms)
 StatsBase.coefnames(t::InteractionTerm) =

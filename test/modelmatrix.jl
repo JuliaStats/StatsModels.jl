@@ -1,5 +1,5 @@
 @testset "Model matrix" begin
-    
+
     using StatsBase: StatisticalModel
 
     using SparseArrays, DataFrames, Tables
@@ -15,7 +15,7 @@
     d[:x1p] = CategoricalArray(d[:x1])
 
     d_orig = deepcopy(d)
-    
+
     x1 = [5.:8;]
     x2 = [9.:12;]
     x3 = [13.:16;]
@@ -163,8 +163,8 @@
         categorical!(d)
         cs = Dict([Pair(name, EffectsCoding()) for name in names(d)])
         d[:n] = 1.:8
-    
-    
+
+
         ## No intercept
         mf = ModelFrame(@formula(n ~ 0 + x), d, contrasts=cs)
         mm = ModelMatrix(mf)
@@ -184,8 +184,8 @@
         mm = ModelMatrix(mf)
         @test all(mm.m .== ifelse.(d[:x] .== :a, -1, 1))
         @test coefnames(mf) == ["x: b"]
-        
-    
+
+
         ## No first-order term for interaction
         mf = ModelFrame(@formula(n ~ 1 + x + x&y), d, contrasts=cs)
         mm = ModelMatrix(mf)
@@ -199,7 +199,7 @@
                                  1  0  1]
         @test mm.m == ModelMatrix{sparsetype}(mf).m
         @test coefnames(mf) == ["(Intercept)", "x: b", "x: a & y: d", "x: b & y: d"]
-    
+
         ## When both terms of interaction are non-redundant:
         mf = ModelFrame(@formula(n ~ 0 + x&y), d, contrasts=cs)
         mm = ModelMatrix(mf)
@@ -220,7 +220,7 @@
         mm = ModelMatrix(mf)
         @test mm.m == Matrix(1.0I, 8, 8)
         @test mm.m == ModelMatrix{sparsetype}(mf).m
-    
+
         # two two-way interactions, with no lower-order term. both are promoted in
         # first (both x and y), but only the old term (x) in the second (because
         # dropping x gives z which isn't found elsewhere, but dropping z gives x
@@ -239,7 +239,7 @@
         @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
                                 "x: a & y: d", "x: b & y: d",
                                 "x: a & z: f", "x: b & z: f"]
-    
+
         # ...and adding a three-way interaction, only the shared term (x) is promoted.
         # this is because dropping x gives y&z which isn't present, but dropping y or z
         # gives x&z or x&z respectively, which are both present.
@@ -258,7 +258,7 @@
                                 "x: a & y: d", "x: b & y: d",
                                 "x: a & z: f", "x: b & z: f",
                                 "x: a & y: d & z: f", "x: b & y: d & z: f"]
-    
+
         # two two-way interactions, with common lower-order term. the common term x is
         # promoted in both (along with lower-order term), because in every case, when
         # x is dropped, the remaining terms (1, y, and z) aren't present elsewhere.
@@ -276,8 +276,8 @@
         @test coefnames(mf) == ["x: a", "x: b",
                                 "x: a & y: d", "x: b & y: d",
                                 "x: a & z: f", "x: b & z: f"]
-    
-    
+
+
         ## FAILS: When both terms are non-redundant and intercept is PRESENT
         ## (not fully redundant). Ideally, would drop last column. Might make sense
         ## to warn about this, and suggest recoding x and y into a single variable.
@@ -288,7 +288,7 @@
                                            1 0 0 0]
         @test_broken coefnames(mf) == ["x: a & y: c", "x: b & y: c",
                                        "x: a & y: d", "x: b & y: d"]
-    
+
         ## note that R also does not detect this automatically. it's left to glm et al.
         ## to detect numerically when the model matrix is rank deficient, which is hard
         ## to do correctly.
@@ -314,9 +314,16 @@
         mf = ModelFrame(@formula(y ~ 1 + (1 | x)), d)
         @test coefnames(mf) == ["(Intercept)", "1 | x"]
 
+        # 1 | x does not work as bitwse | is not defined on floats
+        # and by default that conversion happens
         mf = ModelFrame(@formula(y ~ 0 + (1 | x)), d)
-        @test all(ModelMatrix(mf).m .== float.(1 .| d[:x]))
+        @test_broken all(ModelMatrix(mf).m .== float.(1 .| d[:x]))
         @test coefnames(mf) == ["1 | x"]
+
+        mf = ModelFrame(@formula(y ~ 0 + (Int(1) | Int(x))), d)
+        @show ModelMatrix(mf)
+        @test all(ModelMatrix(mf).m .== float.(1 .| d[:x]))
+        @test coefnames(mf) == ["Int(1) | Int(x)"]
     end
 
 
@@ -345,7 +352,7 @@
                       x = repeat([:a, :b], outer = 4),
                       y = repeat([:c, :d], inner = 2, outer = 2),
                       z = repeat([:e, :f], inner = 4))
-    
+
         f = apply_schema(@formula(r ~ 1 + w*x*y*z), schema(d))
         modelmatrix(f, d)
         @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)

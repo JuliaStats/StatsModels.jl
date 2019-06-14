@@ -10,8 +10,8 @@
 
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
-terms(t::FunctionCallTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
-terms(t::CallTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
+terms(t::CallTerm) = Term.(termnames(t))  # TODO: This is wrong because termnames is wrong
+terms(t::FunctionCallTerm) = t.terms
 terms(t::AbstractTerm) = [t]
 terms(t::MatrixTerm) = terms(t.terms)
 terms(t::TupleTerm) = mapreduce(terms, union, t)
@@ -183,14 +183,14 @@ apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema, Mod::Type) =
 apply_schema(t::MatrixTerm, sch, Mod::Type) = MatrixTerm(apply_schema.(t.terms, Ref(sch), Mod))
 
 
-function apply_schema(ct::CallTerm{Fo, names}, schema, Mod::Type) where {Fo, Fa, names}
+function apply_schema(ct::CallTerm{F, Names}, schema, Mod::Type) where {F, Names}
     # First we apply schema to all terms inside the CallTerm arguments.
     # Thus allowing them to have overloaded `apply_schema` behavour
-    name2term = Dict(map(zip(names,a ct.args_parsed)) do (name, arg)
-        name => apply_schema(arg, schema, Mod)
+    terms  = map(ct.args_parsed) do arg
+        apply_schema(arg, schema, Mod)
     end
-
-    ft = FunctionCallTerm(forig, name2term, args_parsed)
+    names = Symbol[Names...]
+    ft = FunctionCallTerm(ct.forig, names, terms, ct.exorig)
 
     # Last, we apply the schema to the FunctionCallTerm, so it can have overloaded
     # apply_schema behavour -- but the fallback it to leave it as is
@@ -328,9 +328,7 @@ termsyms(t::InterceptTerm{true}) = Set(1)
 termsyms(t::ConstantTerm) = Set((t.n,))
 termsyms(t::Union{Term, CategoricalTerm, ContinuousTerm}) = Set([t.sym])
 termsyms(t::InteractionTerm) = mapreduce(termsyms, union, t.terms)
-termsyms(t::CallTerm) = Set([t.exorig])
-termsyms(t::FunctionCallTerm) = Set([t.exorig])
-
+termsyms(t::Union{CallTerm,FunctionCallTerm}) = Set(termnames(t))
 
 symequal(t1::AbstractTerm, t2::AbstractTerm) = issetequal(termsyms(t1), termsyms(t2))
 
@@ -346,4 +344,8 @@ termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
 termvars(t::TupleTerm) = mapreduce(termvars, union, t, init=Symbol[])
 termvars(t::MatrixTerm) = termvars(t.terms)
 termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
-termvars(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = collect(names)
+termvars(t::Union{CallTerm,FunctionCallTerm}) = collect(termnames(t))
+
+
+termnames(::CallTerm{<:Any, Names}) where Names = Names
+termnames(ft::FunctionCallTerm) = ft.names
