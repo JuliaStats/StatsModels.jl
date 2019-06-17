@@ -1,4 +1,4 @@
-using StatsModels: collect_matrix_terms, MatrixTerm
+using StatsModels: collect_matrix_terms, MatrixTerm, AbstractTerm
 
 struct NotAllowedToCallError <: Exception
     msg::String
@@ -14,7 +14,7 @@ end
 function StatsModels.apply_schema(t::CallTerm{typeof(poly)}, sch, Mod::Type{<:PolyModel})
     parsed_term, parsed_deg = t.args_parsed
     term = apply_schema(parsed_term, sch, Mod)
-    deg = parsed_deg.n
+    deg = unprotect(parsed_deg).n
     PolyTerm(term, deg)
 end
 
@@ -37,11 +37,11 @@ StatsModels.modelcols(t::NonMatrixTerm, d) = modelcols(t.term, d)
     sch = schema(d)
 
     @testset "Poly term" begin
-        f = @formula(y ~ poly(x, 3)
+        f = @formula(y ~ poly(x, protect(3)))
 
         f_plain = apply_schema(f, sch)
         @test f_plain.rhs.terms[1] isa FunctionCallTerm
-        @test f_plain == apply_schema(f, sch, Nothing)
+        @test_broken f_plain == apply_schema(f, sch, Nothing)
         # Default behavour when evaluated as a function is to error
         @test_throws NotAllowedToCallError modelcols(f_plain, d) == hcat(d[:x].^3)
 

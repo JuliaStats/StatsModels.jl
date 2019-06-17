@@ -182,8 +182,7 @@ apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema, Mod::Type) =
     get(schema, term(t.sym), t)
 apply_schema(t::MatrixTerm, sch, Mod::Type) = MatrixTerm(apply_schema.(t.terms, Ref(sch), Mod))
 
-
-function call_fallback_apply_schema(ct::CallTerm{F, Names}, schema, Mod::Type) where {F, Names}
+function call_fallback_apply_schema(ct::CallTerm{F, Names}, schema, Mod) where {F, Names}
     # First we apply schema to all terms inside the CallTerm arguments.
     # Thus allowing them to have overloaded `apply_schema` behavour
     terms  = map(ct.args_parsed) do arg
@@ -199,6 +198,11 @@ function call_fallback_apply_schema(ct::CallTerm{F, Names}, schema, Mod::Type) w
     return apply_schema(ft, schema, Mod)
 end
 apply_schema(ct::CallTerm, schema, Mod::Type) = call_fallback_apply_schema(ct, schema, Mod)
+
+# To get back (approx) old behavour of FunctionTerm do
+# apply_schema(ct::CallTerm, schema, Mod::Type) = call_fallback_apply_schema(ct, schema, ProtectedCtx{Mod})
+
+
 
 # TODO: special case this for <:RegressionModel ?
 function apply_schema(t::ConstantTerm, schema, Mod::Type)

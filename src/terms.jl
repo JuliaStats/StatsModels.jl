@@ -146,6 +146,11 @@ function CallTerm(
 end
 width(::CallTerm) = 1
 
+Base.isequal(a, b::CallTerm) = false
+Base.isequal(a::CallTerm, b) = false
+Base.isequal(a::CallTerm, b::CallTerm) =
+    isequal(a.forig, b.forig) && isequal(a.args_parsed, b.args_parsed)
+Base.hash(ct::CallTerm, h::UInt) = hash(ct.forig, hash(ct.args_parsed, h))
 
 
 """
@@ -500,6 +505,11 @@ end
 
 modelcols(t::ContinuousTerm, d::NamedTuple) = Float64.(d[t.sym])
 modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
+
+# This can exist in a formula after apply_schema if it was protected
+modelcols(t::ConstantTerm, d::ColumnTable) = fill(t.n, length(d))
+modelcols(t::ConstantTerm, d::Tables.RowTable) = fill(t.n, length(first(d)))
+
 
 
 """

@@ -15,7 +15,9 @@ function StatsModels.apply_schema(t::CallTerm{typeof(protect)}, sch, Mod::Type)
 end
 
 
-unprotect(x) = error("unprotect should only be used within a @formula")
+# Outside of a @formula unprotect strips the protect wrapper
+unprotect(t::CallTerm{typeof(protect)}) = t.args_parsed[1]
+unprotect(t) = t
 function StatsModels.apply_schema(t::CallTerm{typeof(unprotect)}, sch, Mod::Type)
     throw(DomainError("`unprotect` used outside a protected context."))
 end
@@ -27,7 +29,28 @@ end
 
 ## Defintion of how things act while protected:
 
-# TODO: Transform & and + and * into FunctionTerms
+# TODO: Transform * into FunctionTerms
+# https://github.com/JuliaStats/StatsModels.jl/issues/119
 
-apply_schema(t::ConstantTerm, schema, Mod::Type{<:ProtectedCtx}) = t.n
-apply_schema(ct::CallTerm, schema, Mod::Type{<:ProtectedCtx})  = call_fallback_apply_schema(ct, schema, Mod)
+apply_schema(t::ConstantTerm, schema, Mod::Type{<:ProtectedCtx}) = t
+
+function direct_call(op, arg_terms::Tuple)
+    names = Tuple(termvars(arg_terms))
+    ex = Expr(:call, nameof(op), names...)
+    ct = CallTerm{typeof(op), names}(+, ex, t)
+    return call_fallback_apply_schema(ct, schema, Mod)
+end
+function apply_schema(t::TupleTerm, schema, Mod::Type{<:ProtectedCtx})
+    # TupleTerm is what is created by `x+y`, we need to turn that back into addition.
+    return direct_call(+, t)
+end
+
+function apply_schema(t::InteractionTerm, schema, Mod::Type{<:ProtectedCtx})
+    # InteractionTerm is what is created by `x&y`, we need to turn that back into bitwise and.
+    return direct_call(&, t.terms)
+end
+
+
+# Lets not do the below by default. Instead overloaded call terms should opt into the fallback for during ProtectedCtx
+# that way we avoid and ambiguity error.
+# apply_schema(ct::CallTerm, schema, Mod::Type{<:ProtectedCtx})  = call_fallback_apply_schema(ct, schema, Mod)
