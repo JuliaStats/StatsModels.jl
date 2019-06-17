@@ -51,13 +51,16 @@ export
     width,
     modelcols,
     modelmatrix,
-    response
+    response,
+    protect,
+    unprotect
 
 include("traits.jl")
 include("contrasts.jl")
 include("terms.jl")
 include("schema.jl")
 include("formula.jl")
+include("protection.jl")
 include("modelframe.jl")
 include("statsmodel.jl")
 
