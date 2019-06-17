@@ -25,7 +25,7 @@ numeric matrix when ultimately combined with a tabular data source:
    variable, levels of categorical variables, summary statistics for continuous
    variables) and the over all structure of the **data**, during the invocation of `schema`
 3. "Semantics time" incorporates information about the **model type (context)**, and custom terms,
-during the call of `apply_schema`
+   during the call of `apply_schema`
 4. "Data time" when the actual data values themselves are available.
 
 For in-memory (columnar) tables, there is not much difference between "data
