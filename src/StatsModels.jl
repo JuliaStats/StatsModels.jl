@@ -15,7 +15,7 @@ export
     #re-export from StatsBase:
     StatisticalModel,
     RegressionModel,
-    
+
     @formula,
     ModelFrame,
     ModelMatrix,
@@ -38,7 +38,8 @@ export
     InteractionTerm,
     FormulaTerm,
     InterceptTerm,
-    FunctionTerm,
+    CallTerm,
+    FunctionCallTerm,
     MatrixTerm,
 
     term,
@@ -50,13 +51,16 @@ export
     width,
     modelcols,
     modelmatrix,
-    response
+    response,
+    protect,
+    unprotect
 
 include("traits.jl")
 include("contrasts.jl")
 include("terms.jl")
 include("schema.jl")
 include("formula.jl")
+include("protection.jl")
 include("modelframe.jl")
 include("statsmodel.jl")
 

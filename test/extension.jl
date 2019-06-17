@@ -1,19 +1,27 @@
-using StatsModels: collect_matrix_terms, MatrixTerm
+using StatsModels: collect_matrix_terms, MatrixTerm, AbstractTerm
 
-poly(x, n) = x^n
+struct NotAllowedToCallError <: Exception
+    msg::String
+end
+poly(x, n) = throw(NotAllowedToCallError("poly function should be only used in a @formula"))
 
 abstract type PolyModel end
-struct PolyTerm <: AbstractTerm
-    term::Symbol
+struct PolyTerm{T<:AbstractTerm} <: AbstractTerm
+    term::T
     deg::Int
 end
-PolyTerm(t::Term, deg::ConstantTerm) = PolyTerm(t.sym, deg.n)
 
-StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, ::Type{<:PolyModel}) =
-    PolyTerm(t.args_parsed...)
+function StatsModels.apply_schema(t::CallTerm{typeof(poly)}, sch, Mod::Type{<:PolyModel})
+    parsed_term, parsed_deg = t.args_parsed
+    term = apply_schema(parsed_term, sch, Mod)
+    deg = unprotect(parsed_deg).n
+    PolyTerm(term, deg)
+end
 
-StatsModels.modelcols(p::PolyTerm, d::NamedTuple) =
-    reduce(hcat, [d[p.term].^n for n in 1:p.deg])
+function StatsModels.modelcols(p::PolyTerm, d::NamedTuple)
+    term_col = modelcols(p.term, d)
+    reduce(hcat, [term_col.^n for n in 1:p.deg])
+end
 
 struct NonMatrixTerm{T} <: AbstractTerm
     term::T
@@ -29,18 +37,46 @@ StatsModels.modelcols(t::NonMatrixTerm, d) = modelcols(t.term, d)
     sch = schema(d)
 
     @testset "Poly term" begin
-        f = @formula(y ~ poly(x, 3))
+        f = @formula(y ~ poly(x, protect(3)))
 
         f_plain = apply_schema(f, sch)
-        @test f_plain.rhs.terms[1] isa FunctionTerm
-        @test f_plain == apply_schema(f, sch, Nothing)
-        @test last(modelcols(f_plain, d)) == hcat(d[:x].^3)
-        
+        @test f_plain.rhs.terms[1] isa FunctionCallTerm
+        @test_broken f_plain == apply_schema(f, sch, Nothing)
+        # Default behavour when evaluated as a function is to error
+        @test_throws NotAllowedToCallError modelcols(f_plain, d) == hcat(d[:x].^3)
+
         f_special = apply_schema(f, sch, PolyModel)
         @test f_special.rhs.terms[1] isa PolyTerm
         @test last(modelcols(f_special, d)) == hcat(d[:x], d[:x].^2, d[:x].^3)
     end
-    
+
+    @testset "nesting of functional terms and custom terms" begin
+        @testset "Custom functional term used inside a normal function" begin
+            f = @formula(y ~ max(x, poly(x, 1)))
+            f_special = apply_schema(f, sch, PolyModel)
+            @test last(modelcols(f_special, d)) |> vec == 1:10
+        end
+
+        @testset "Custom functional term used inside a custom functional term" begin
+            f = @formula(y ~ poly(poly(x,1), 1))
+            f_special = apply_schema(f, sch, PolyModel)
+            @test last(modelcols(f_special, d)) |> vec == 1:10
+        end
+
+        @testset "Normal functional term used inside a custom functional term" begin
+            f = @formula(y ~ poly(max(x, x), 1))
+            f_special = apply_schema(f, sch, PolyModel)
+            @test last(modelcols(f_special, d)) |> vec == 1:10
+        end
+
+        @testset "Normal functional term used inside a normal functional term" begin
+            f = @formula(y ~ max(x, max(x, x)))
+            f_special = apply_schema(f, sch, PolyModel)
+            @test last(modelcols(f_special, d)) |> vec == 1:10
+        end
+    end
+
+
     @testset "Non-matrix term" begin
         f = @formula(z ~ x + y)
         f2 = term(:z) ~ term(:x) + NonMatrixTerm(term(:y))
@@ -84,8 +120,7 @@ StatsModels.modelcols(t::NonMatrixTerm, d) = modelcols(t.term, d)
         @test f5.rhs ==
             apply_schema((MatrixTerm((term.((:x, :y)))), NonMatrixTerm(term(:y))), sch)
         @test modelcols(f5.rhs, d) == (hcat(d.x, d.y), d.y)
-        
+
     end
 
 end
-

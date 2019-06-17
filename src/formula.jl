@@ -146,7 +146,7 @@ end
 """
     And1 <: FormulaRewrite
 
-Remove numbers from interaction terms, so `1&x` becomes `&(x)` (which is later 
+Remove numbers from interaction terms, so `1&x` becomes `&(x)` (which is later
 cleaned up by `EmptyAnd`).
 """
 struct And1 <: FormulaRewrite end
@@ -188,7 +188,7 @@ function parse!(ex::Expr, rewrites::Vector)
 
     # parse a copy of non-special calls
     ex_parsed = ex.args[1] ∉ SPECIALS ? deepcopy(ex) : ex
-    
+
     # iterate over children, checking for special rules
     child_idx = 2
     while child_idx <= length(ex_parsed.args)
@@ -215,17 +215,15 @@ end
 
 Capture a call to a function that is not part of the formula DSL.  This replaces
 `ex` with a call to [`capture_call`](@ref).  `ex_parsed` is a copy of `ex` whose
-arguments have been parsed according to the normal formula DSL rules and which 
+arguments have been parsed according to the normal formula DSL rules and which
 will be passed as the final argument to `capture_call`.
 """
 function capture_call_ex!(ex::Expr, ex_parsed::Expr)
     symbols = extract_symbols(ex)
     symbols_ex = Expr(:tuple, symbols...)
-    f_anon_ex = esc(Expr(:(->), symbols_ex, copy(ex)))
     f_orig = ex.args[1]
     ex.args = [:capture_call,
                esc(f_orig),
-               f_anon_ex,
                tuple(symbols...),
                Meta.quot(deepcopy(ex)),
                :[$(ex_parsed.args[2:end]...)]]
