@@ -20,18 +20,20 @@ A formula goes through a number of stages, starting as an
 expression that's passed to the `@formula` macro and ending up generating a
 numeric matrix when ultimately combined with a tabular data source:
 
-1. "Syntax time" when only the surface syntax is available
+1. "Syntax time" when only the surface syntax is available, during the defintion of `@formula`
 2. "Schema time" incorporates information about **data invariants** (types of each
    variable, levels of categorical variables, summary statistics for continuous
-   variables) and the **model type**.
-3. "Data time" when the actual data values themselves are available.
+   variables) and the over all structure of the **data**, during the invocation of `schema`
+3. "Semantics time" incorperates information about the **model type (context)**, and custom terms,
+during the call of `apply_schema`
+4. "Data time" when the actual data values themselves are available.
 
 For in-memory (columnar) tables, there is not much difference between "data
 time" and "schema time" in practice, but in principle it's important to
 distinguish between these when dealing with truly streaming data, or large data
 stores where calculating invariants of the data may be expensive.
 
-### Syntax time
+### Syntax time (`@formula`)
 
 The `@formula` macro does syntactic transformations of the formula expression.
 At this point, _only_ the expression itself is available, and there's no way to
@@ -111,7 +113,9 @@ and turned into anonymous functions that can be evaluated elementwise, which has
 to happen at compile time.  For instance, the call to `log` in `@formula(y ~
 log(a+b))` is converted into the anonymous function `(a,b) -> log(a+b)`.
 
-### Schema time
+Internally a lot of the work at syntax time is done by the `parse!` function.
+
+### Schema time (`schema`)
 
 The next phase of life for a formula begins when a _schema_ for the data becomes
 available.  A schema is a mapping from data columns to a concrete term
@@ -163,6 +167,8 @@ Dict{Any,Any} with 2 entries:
   b => b
 ```
 
+### Semantics time (`apply_schema`)
+
 Once a schema is computed, it's _applied_ to the formula with
 [`apply_schema`](@ref).  Among other things, this _instantiates_ placeholder
 terms:
@@ -170,6 +176,8 @@ terms:
 * `ConstantTerm`s become `InterceptTerm`s
 * Tuples of terms become [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
   they should be concatenated into a single model matrix
+* Custom terms (like the `poly` example) are applied
+* Any model (context) specific interperation of the terms is made.
 
 ```jldoctest 1
 julia> f = @formula(y ~ 1 + a + b * c)
@@ -210,7 +218,7 @@ _both_ the source (schema) _and_ the destination (model type).  This is the
 primary mechanisms by which the formula DSL can be extended ([see
 below](#Extending-@formula-syntax-1) for more details)
 
-### Data time
+### Data time (`modelcols`)
 
 At the end of "schema time", a formula encapsulates all the information needed
 to convert a table into a numeric model matrix.  That is, it is ready for "data
