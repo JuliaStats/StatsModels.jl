@@ -29,6 +29,14 @@ using DataStructures
             @test coefnames(f)[2] == "x_lag1"
         end
 
+        @testset "Row Table" begin
+            rowdata = [(y=i, x=2i) for i in 1:10]
+            f = @formula(y ~ lag(x))
+            f = apply_schema(f, schema(f, rowdata))
+            resp, pred = modelcols(f, rowdata)
+            @test pred[:, 1] == [missing; 2.0; 4.0; 6.0; 8.0; 10.0; 12.0; 14.0; 16.0; 18.0]
+        end
+
         @testset "Nested Use" begin
             df = (y=1:10, x = 1:10)
             f = @formula(y ~ lag(lag(x, 1), 2))  # equiv to `lag(x, 3)`
@@ -82,7 +90,7 @@ using DataStructures
                 bad_f = @formula(y ~ lag(x, 1.5))
                 @test_throws InexactError apply_schema(bad_f, schema(bad_f, df))
             end
-        end
+        end # Unhappy Path testset
     end # Lag testset
 
     # The code for lag and lead is basically the same, as we tested lag comprehensively above

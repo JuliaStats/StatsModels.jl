@@ -26,12 +26,8 @@ struct LeadLagTerm{T<:AbstractTerm, F<:Union{typeof(lead), typeof(lag)}} <: Abst
     nsteps::Int
 end
 
-opname(::LeadLagTerm{<:Any, typeof(lag)}) = "lag"
-opname(::LeadLagTerm{<:Any, typeof(lead)}) = "lead"
-
-
 function apply_schema(t::FunctionTerm{F}, sch, ctx::Type) where F<:Union{typeof(lead), typeof(lag)}
-    opname = string(F.instance)
+    opname = string(nameof(F.instance))
     if length(t.args_parsed) == 1  # lag(term)
         term_parsed = first(t.args_parsed)
         nsteps = 1
@@ -54,5 +50,11 @@ function modelcols(ll::LeadLagTerm{<:Any, F}, d::Tables.ColumnTable) where F
 end
 
 width(ll::LeadLagTerm) = width(ll.term)
-Base.show(io::IO, ll::LeadLagTerm) = print(io, "$(opname(ll))($(ll.term), $(ll.nsteps))")
-StatsBase.coefnames(ll::LeadLagTerm) = coefnames(ll.term) .* "_$(opname(ll))$(ll.nsteps)"
+function Base.show(io::IO, ll::LeadLagTerm{<:Any, F}) where F
+    opname = string(nameof(F.instance))
+    print(io, "$opname($(ll.term), $(ll.nsteps))")
+end
+function StatsBase.coefnames(ll::LeadLagTerm{<:Any, F}) where F
+    opname = string(nameof(F.instance))
+    coefnames(ll.term) .* "_$opname$(ll.nsteps)"
+end
