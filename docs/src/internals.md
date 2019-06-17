@@ -24,7 +24,7 @@ numeric matrix when ultimately combined with a tabular data source:
 2. "Schema time" incorporates information about **data invariants** (types of each
    variable, levels of categorical variables, summary statistics for continuous
    variables) and the over all structure of the **data**, during the invocation of `schema`
-3. "Semantics time" incorperates information about the **model type (context)**, and custom terms,
+3. "Semantics time" incorporates information about the **model type (context)**, and custom terms,
 during the call of `apply_schema`
 4. "Data time" when the actual data values themselves are available.
 
