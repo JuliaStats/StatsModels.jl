@@ -1,9 +1,22 @@
-##Temporal Terms (Lag/Lead)
+## Temporal Terms (Lag/Lead)
 
 When working with time series data it is common to want to access past or future values of your predictors.
 These are called lagged (past) or lead (future) variables.
 
-### Basic Lead/Lag
+StatsModels supports basic lead and lag functionality:
+
+- `lag(x, n)` accesses data for variable `x` from `n` rows (time steps) ago.
+- `lead(x, n)` accesses data for variable `x` from `n` rows (time steps) ahead.
+
+In both cases, `n` can be omitted, and it defaults to `1` row.
+`missing` is used for any entries that are lagged or lead out of the table.
+
+Note that this is a purely structural lead/lag term: it is unaware of any
+time index of the data. It is up to the user to ensure the data is sorted,
+and following a regular time interval, which may require inserting additional
+rows containing `missing`s  to fill in gaps in irregular data.
+
+Below is a simple example:
 ```jldoctest
 julia> using StatsModels, DataFrames
 
@@ -18,7 +31,7 @@ julia> df = DataFrame(y=1:5, x=2:2:10)
 │ 4   │ 4     │ 8     │
 │ 5   │ 5     │ 10    │
 
-julia> f = @formula(y~ x + lag(x,2) + lead(x,2))
+julia> f = @formula(y ~ x + lag(x, 2) + lead(x, 2))
 FormulaTerm
 Response:
   y(unknown)
@@ -50,14 +63,3 @@ julia> DataFrame(hcat(modelcols(f,df)...), Symbol.(vcat(coefnames(f)...)))
 │ 4   │ 4.0      │ 8.0      │ 4.0      │ missing  │
 │ 5   │ 5.0      │ 10.0     │ 6.0      │ missing  │
 ```
-
-StatsModels supports basic lead and lag functionality; as demonstrated above.
-`lag(x, n)` accessed data for variable `x` from `n` rows (timesteps) ago.
-`lead(x, n)` accessed data for variable `x` from `n` rows (timesteps) ahead.
-In both cases, `n` can be ommitted, and it defaults to `1` row.
-`missing` is used for any enties that are lagged or lead out of the table.
-
-Note that this is a purely structural lead/lag term.
-It is unaware of any time-index of the data.
-It is up to the user to ensure the data is sorted, and following a regular time interval.
-This may require insterting additional rows containing `missing`s  to fill in gaps in irregular data.
