@@ -494,21 +494,9 @@ modelcols(ts::TupleTerm, d::NamedTuple) = modelcols.(ts, Ref(d))
 
 # TODO: @generated to unroll the accessing of fields stuff
 function modelcols(ft::FunctionCallTerm, d::ColumnTable)
-    @show ft
-    @show ft.terms
-    cols = Base.Generator(ft.terms) do term
-        modelcols(term, d)
-    end
-
-    @show collect(cols)
+    cols = (modelcols(term, d) for term in ft.terms)
     return ft.funct.(cols...)
 end
-#==
-const OneColumnTable = NamedTuple{Names, Tuple{T}} where {Names, T}
-function modelcols(ft::FunctionCallTerm, d::OneColumnTable)
-    return ft.funct.(d[1])
-end
-==#
 
 modelcols(t::ContinuousTerm, d::NamedTuple) = Float64.(d[t.sym])
 modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]

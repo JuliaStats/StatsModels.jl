@@ -6,17 +6,22 @@ end
 poly(x, n) = throw(NotAllowedToCallError("poly function should be only used in a @formula"))
 
 abstract type PolyModel end
-struct PolyTerm <: AbstractTerm
-    term::Symbol
+struct PolyTerm{T<:AbstractTerm} <: AbstractTerm
+    term::T
     deg::Int
 end
-PolyTerm(t::Term, deg::ConstantTerm) = PolyTerm(t.sym, deg.n)
 
-StatsModels.apply_schema(t::FunctionCallTerm{typeof(poly)}, sch, ::Type{<:PolyModel}) =
-    PolyTerm(t.args_parsed...)
+function StatsModels.apply_schema(t::CallTerm{typeof(poly)}, sch, Mod::Type{<:PolyModel})
+    parsed_term, parsed_deg = t.args_parsed
+    term = apply_schema(parsed_term, sch, Mod)
+    deg = parsed_deg.n
+    PolyTerm(term, deg)
+end
 
-StatsModels.modelcols(p::PolyTerm, d::NamedTuple) =
-    reduce(hcat, [d[p.term].^n for n in 1:p.deg])
+function StatsModels.modelcols(p::PolyTerm, d::NamedTuple)
+    term_col = modelcols(p.term, d)
+    reduce(hcat, [term_col.^n for n in 1:p.deg])
+end
 
 struct NonMatrixTerm{T} <: AbstractTerm
     term::T
@@ -32,7 +37,7 @@ StatsModels.modelcols(t::NonMatrixTerm, d) = modelcols(t.term, d)
     sch = schema(d)
 
     @testset "Poly term" begin
-        f = @formula(y ~ poly(x, 3))
+        f = @formula(y ~ poly(x, 3)
 
         f_plain = apply_schema(f, sch)
         @test f_plain.rhs.terms[1] isa FunctionCallTerm
@@ -45,12 +50,30 @@ StatsModels.modelcols(t::NonMatrixTerm, d) = modelcols(t.term, d)
         @test last(modelcols(f_special, d)) == hcat(d[:x], d[:x].^2, d[:x].^3)
     end
 
-    @testset "Custom functional term used inside a normal function" begin
-        f = @formula(y ~ (x - poly(x, 1)))
+    @testset "nesting of functional terms and custom terms" begin
+        @testset "Custom functional term used inside a normal function" begin
+            f = @formula(y ~ max(x, poly(x, 1)))
+            f_special = apply_schema(f, sch, PolyModel)
+            @test last(modelcols(f_special, d)) |> vec == 1:10
+        end
 
-        f_special = apply_schema(f, sch, PolyModel)
-        #@test_broken
-        last(modelcols(f_special, d)) == zeros(10)
+        @testset "Custom functional term used inside a custom functional term" begin
+            f = @formula(y ~ poly(poly(x,1), 1))
+            f_special = apply_schema(f, sch, PolyModel)
+            @test last(modelcols(f_special, d)) |> vec == 1:10
+        end
+
+        @testset "Normal functional term used inside a custom functional term" begin
+            f = @formula(y ~ poly(max(x, x), 1))
+            f_special = apply_schema(f, sch, PolyModel)
+            @test last(modelcols(f_special, d)) |> vec == 1:10
+        end
+
+        @testset "Normal functional term used inside a normal functional term" begin
+            f = @formula(y ~ max(x, max(x, x)))
+            f_special = apply_schema(f, sch, PolyModel)
+            @test last(modelcols(f_special, d)) |> vec == 1:10
+        end
     end
 
 

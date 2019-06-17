@@ -321,7 +321,6 @@
         @test coefnames(mf) == ["1 | x"]
 
         mf = ModelFrame(@formula(y ~ 0 + (Int(1) | Int(x))), d)
-        @show ModelMatrix(mf)
         @test all(ModelMatrix(mf).m .== float.(1 .| d[:x]))
         @test coefnames(mf) == ["Int(1) | Int(x)"]
     end
