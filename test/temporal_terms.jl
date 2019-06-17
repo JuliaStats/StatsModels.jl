@@ -34,7 +34,7 @@ using DataStructures
             f = @formula(y ~ lag(x))
             f = apply_schema(f, schema(f, rowdata))
             resp, pred = modelcols(f, rowdata)
-            @test pred[:, 1] == [missing; 2.0; 4.0; 6.0; 8.0; 10.0; 12.0; 14.0; 16.0; 18.0]
+            @test isequal(pred[:, 1], [missing; 2.0; 4.0; 6.0; 8.0; 10.0; 12.0; 14.0; 16.0; 18.0])
         end
 
         @testset "Nested Use" begin
