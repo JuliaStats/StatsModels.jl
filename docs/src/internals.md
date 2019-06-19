@@ -120,7 +120,7 @@ Internally a lot of the work at syntax time is done by the `parse!` function.
 The next phase of life for a formula requires some information about the data it
 will be used with.  This is represented by a _schema_, a mapping from
 placeholder `Term`s to _concrete_ terms—like `ContinuousTerm`
-`CategoricalTerm`—which represents all the summary information about a data
+`CategoricalTerm`—which represent all the summary information about a data
 column necessary to create a model matrix from that column.
 
 There are a number of ways to construct a schema, ranging from fully automatic
