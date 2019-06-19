@@ -20,7 +20,7 @@ A formula goes through a number of stages, starting as an
 expression that's passed to the `@formula` macro and ending up generating a
 numeric matrix when ultimately combined with a tabular data source:
 
-1. "Syntax time" when only the surface syntax is available, during the defintion of `@formula`
+1. "Syntax time" when only the surface syntax is available, when the `@formula` macro is invoked.
 2. "Schema time" incorporates information about **data invariants** (types of each
    variable, levels of categorical variables, summary statistics for continuous
    variables) and the over all structure of the **data**, during the invocation of `schema`
