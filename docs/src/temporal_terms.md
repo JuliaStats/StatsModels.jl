@@ -49,17 +49,11 @@ Predictors:
   lag(x, 2)
   lead(x, 2)
 
-julia> modelcols(f, df)
-([1.0, 2.0, 3.0, 4.0, 5.0], Union{Missing, Float64}[2.0 missing 6.0; 4.0 missing 8.0; … ; 8.0 4.0 missing; 10.0 6.0 missing])
-
-julia> DataFrame(hcat(modelcols(f,df)...), Symbol.(vcat(coefnames(f)...)))
-5×4 DataFrame
-│ Row │ y        │ x        │ x_lag2   │ x_lead2  │
-│     │ Float64⍰ │ Float64⍰ │ Float64⍰ │ Float64⍰ │
-├─────┼──────────┼──────────┼──────────┼──────────┤
-│ 1   │ 1.0      │ 2.0      │ missing  │ 6.0      │
-│ 2   │ 2.0      │ 4.0      │ missing  │ 8.0      │
-│ 3   │ 3.0      │ 6.0      │ 2.0      │ 10.0     │
-│ 4   │ 4.0      │ 8.0      │ 4.0      │ missing  │
-│ 5   │ 5.0      │ 10.0     │ 6.0      │ missing  │
+julia> modelmatrix(f, df)
+5×3 reshape(::Array{Union{Missing, Float64},2}, 5, 3) with eltype Union{Missing, Float64}:
+  2.0   missing   6.0
+  4.0   missing   8.0
+  6.0  2.0       10.0
+  8.0  4.0         missing
+ 10.0  6.0         missing
 ```
