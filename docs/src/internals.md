@@ -117,14 +117,19 @@ Internally a lot of the work at syntax time is done by the `parse!` function.
 
 ### Schema time (`schema`)
 
-The next phase of life for a formula begins when a _schema_ for the data becomes
-available.  A schema is a mapping from data columns to a concrete term
-type—either a `ContinuousTerm` or a `CategoricalTerm`—which represents all
-the summary information about a data column necessary to create a model matrix
-from that column.
+The next phase of life for a formula requires some information about the data it
+will be used with.  This is represented by a _schema_, a mapping from
+placeholder `Term`s to _concrete_ terms—like `ContinuousTerm`
+`CategoricalTerm`—which represents all the summary information about a data
+column necessary to create a model matrix from that column.
 
-A schema is computed with the `schema` function.  By default, it will create a
-schema for every column in the data:
+There are a number of ways to construct a schema, ranging from fully automatic
+to fully manual.
+
+#### Fully automatic: `schema`
+
+The most convenient way to automatically compute a schema is with the `schema`
+function.  By default, it will create a schema for every column in the data:
 
 ```jldoctest 1
 julia> using DataFrames    # for pretty printing---any Table will do
@@ -167,23 +172,30 @@ Dict{Any,Any} with 2 entries:
   b => b
 ```
 
+#### Fully manual: term constructors
+
 While `schema` is a convenient way to generate a schema automatically from a
 data source, in some cases it may be preferable to create a schema manually.  In
-particular `schema` peforms a complete sweep through the data, and if your
+particular, `schema` peforms a complete sweep through the data, and if your
 dataset is very large or truly streaming (online), then this may be
 undesirable.  In such cases, you can construct a schema from instances of the
 relevant concrete terms ([`ContinuousTerm`](@ref) or [`CategoricalTerm`](@ref)),
 in a number of ways.
 
-First, you could use the constructors, which for a `ContinuousTerm` requires
-values for the mean, standard deviation, minimum, and maximum, and for
-`CategoricalTerm` requires the [`ContrastsMatrix`](@ref):
+The constructors for concrete terms provide the maximum level of control.  A
+`ContinuousTerm` stores values for the mean, standard deviation, minimum, and
+maximum, while a `CategoricalTerm` stores the
+[`StatsModels.ContrastsMatrix`](@ref) that defines the mapping from levels to
+predictors, and these need to be manually supplied to the constructors:
+
+!!! warning
+    The format of the invariants stored in a term are implementation details and
+    subject to change.
 
 ```jldoctest
 julia> cont_a = ContinuousTerm(:a, 0., 1., -1., 1.)
 a(continuous)
 
-# categorical term holds contrasts matrix:
 julia> cat_b = CategoricalTerm(:b, StatsModels.ContrastsMatrix(DummyCoding(), [:a, :b, :c]))
 b(DummyCoding:3→2)
 
@@ -193,10 +205,14 @@ Dict{Term,AbstractTerm} with 2 entries:
   b => b
 ```
 
-Second, you could use `concrete_term` with data vectors constructed to have the
-necessary invariants that you care about in your actual data (e.g., the same
-unique values for categorical data, and the same minimum/maximum values or the
-same mean/variance for continuous):
+#### Semi-automatic: data subsets
+
+A slightly more convenient method for generating a schema is provided by
+[`concrete_term`](@ref) the internal function which extracts invariants from a
+data column and returns an concrete type.  This can be used to generate concrete
+terms from data vectors constructed to have the same invariants that you care
+about in your actual data (e.g., the same unique values for categorical data,
+and the same minimum/maximum values or the same mean/variance for continuous):
 
 ```jldoctest
 julia> cont_a2 = concrete_term(term(:a), [-1., 1.])
@@ -211,7 +227,7 @@ Dict{Term,AbstractTerm} with 2 entries:
   b => b
 ```
 
-Finally, you could call `schema` on a `NamedTuple` of vectors (e.g., a
+Third, you could call `schema` on a `NamedTuple` of vectors (e.g., a
 `Tables.ColumnTable`) with the necessary invariants:
 
 ```jldoctest
@@ -223,15 +239,20 @@ Dict{Any,Any} with 2 entries:
 
 ### Semantics time (`apply_schema`)
 
-Once a schema has been computed, it's _applied_ to the formula with
-[`apply_schema`](@ref).  Among other things, this _instantiates_ placeholder
+The next stage of life for a formula happens when _semantic_ information is
+available, which includes the schema of the data to be transformed as well as
+the _context_, or the type of model that will be fit.  This stage is implemented
+by [`apply_schema`](@ref).  Among other things, this _instantiates_ placeholder
 terms:
+
 * `Term`s become `ContinuousTerm`s or `CategoricalTerm`s
 * `ConstantTerm`s become `InterceptTerm`s
 * Tuples of terms become [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
   they should be concatenated into a single model matrix
-* Custom terms (like the `poly` example) are applied
-* Any model (context) specific interperation of the terms is made.
+* Any model (context) specific interperation of the terms is made, including
+  transforming calls to functions that have special meaning in particular
+  contexts into their special term types (see the section on [Extending
+  `@formula` syntax](@ref extending) below)
 
 ```jldoctest 1
 julia> f = @formula(y ~ 1 + a + b * c)
@@ -270,7 +291,7 @@ two arguments).  Because `apply_schema` dispatches on the term, schema, and
 model type, this stage allows generic context-aware transformations, based on
 _both_ the source (schema) _and_ the destination (model type).  This is the
 primary mechanisms by which the formula DSL can be extended ([see
-below](#Extending-@formula-syntax-1) for more details)
+below](@ref extending) for more details)
 
 ### Data time (`modelcols`)
 
@@ -341,7 +362,7 @@ julia> modelcols(t, df)
 ```
 
 
-## Extending `@formula` syntax
+## [Extending `@formula` syntax](@id extending)
 
 Package authors may want to create additional syntax to the `@formula` DSL so
 their users can conveniently specify particular kinds of models.  StatsModels.jl
