@@ -119,7 +119,7 @@ Internally a lot of the work at syntax time is done by the `parse!` function.
 
 The next phase of life for a formula begins when a _schema_ for the data becomes
 available.  A schema is a mapping from data columns to a concrete term
-type---either a `ContinuousTerm` or a `CategoricalTerm`---which represents all
+type—either a `ContinuousTerm` or a `CategoricalTerm`—which represents all
 the summary information about a data column necessary to create a model matrix
 from that column.
 
@@ -167,9 +167,63 @@ Dict{Any,Any} with 2 entries:
   b => b
 ```
 
+While `schema` is a convenient way to generate a schema automatically from a
+data source, in some cases it may be preferable to create a schema manually.  In
+particular `schema` peforms a complete sweep through the data, and if your
+dataset is very large or truly streaming (online), then this may be
+undesirable.  In such cases, you can construct a schema from instances of the
+relevant concrete terms ([`ContinuousTerm`](@ref) or [`CategoricalTerm`](@ref)),
+in a number of ways.
+
+First, you could use the constructors, which for a `ContinuousTerm` requires
+values for the mean, standard deviation, minimum, and maximum, and for
+`CategoricalTerm` requires the [`ContrastsMatrix`](@ref):
+
+```jldoctest
+julia> cont_a = ContinuousTerm(:a, 0., 1., -1., 1.)
+a(continuous)
+
+# categorical term holds contrasts matrix:
+julia> cat_b = CategoricalTerm(:b, StatsModels.ContrastsMatrix(DummyCoding(), [:a, :b, :c]))
+b(DummyCoding:3→2)
+
+julia> sch1 = Dict(term(:a) => cont_a, term(:b) => cat_b)
+Dict{Term,AbstractTerm} with 2 entries:
+  a => a
+  b => b
+```
+
+Second, you could use `concrete_term` with data vectors constructed to have the
+necessary invariants that you care about in your actual data (e.g., the same
+unique values for categorical data, and the same minimum/maximum values or the
+same mean/variance for continuous):
+
+```jldoctest
+julia> cont_a2 = concrete_term(term(:a), [-1., 1.])
+a(continuous)
+
+julia> cat_b2 = concrete_term(term(:b), [:a, :b, :c])
+b(DummyCoding:3→2)
+
+julia> sch2 = Dict(term(:a) => cont_a2, term(:b) => cat_b2)
+Dict{Term,AbstractTerm} with 2 entries:
+  a => a
+  b => b
+```
+
+Finally, you could call `schema` on a `NamedTuple` of vectors (e.g., a
+`Tables.ColumnTable`) with the necessary invariants:
+
+```jldoctest
+julia> sch3 = schema((a=[-1., 1], b=[:a, :b, :c]))
+Dict{Any,Any} with 2 entries:
+  a => a
+  b => b
+```
+
 ### Semantics time (`apply_schema`)
 
-Once a schema is computed, it's _applied_ to the formula with
+Once a schema has been computed, it's _applied_ to the formula with
 [`apply_schema`](@ref).  Among other things, this _instantiates_ placeholder
 terms:
 * `Term`s become `ContinuousTerm`s or `CategoricalTerm`s
