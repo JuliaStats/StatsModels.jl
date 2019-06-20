@@ -249,7 +249,7 @@ terms:
 * `ConstantTerm`s become `InterceptTerm`s
 * Tuples of terms become [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
   they should be concatenated into a single model matrix
-* Any model (context) specific interperation of the terms is made, including
+* Any model-specific (context-specific) interpretation of the terms is made, including
   transforming calls to functions that have special meaning in particular
   contexts into their special term types (see the section on [Extending
   `@formula` syntax](@ref extending) below)
