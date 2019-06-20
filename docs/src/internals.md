@@ -208,7 +208,7 @@ Dict{Term,AbstractTerm} with 2 entries:
 #### Semi-automatic: data subsets
 
 A slightly more convenient method for generating a schema is provided by
-[`concrete_term`](@ref) the internal function which extracts invariants from a
+the [`concrete_term`](@ref) internal function, which extracts invariants from a
 data column and returns an concrete type.  This can be used to generate concrete
 terms from data vectors constructed to have the same invariants that you care
 about in your actual data (e.g., the same unique values for categorical data,
