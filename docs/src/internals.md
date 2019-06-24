@@ -152,7 +152,7 @@ julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"
 │ 9   │ 0.251662   │ 9     │ 0.0203749 │ c      │
 
 julia> schema(df)
-Dict{Any,Any} with 4 entries:
+StatsModels.Schema with 4 entries:
   y => y
   a => a
   b => b
@@ -164,12 +164,12 @@ computed based only on the necessary variables:
 
 ```jldoctest 1
 julia> schema(@formula(y ~ 1 + a), df)
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   y => y
   a => a
 
 julia> schema(Term(:a) + Term(:b), df)
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   a => a
   b => b
 ```
@@ -194,15 +194,20 @@ predictors, and these need to be manually supplied to the constructors:
     The format of the invariants stored in a term are implementation details and
     subject to change.
 
-```jldoctest
+```jldoctest sch
 julia> cont_a = ContinuousTerm(:a, 0., 1., -1., 1.)
 a(continuous)
 
 julia> cat_b = CategoricalTerm(:b, StatsModels.ContrastsMatrix(DummyCoding(), [:a, :b, :c]))
 b(DummyCoding:3→2)
+```
 
-julia> sch1 = Dict(term(:a) => cont_a, term(:b) => cat_b)
-Dict{Term,AbstractTerm} with 2 entries:
+The `Term`-concrete term pairs can then be passed to the `StatsModels.Schema`
+constructor (a wrapper for the underlying `Dict{Term,AbstractTerm}`):
+
+```jldoctest sch
+julia> sch1 = StatsModels.Schema(term(:a) => cont_a, term(:b) => cat_b)
+StatsModels.Schema with 2 entries:
   a => a
   b => b
 ```
@@ -223,18 +228,18 @@ a(continuous)
 julia> cat_b2 = concrete_term(term(:b), [:a, :b, :c])
 b(DummyCoding:3→2)
 
-julia> sch2 = Dict(term(:a) => cont_a2, term(:b) => cat_b2)
-Dict{Term,AbstractTerm} with 2 entries:
+julia> sch2 = StatsModels.Schema(term(:a) => cont_a2, term(:b) => cat_b2)
+StatsModels.Schema with 2 entries:
   a => a
   b => b
 ```
 
-Third, you could call `schema` on a `NamedTuple` of vectors (e.g., a
+Finally, you could also call `schema` on a `NamedTuple` of vectors (e.g., a
 `Tables.ColumnTable`) with the necessary invariants:
 
 ```jldoctest
 julia> sch3 = schema((a=[-1., 1], b=[:a, :b, :c]))
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   a => a
   b => b
 ```
@@ -403,7 +408,9 @@ end
 
 Base.show(io::IO, p::PolyTerm) = print(io, "poly($(p.term), $(p.deg))")
 
-function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{<:POLY_CONTEXT})
+function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+                                  sch::StatsModels.Schema,
+                                  Mod::Type{<:POLY_CONTEXT})
     term = apply_schema(t.args_parsed[1], sch, Mod)
     isa(term, ContinuousTerm) ||
         throw(ArgumentError("PolyTerm only works with continuous terms (got $term)"))
@@ -486,7 +493,7 @@ could block `PolyTerm`s being generated for `GLM.LinearModel`:
 julia> using GLM
 
 julia> StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
-                                sch,
+                                sch::StatsModels.Schema,
                                 Mod::Type{GLM.LinearModel}) = t
 ```
 
@@ -569,9 +576,12 @@ StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredC
 y ~ 1 + :(poly(b, 2))
 
 Coefficients:
-             Estimate Std.Error t value Pr(>|t|)
-(Intercept)  0.911363  0.310486 2.93528   0.0042
-poly(b, 2)    2.94442  0.191024 15.4139   <1e-27
+────────────────────────────────────────────────────
+             Estimate  Std.Error   t value  Pr(>|t|)
+────────────────────────────────────────────────────
+(Intercept)  0.911363   0.310486   2.93528    0.0042
+poly(b, 2)   2.94442    0.191024  15.4139     <1e-27
+────────────────────────────────────────────────────
 
 julia> fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
 StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1},Normal{Float64},IdentityLink},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
@@ -579,10 +589,13 @@ StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1}
 y ~ 1 + poly(b, 2)
 
 Coefficients:
-             Estimate Std.Error z value Pr(>|z|)
-(Intercept)  0.829374  0.131582  6.3031    <1e-9
-b^1           2.13096  0.100552 21.1926   <1e-98
-b^2            3.1132 0.0813107 38.2877   <1e-99
+───────────────────────────────────────────────────
+             Estimate  Std.Error  z value  Pr(>|z|)
+───────────────────────────────────────────────────
+(Intercept)  0.829374  0.131582    6.3031    <1e-9
+b^1          2.13096   0.100552   21.1926    <1e-98
+b^2          3.1132    0.0813107  38.2877    <1e-99
+───────────────────────────────────────────────────
 
 ```
 

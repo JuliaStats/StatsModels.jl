@@ -49,6 +49,7 @@ is_matrix_term
 ## Schema
 
 ```@docs
+Schema
 schema
 concrete_term
 apply_schema

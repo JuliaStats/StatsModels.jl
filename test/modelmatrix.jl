@@ -351,4 +351,28 @@
         @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)
     end
 
+    @testset "setcontrasts!" begin
+        @testset "#95" begin
+            tbl = (Y = randn(8),
+                   A = repeat(['N','Y'], outer=4),
+                   B=repeat(['-','+'], inner=2, outer=2),
+                   C=repeat(['L','H'], inner=4))
+
+            contrasts = Dict(:A=>HelmertCoding(), :B=>HelmertCoding(), :C=>HelmertCoding())
+                                                  
+                                                  
+
+            mf = ModelFrame(@formula(Y ~ 1 + A*B*C), tbl)
+            mf_helm = ModelFrame(@formula(Y ~ 1 + A*B*C), tbl, contrasts = contrasts)
+
+            @test size(modelmatrix(mf)) == size(modelmatrix(mf_helm))
+            
+            mf_helm2 = setcontrasts!(ModelFrame(@formula(Y ~ 1 + A*B*C), tbl), contrasts)
+
+            @test size(modelmatrix(mf)) == size(modelmatrix(mf_helm2))
+            @test modelmatrix(mf_helm) == modelmatrix(mf_helm2)
+            
+        end
+    end
+
 end
