@@ -194,15 +194,20 @@ predictors, and these need to be manually supplied to the constructors:
     The format of the invariants stored in a term are implementation details and
     subject to change.
 
-```jldoctest
+```jldoctest sch
 julia> cont_a = ContinuousTerm(:a, 0., 1., -1., 1.)
 a(continuous)
 
 julia> cat_b = CategoricalTerm(:b, StatsModels.ContrastsMatrix(DummyCoding(), [:a, :b, :c]))
 b(DummyCoding:3→2)
+```
 
-julia> sch1 = Dict(term(:a) => cont_a, term(:b) => cat_b)
-Dict{Term,AbstractTerm} with 2 entries:
+The `Term`-concrete term pairs can then be passed to the `StatsModels.Schema`
+constructor (a wrapper for the underlying `Dict{Term,AbstractTerm}`):
+
+```jldoctest sch
+julia> sch1 = StatsModels.Schema(term(:a) => cont_a, term(:b) => cat_b)
+StatsModels.Schema with 2 entries:
   a => a
   b => b
 ```
@@ -223,18 +228,18 @@ a(continuous)
 julia> cat_b2 = concrete_term(term(:b), [:a, :b, :c])
 b(DummyCoding:3→2)
 
-julia> sch2 = Dict(term(:a) => cont_a2, term(:b) => cat_b2)
-Dict{Term,AbstractTerm} with 2 entries:
+julia> sch2 = StatsModels.Schema(term(:a) => cont_a2, term(:b) => cat_b2)
+StatsModels.Schema with 2 entries:
   a => a
   b => b
 ```
 
-Third, you could call `schema` on a `NamedTuple` of vectors (e.g., a
+Finally, you could also call `schema` on a `NamedTuple` of vectors (e.g., a
 `Tables.ColumnTable`) with the necessary invariants:
 
 ```jldoctest
 julia> sch3 = schema((a=[-1., 1], b=[:a, :b, :c]))
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   a => a
   b => b
 ```
