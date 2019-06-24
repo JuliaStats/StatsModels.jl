@@ -472,7 +472,7 @@ modelcols(ts::TupleTerm, d::NamedTuple) = modelcols.(ts, Ref(d))
 modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
     ft.fanon.(getfield.(Ref(d), Names)...)
 
-modelcols(t::ContinuousTerm, d::NamedTuple) = Float64.(d[t.sym])
+modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
 
 modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
 
