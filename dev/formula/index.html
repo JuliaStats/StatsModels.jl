@@ -102,10 +102,13 @@ StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredC
 :(log(y)) ~ 1 + a + b
 
 Coefficients:
-             Estimate Std.Error  t value Pr(&gt;|t|)
-(Intercept)  -4.16168   2.98788 -1.39285   0.2131
-a            0.357482  0.342126  1.04489   0.3363
-b             2.32528   3.13735 0.741159   0.4866
+──────────────────────────────────────────────────────
+              Estimate  Std.Error    t value  Pr(&gt;|t|)
+──────────────────────────────────────────────────────
+(Intercept)  -4.16168    2.98788   -1.39285     0.2131
+a             0.357482   0.342126   1.04489     0.3363
+b             2.32528    3.13735    0.741159    0.4866
+──────────────────────────────────────────────────────
 
 julia&gt; df[:log_y] = log.(df[:y]);
 
@@ -115,10 +118,13 @@ StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredC
 log_y ~ 1 + a + b
 
 Coefficients:
-             Estimate Std.Error  t value Pr(&gt;|t|)
-(Intercept)  -4.16168   2.98788 -1.39285   0.2131
-a            0.357482  0.342126  1.04489   0.3363
-b             2.32528   3.13735 0.741159   0.4866
+──────────────────────────────────────────────────────
+              Estimate  Std.Error    t value  Pr(&gt;|t|)
+──────────────────────────────────────────────────────
+(Intercept)  -4.16168    2.98788   -1.39285     0.2131
+a             0.357482   0.342126   1.04489     0.3363
+b             2.32528    3.13735    0.741159    0.4866
+──────────────────────────────────────────────────────
 </code></pre><p>The no-op function <code>identity</code> can be used to block the normal formula-specific interpretation of <code>+</code>, <code>*</code>, and <code>&amp;</code>:</p><pre><code class="language-julia-repl">julia&gt; modelmatrix(@formula(y ~ 1 + b + identity(1+b)), df)
 9×3 Array{Float64,2}:
  1.0  0.986666   1.98667
@@ -178,13 +184,16 @@ StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredC
 y ~ 1 + a + b + a &amp; b
 
 Coefficients:
-             Estimate Std.Error t value Pr(&gt;|t|)
-(Intercept)   0.98878 0.0384341 25.7266   &lt;1e-43
-a             2.00843 0.0779388 25.7694   &lt;1e-43
-b: e          3.03726 0.0616371 49.2764   &lt;1e-67
-b: f          4.03909 0.0572857 70.5078   &lt;1e-81
-b: g          5.02948 0.0587224 85.6484   &lt;1e-88
-a &amp; b: e       5.9385   0.10753 55.2264   &lt;1e-71
-a &amp; b: f       6.9073  0.112483 61.4075   &lt;1e-75
-a &amp; b: g      7.93918  0.111285 71.3407   &lt;1e-81
+───────────────────────────────────────────────────
+             Estimate  Std.Error  t value  Pr(&gt;|t|)
+───────────────────────────────────────────────────
+(Intercept)   0.98878  0.0384341  25.7266    &lt;1e-43
+a             2.00843  0.0779388  25.7694    &lt;1e-43
+b: e          3.03726  0.0616371  49.2764    &lt;1e-67
+b: f          4.03909  0.0572857  70.5078    &lt;1e-81
+b: g          5.02948  0.0587224  85.6484    &lt;1e-88
+a &amp; b: e      5.9385   0.10753    55.2264    &lt;1e-71
+a &amp; b: f      6.9073   0.112483   61.4075    &lt;1e-75
+a &amp; b: g      7.93918  0.111285   71.3407    &lt;1e-81
+───────────────────────────────────────────────────
 </code></pre><p>Internally, this is accomplished in three steps:</p><ol><li>The expression passed to <code>@formula</code> is lowered to term constructors combined by <code>~</code>, <code>+</code>, and <code>&amp;</code>, which evaluate to create terms for the whole formula and any interaction terms.</li><li>A schema is extracted from the data, which determines whether each variable is continuous or categorical and extracts the summary statistics of each variable (mean/variance/min/max or unique levels respectively).  This schema is then <em>applied</em> to the formula with <code>apply_schema(term, schema, ::Type{Model})</code>, which returns a new formula with each placeholder <code>Term</code> replaced with a concrete <code>ContinuousTerm</code> or <code>CategoricalTerm</code> as appropriate.  This is also the stage where any custom syntax is applied (see <a href="../internals/#Internals-and-extending-the-formula-DSL-1">the section on extending the <code>@formula</code> language</a> for more details).</li><li>Numeric arrays are generated for the response and predictors from the full table using <code>modelcols(term, data)</code>.</li></ol><p>The <code>ModelFrame</code> and <code>ModelMatrix</code> types can still be used to do this transformation, but this is only to preserve some backwards compatibility. Package authors who would like to include support for fitting models from a <code>@formula</code> are <strong>strongly</strong> encouraged to directly use <code>schema</code>, <code>apply_schema</code>, and <code>modelcols</code> to handle the table-to-matrix transformations they need.</p><footer><hr/><a class="previous" href="../"><span class="direction">Previous</span><span class="title">Introduction</span></a><a class="next" href="../internals/"><span class="direction">Next</span><span class="title">Internals and extending the <code>@formula</code></span></a></footer></article></body></html>

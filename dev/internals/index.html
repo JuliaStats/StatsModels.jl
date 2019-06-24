@@ -52,26 +52,24 @@ julia&gt; df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat([&quot;a&
 │ 9   │ 0.251662   │ 9     │ 0.0203749 │ c      │
 
 julia&gt; schema(df)
-Dict{Any,Any} with 4 entries:
+StatsModels.Schema with 4 entries:
   y =&gt; y
   a =&gt; a
   b =&gt; b
   c =&gt; c</code></pre><p>However, if a term (including a <code>FormulaTerm</code>) is provided, the schema will be computed based only on the necessary variables:</p><pre><code class="language-julia-repl">julia&gt; schema(@formula(y ~ 1 + a), df)
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   y =&gt; y
   a =&gt; a
 
 julia&gt; schema(Term(:a) + Term(:b), df)
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   a =&gt; a
   b =&gt; b</code></pre><h4><a class="nav-anchor" id="Fully-manual:-term-constructors-1" href="#Fully-manual:-term-constructors-1">Fully manual: term constructors</a></h4><p>While <code>schema</code> is a convenient way to generate a schema automatically from a data source, in some cases it may be preferable to create a schema manually.  In particular, <code>schema</code> peforms a complete sweep through the data, and if your dataset is very large or truly streaming (online), then this may be undesirable.  In such cases, you can construct a schema from instances of the relevant concrete terms (<a href="../api/#StatsModels.ContinuousTerm"><code>ContinuousTerm</code></a> or <a href="../api/#StatsModels.CategoricalTerm"><code>CategoricalTerm</code></a>), in a number of ways.</p><p>The constructors for concrete terms provide the maximum level of control.  A <code>ContinuousTerm</code> stores values for the mean, standard deviation, minimum, and maximum, while a <code>CategoricalTerm</code> stores the <a href="../contrasts/#StatsModels.ContrastsMatrix"><code>StatsModels.ContrastsMatrix</code></a> that defines the mapping from levels to predictors, and these need to be manually supplied to the constructors:</p><div class="admonition warning"><div class="admonition-title">Warning</div><div class="admonition-text"><p>The format of the invariants stored in a term are implementation details and subject to change.</p></div></div><pre><code class="language-julia-repl">julia&gt; cont_a = ContinuousTerm(:a, 0., 1., -1., 1.)
 a(continuous)
 
 julia&gt; cat_b = CategoricalTerm(:b, StatsModels.ContrastsMatrix(DummyCoding(), [:a, :b, :c]))
-b(DummyCoding:3→2)
-
-julia&gt; sch1 = Dict(term(:a) =&gt; cont_a, term(:b) =&gt; cat_b)
-Dict{Term,AbstractTerm} with 2 entries:
+b(DummyCoding:3→2)</code></pre><p>The <code>Term</code>-concrete term pairs can then be passed to the <code>StatsModels.Schema</code> constructor (a wrapper for the underlying <code>Dict{Term,AbstractTerm}</code>):</p><pre><code class="language-julia-repl">julia&gt; sch1 = StatsModels.Schema(term(:a) =&gt; cont_a, term(:b) =&gt; cat_b)
+StatsModels.Schema with 2 entries:
   a =&gt; a
   b =&gt; b</code></pre><h4><a class="nav-anchor" id="Semi-automatic:-data-subsets-1" href="#Semi-automatic:-data-subsets-1">Semi-automatic: data subsets</a></h4><p>A slightly more convenient method for generating a schema is provided by the <a href="../api/#StatsModels.concrete_term"><code>concrete_term</code></a> internal function, which extracts invariants from a data column and returns a concrete type.  This can be used to generate concrete terms from data vectors constructed to have the same invariants that you care about in your actual data (e.g., the same unique values for categorical data, and the same minimum/maximum values or the same mean/variance for continuous):</p><pre><code class="language-julia-repl">julia&gt; cont_a2 = concrete_term(term(:a), [-1., 1.])
 a(continuous)
@@ -79,11 +77,11 @@ a(continuous)
 julia&gt; cat_b2 = concrete_term(term(:b), [:a, :b, :c])
 b(DummyCoding:3→2)
 
-julia&gt; sch2 = Dict(term(:a) =&gt; cont_a2, term(:b) =&gt; cat_b2)
-Dict{Term,AbstractTerm} with 2 entries:
+julia&gt; sch2 = StatsModels.Schema(term(:a) =&gt; cont_a2, term(:b) =&gt; cat_b2)
+StatsModels.Schema with 2 entries:
   a =&gt; a
-  b =&gt; b</code></pre><p>Third, you could call <code>schema</code> on a <code>NamedTuple</code> of vectors (e.g., a <code>Tables.ColumnTable</code>) with the necessary invariants:</p><pre><code class="language-julia-repl">julia&gt; sch3 = schema((a=[-1., 1], b=[:a, :b, :c]))
-Dict{Any,Any} with 2 entries:
+  b =&gt; b</code></pre><p>Finally, you could also call <code>schema</code> on a <code>NamedTuple</code> of vectors (e.g., a <code>Tables.ColumnTable</code>) with the necessary invariants:</p><pre><code class="language-julia-repl">julia&gt; sch3 = schema((a=[-1., 1], b=[:a, :b, :c]))
+StatsModels.Schema with 2 entries:
   a =&gt; a
   b =&gt; b</code></pre><h3><a class="nav-anchor" id="Semantics-time-(apply_schema)-1" href="#Semantics-time-(apply_schema)-1">Semantics time (<code>apply_schema</code>)</a></h3><p>The next stage of life for a formula happens when <em>semantic</em> information is available, which includes the schema of the data to be transformed as well as the <em>context</em>, or the type of model that will be fit.  This stage is implemented by <a href="../api/#StatsModels.apply_schema"><code>apply_schema</code></a>.  Among other things, this <em>instantiates</em> placeholder terms:</p><ul><li><code>Term</code>s become <code>ContinuousTerm</code>s or <code>CategoricalTerm</code>s</li><li><code>ConstantTerm</code>s become <code>InterceptTerm</code>s</li><li>Tuples of terms become <a href="../api/#StatsModels.MatrixTerm"><code>MatrixTerm</code></a>s where appropriate to explicitly indicate they should be concatenated into a single model matrix</li><li>Any model-specific (context-specific) interpretation of the terms is made, including transforming calls to functions that have special meaning in particular contexts into their special term types (see the section on <a href="#extending-1">Extending <code>@formula</code> syntax</a> below)</li></ul><pre><code class="language-julia-repl">julia&gt; f = @formula(y ~ 1 + a + b * c)
 FormulaTerm
@@ -169,7 +167,9 @@ end
 
 Base.show(io::IO, p::PolyTerm) = print(io, &quot;poly($(p.term), $(p.deg))&quot;)
 
-function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{&lt;:POLY_CONTEXT})
+function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+                                  sch::StatsModels.Schema,
+                                  Mod::Type{&lt;:POLY_CONTEXT})
     term = apply_schema(t.args_parsed[1], sch, Mod)
     isa(term, ContinuousTerm) ||
         throw(ArgumentError(&quot;PolyTerm only works with continuous terms (got $term)&quot;))
@@ -238,7 +238,7 @@ julia&gt; coefnames(f.rhs)
 </code></pre><p>It&#39;s also possible to <em>block</em> interpretation of the <code>poly</code> syntax as special in certain contexts by adding additional (more specific) methods.  For instance, we could block <code>PolyTerm</code>s being generated for <code>GLM.LinearModel</code>:</p><pre><code class="language-julia-repl">julia&gt; using GLM
 
 julia&gt; StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
-                                sch,
+                                sch::StatsModels.Schema,
                                 Mod::Type{GLM.LinearModel}) = t</code></pre><p>Now the <code>poly</code> is interpreted by default as the &quot;vanilla&quot; function defined first, which just raises its first argument to the designated power:</p><pre><code class="language-julia-repl">julia&gt; f = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
                         schema(data),
                         GLM.LinearModel)
@@ -300,9 +300,12 @@ StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredC
 y ~ 1 + :(poly(b, 2))
 
 Coefficients:
-             Estimate Std.Error t value Pr(&gt;|t|)
-(Intercept)  0.911363  0.310486 2.93528   0.0042
-poly(b, 2)    2.94442  0.191024 15.4139   &lt;1e-27
+────────────────────────────────────────────────────
+             Estimate  Std.Error   t value  Pr(&gt;|t|)
+────────────────────────────────────────────────────
+(Intercept)  0.911363   0.310486   2.93528    0.0042
+poly(b, 2)   2.94442    0.191024  15.4139     &lt;1e-27
+────────────────────────────────────────────────────
 
 julia&gt; fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
 StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1},Normal{Float64},IdentityLink},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
@@ -310,8 +313,11 @@ StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1}
 y ~ 1 + poly(b, 2)
 
 Coefficients:
-             Estimate Std.Error z value Pr(&gt;|z|)
-(Intercept)  0.829374  0.131582  6.3031    &lt;1e-9
-b^1           2.13096  0.100552 21.1926   &lt;1e-98
-b^2            3.1132 0.0813107 38.2877   &lt;1e-99
+───────────────────────────────────────────────────
+             Estimate  Std.Error  z value  Pr(&gt;|z|)
+───────────────────────────────────────────────────
+(Intercept)  0.829374  0.131582    6.3031    &lt;1e-9
+b^1          2.13096   0.100552   21.1926    &lt;1e-98
+b^2          3.1132    0.0813107  38.2877    &lt;1e-99
+───────────────────────────────────────────────────
 </code></pre><p>(a <code>GeneralizeLinearModel</code> with a <code>Normal</code> distribution is equivalent to a <code>LinearModel</code>)</p><h3><a class="nav-anchor" id="Summary-1" href="#Summary-1">Summary</a></h3><p>&quot;Custom syntax&quot; means that calls to a particular function in a formula are not interpreted as normal Julia code, but rather as a particular (possibly special) kind of term.</p><p>Custom syntax is a combination of <strong>syntax</strong> (Julia function) and <strong>term</strong> (subtype of <code>AbstractTerm</code>).  This syntax applies in a particular <strong>context</strong> (schema plus model type, designated via a method of <a href="../api/#StatsModels.apply_schema"><code>apply_schema</code></a>), transforming a <code>FunctionTerm{syntax}</code> into another (often custom) term type. This custom term type then specifies special <strong>behavior</strong> at data time (via a method for <a href="../api/#StatsModels.modelcols"><code>modelcols</code></a>).</p><p>Finally, note that it&#39;s easy for a package to intercept the formula terms and manipulate them directly as well, before calling <code>apply_schema</code> or <code>modelcols</code>.  This gives packages great flexibility in how they interpret formula terms.</p><footer><hr/><a class="previous" href="../formula/"><span class="direction">Previous</span><span class="title">Modeling tabular data</span></a><a class="next" href="../contrasts/"><span class="direction">Next</span><span class="title">Contrast coding categorical variables</span></a></footer></article></body></html>
