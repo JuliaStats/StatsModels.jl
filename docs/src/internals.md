@@ -20,12 +20,14 @@ A formula goes through a number of stages, starting as an
 expression that's passed to the `@formula` macro and ending up generating a
 numeric matrix when ultimately combined with a tabular data source:
 
-1. "Syntax time" when only the surface syntax is available, when the `@formula` macro is invoked.
-2. "Schema time" incorporates information about **data invariants** (types of each
-   variable, levels of categorical variables, summary statistics for continuous
-   variables) and the over all structure of the **data**, during the invocation of `schema`
-3. "Semantics time" incorporates information about the **model type (context)**, and custom terms,
-   during the call of `apply_schema`
+1. "Syntax time" when only the surface syntax is available, when the `@formula`
+   macro is invoked.
+2. "Schema time" incorporates information about **data invariants** (types of
+   each variable, levels of categorical variables, summary statistics for
+   continuous variables) and the overall structure of the **data**, during the
+   invocation of `schema`.
+3. "Semantics time" incorporates information about the **model type (context)**,
+   and custom terms, during the call to `apply_schema`.
 4. "Data time" when the actual data values themselves are available.
 
 For in-memory (columnar) tables, there is not much difference between "data
@@ -209,7 +211,7 @@ Dict{Term,AbstractTerm} with 2 entries:
 
 A slightly more convenient method for generating a schema is provided by
 the [`concrete_term`](@ref) internal function, which extracts invariants from a
-data column and returns an concrete type.  This can be used to generate concrete
+data column and returns a concrete type.  This can be used to generate concrete
 terms from data vectors constructed to have the same invariants that you care
 about in your actual data (e.g., the same unique values for categorical data,
 and the same minimum/maximum values or the same mean/variance for continuous):
