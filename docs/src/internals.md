@@ -20,18 +20,22 @@ A formula goes through a number of stages, starting as an
 expression that's passed to the `@formula` macro and ending up generating a
 numeric matrix when ultimately combined with a tabular data source:
 
-1. "Syntax time" when only the surface syntax is available
-2. "Schema time" incorporates information about **data invariants** (types of each
-   variable, levels of categorical variables, summary statistics for continuous
-   variables) and the **model type**.
-3. "Data time" when the actual data values themselves are available.
+1. "Syntax time" when only the surface syntax is available, when the `@formula`
+   macro is invoked.
+2. "Schema time" incorporates information about **data invariants** (types of
+   each variable, levels of categorical variables, summary statistics for
+   continuous variables) and the overall structure of the **data**, during the
+   invocation of `schema`.
+3. "Semantics time" incorporates information about the **model type (context)**,
+   and custom terms, during the call to `apply_schema`.
+4. "Data time" when the actual data values themselves are available.
 
 For in-memory (columnar) tables, there is not much difference between "data
 time" and "schema time" in practice, but in principle it's important to
 distinguish between these when dealing with truly streaming data, or large data
 stores where calculating invariants of the data may be expensive.
 
-### Syntax time
+### Syntax time (`@formula`)
 
 The `@formula` macro does syntactic transformations of the formula expression.
 At this point, _only_ the expression itself is available, and there's no way to
@@ -111,16 +115,23 @@ and turned into anonymous functions that can be evaluated elementwise, which has
 to happen at compile time.  For instance, the call to `log` in `@formula(y ~
 log(a+b))` is converted into the anonymous function `(a,b) -> log(a+b)`.
 
-### Schema time
+Internally a lot of the work at syntax time is done by the `parse!` function.
 
-The next phase of life for a formula begins when a _schema_ for the data becomes
-available.  A schema is a mapping from data columns to a concrete term
-type---either a `ContinuousTerm` or a `CategoricalTerm`---which represents all
-the summary information about a data column necessary to create a model matrix
-from that column.
+### Schema time (`schema`)
 
-A schema is computed with the `schema` function.  By default, it will create a
-schema for every column in the data:
+The next phase of life for a formula requires some information about the data it
+will be used with.  This is represented by a _schema_, a mapping from
+placeholder `Term`s to _concrete_ terms—like `ContinuousTerm`
+`CategoricalTerm`—which represent all the summary information about a data
+column necessary to create a model matrix from that column.
+
+There are a number of ways to construct a schema, ranging from fully automatic
+to fully manual.
+
+#### Fully automatic: `schema`
+
+The most convenient way to automatically compute a schema is with the `schema`
+function.  By default, it will create a schema for every column in the data:
 
 ```jldoctest 1
 julia> using DataFrames    # for pretty printing---any Table will do
@@ -141,7 +152,7 @@ julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"
 │ 9   │ 0.251662   │ 9     │ 0.0203749 │ c      │
 
 julia> schema(df)
-Dict{Any,Any} with 4 entries:
+StatsModels.Schema with 4 entries:
   y => y
   a => a
   b => b
@@ -153,23 +164,102 @@ computed based only on the necessary variables:
 
 ```jldoctest 1
 julia> schema(@formula(y ~ 1 + a), df)
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   y => y
   a => a
 
 julia> schema(Term(:a) + Term(:b), df)
-Dict{Any,Any} with 2 entries:
+StatsModels.Schema with 2 entries:
   a => a
   b => b
 ```
 
-Once a schema is computed, it's _applied_ to the formula with
-[`apply_schema`](@ref).  Among other things, this _instantiates_ placeholder
+#### Fully manual: term constructors
+
+While `schema` is a convenient way to generate a schema automatically from a
+data source, in some cases it may be preferable to create a schema manually.  In
+particular, `schema` peforms a complete sweep through the data, and if your
+dataset is very large or truly streaming (online), then this may be
+undesirable.  In such cases, you can construct a schema from instances of the
+relevant concrete terms ([`ContinuousTerm`](@ref) or [`CategoricalTerm`](@ref)),
+in a number of ways.
+
+The constructors for concrete terms provide the maximum level of control.  A
+`ContinuousTerm` stores values for the mean, standard deviation, minimum, and
+maximum, while a `CategoricalTerm` stores the
+[`StatsModels.ContrastsMatrix`](@ref) that defines the mapping from levels to
+predictors, and these need to be manually supplied to the constructors:
+
+!!! warning
+    The format of the invariants stored in a term are implementation details and
+    subject to change.
+
+```jldoctest sch
+julia> cont_a = ContinuousTerm(:a, 0., 1., -1., 1.)
+a(continuous)
+
+julia> cat_b = CategoricalTerm(:b, StatsModels.ContrastsMatrix(DummyCoding(), [:a, :b, :c]))
+b(DummyCoding:3→2)
+```
+
+The `Term`-concrete term pairs can then be passed to the `StatsModels.Schema`
+constructor (a wrapper for the underlying `Dict{Term,AbstractTerm}`):
+
+```jldoctest sch
+julia> sch1 = StatsModels.Schema(term(:a) => cont_a, term(:b) => cat_b)
+StatsModels.Schema with 2 entries:
+  a => a
+  b => b
+```
+
+#### Semi-automatic: data subsets
+
+A slightly more convenient method for generating a schema is provided by
+the [`concrete_term`](@ref) internal function, which extracts invariants from a
+data column and returns a concrete type.  This can be used to generate concrete
+terms from data vectors constructed to have the same invariants that you care
+about in your actual data (e.g., the same unique values for categorical data,
+and the same minimum/maximum values or the same mean/variance for continuous):
+
+```jldoctest
+julia> cont_a2 = concrete_term(term(:a), [-1., 1.])
+a(continuous)
+
+julia> cat_b2 = concrete_term(term(:b), [:a, :b, :c])
+b(DummyCoding:3→2)
+
+julia> sch2 = StatsModels.Schema(term(:a) => cont_a2, term(:b) => cat_b2)
+StatsModels.Schema with 2 entries:
+  a => a
+  b => b
+```
+
+Finally, you could also call `schema` on a `NamedTuple` of vectors (e.g., a
+`Tables.ColumnTable`) with the necessary invariants:
+
+```jldoctest
+julia> sch3 = schema((a=[-1., 1], b=[:a, :b, :c]))
+StatsModels.Schema with 2 entries:
+  a => a
+  b => b
+```
+
+### Semantics time (`apply_schema`)
+
+The next stage of life for a formula happens when _semantic_ information is
+available, which includes the schema of the data to be transformed as well as
+the _context_, or the type of model that will be fit.  This stage is implemented
+by [`apply_schema`](@ref).  Among other things, this _instantiates_ placeholder
 terms:
+
 * `Term`s become `ContinuousTerm`s or `CategoricalTerm`s
 * `ConstantTerm`s become `InterceptTerm`s
 * Tuples of terms become [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
   they should be concatenated into a single model matrix
+* Any model-specific (context-specific) interpretation of the terms is made, including
+  transforming calls to functions that have special meaning in particular
+  contexts into their special term types (see the section on [Extending
+  `@formula` syntax](@ref extending) below)
 
 ```jldoctest 1
 julia> f = @formula(y ~ 1 + a + b * c)
@@ -208,9 +298,9 @@ two arguments).  Because `apply_schema` dispatches on the term, schema, and
 model type, this stage allows generic context-aware transformations, based on
 _both_ the source (schema) _and_ the destination (model type).  This is the
 primary mechanisms by which the formula DSL can be extended ([see
-below](#Extending-@formula-syntax-1) for more details)
+below](@ref extending) for more details)
 
-### Data time
+### Data time (`modelcols`)
 
 At the end of "schema time", a formula encapsulates all the information needed
 to convert a table into a numeric model matrix.  That is, it is ready for "data
@@ -279,7 +369,7 @@ julia> modelcols(t, df)
 ```
 
 
-## Extending `@formula` syntax
+## [Extending `@formula` syntax](@id extending)
 
 Package authors may want to create additional syntax to the `@formula` DSL so
 their users can conveniently specify particular kinds of models.  StatsModels.jl
@@ -318,7 +408,9 @@ end
 
 Base.show(io::IO, p::PolyTerm) = print(io, "poly($(p.term), $(p.deg))")
 
-function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, Mod::Type{<:POLY_CONTEXT})
+function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+                                  sch::StatsModels.Schema,
+                                  Mod::Type{<:POLY_CONTEXT})
     term = apply_schema(t.args_parsed[1], sch, Mod)
     isa(term, ContinuousTerm) ||
         throw(ArgumentError("PolyTerm only works with continuous terms (got $term)"))
@@ -401,7 +493,7 @@ could block `PolyTerm`s being generated for `GLM.LinearModel`:
 julia> using GLM
 
 julia> StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
-                                sch,
+                                sch::StatsModels.Schema,
                                 Mod::Type{GLM.LinearModel}) = t
 ```
 
@@ -484,9 +576,12 @@ StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredC
 y ~ 1 + :(poly(b, 2))
 
 Coefficients:
-             Estimate Std.Error t value Pr(>|t|)
-(Intercept)  0.911363  0.310486 2.93528   0.0042
-poly(b, 2)    2.94442  0.191024 15.4139   <1e-27
+────────────────────────────────────────────────────
+             Estimate  Std.Error   t value  Pr(>|t|)
+────────────────────────────────────────────────────
+(Intercept)  0.911363   0.310486   2.93528    0.0042
+poly(b, 2)   2.94442    0.191024  15.4139     <1e-27
+────────────────────────────────────────────────────
 
 julia> fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
 StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1},Normal{Float64},IdentityLink},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
@@ -494,10 +589,13 @@ StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1}
 y ~ 1 + poly(b, 2)
 
 Coefficients:
-             Estimate Std.Error z value Pr(>|z|)
-(Intercept)  0.829374  0.131582  6.3031    <1e-9
-b^1           2.13096  0.100552 21.1926   <1e-98
-b^2            3.1132 0.0813107 38.2877   <1e-99
+───────────────────────────────────────────────────
+             Estimate  Std.Error  z value  Pr(>|z|)
+───────────────────────────────────────────────────
+(Intercept)  0.829374  0.131582    6.3031    <1e-9
+b^1          2.13096   0.100552   21.1926    <1e-98
+b^2          3.1132    0.0813107  38.2877    <1e-99
+───────────────────────────────────────────────────
 
 ```
 
