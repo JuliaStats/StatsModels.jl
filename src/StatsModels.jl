@@ -2,6 +2,7 @@ module StatsModels
 
 using Tables
 using StatsBase
+using ShiftedArrays: lag, lead
 using CategoricalArrays
 using DataStructures
 
@@ -15,7 +16,7 @@ export
     #re-export from StatsBase:
     StatisticalModel,
     RegressionModel,
-    
+
     @formula,
     ModelFrame,
     ModelMatrix,
@@ -39,7 +40,10 @@ export
     FormulaTerm,
     InterceptTerm,
     FunctionTerm,
+    LagTerm,
     MatrixTerm,
+
+    lag, lead, # Rexported from ShiftedArrays
 
     term,
     terms,
@@ -55,6 +59,7 @@ export
 include("traits.jl")
 include("contrasts.jl")
 include("terms.jl")
+include("temporal_terms.jl")
 include("schema.jl")
 include("formula.jl")
 include("modelframe.jl")
