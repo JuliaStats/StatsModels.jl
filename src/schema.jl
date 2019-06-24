@@ -286,7 +286,7 @@ end
     apply_schema(t::AbstractTerm, schema::StatsModels.FullRank, Mod::Type)
 
 Apply a schema, under the assumption that when a less-than-full rank model
-matrix would be produce, categorical terms should be "promoted" to full rank
+matrix would be produced, categorical terms should be "promoted" to full rank
 (where a categorical variable with ``k`` levels would produce ``k`` columns,
 instead of ``k-1`` in the standard contrast coding schemes).  This step is
 applied automatically when `Mod <: StatisticalModel`, but other types of models
