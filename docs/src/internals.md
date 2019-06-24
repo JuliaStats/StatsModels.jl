@@ -20,18 +20,22 @@ A formula goes through a number of stages, starting as an
 expression that's passed to the `@formula` macro and ending up generating a
 numeric matrix when ultimately combined with a tabular data source:
 
-1. "Syntax time" when only the surface syntax is available
-2. "Schema time" incorporates information about **data invariants** (types of each
-   variable, levels of categorical variables, summary statistics for continuous
-   variables) and the **model type**.
-3. "Data time" when the actual data values themselves are available.
+1. "Syntax time" when only the surface syntax is available, when the `@formula`
+   macro is invoked.
+2. "Schema time" incorporates information about **data invariants** (types of
+   each variable, levels of categorical variables, summary statistics for
+   continuous variables) and the overall structure of the **data**, during the
+   invocation of `schema`.
+3. "Semantics time" incorporates information about the **model type (context)**,
+   and custom terms, during the call to `apply_schema`.
+4. "Data time" when the actual data values themselves are available.
 
 For in-memory (columnar) tables, there is not much difference between "data
 time" and "schema time" in practice, but in principle it's important to
 distinguish between these when dealing with truly streaming data, or large data
 stores where calculating invariants of the data may be expensive.
 
-### Syntax time
+### Syntax time (`@formula`)
 
 The `@formula` macro does syntactic transformations of the formula expression.
 At this point, _only_ the expression itself is available, and there's no way to
@@ -111,16 +115,23 @@ and turned into anonymous functions that can be evaluated elementwise, which has
 to happen at compile time.  For instance, the call to `log` in `@formula(y ~
 log(a+b))` is converted into the anonymous function `(a,b) -> log(a+b)`.
 
-### Schema time
+Internally a lot of the work at syntax time is done by the `parse!` function.
 
-The next phase of life for a formula begins when a _schema_ for the data becomes
-available.  A schema is a mapping from data columns to a concrete term
-type---either a `ContinuousTerm` or a `CategoricalTerm`---which represents all
-the summary information about a data column necessary to create a model matrix
-from that column.
+### Schema time (`schema`)
 
-A schema is computed with the `schema` function.  By default, it will create a
-schema for every column in the data:
+The next phase of life for a formula requires some information about the data it
+will be used with.  This is represented by a _schema_, a mapping from
+placeholder `Term`s to _concrete_ terms—like `ContinuousTerm`
+`CategoricalTerm`—which represent all the summary information about a data
+column necessary to create a model matrix from that column.
+
+There are a number of ways to construct a schema, ranging from fully automatic
+to fully manual.
+
+#### Fully automatic: `schema`
+
+The most convenient way to automatically compute a schema is with the `schema`
+function.  By default, it will create a schema for every column in the data:
 
 ```jldoctest 1
 julia> using DataFrames    # for pretty printing---any Table will do
@@ -163,13 +174,87 @@ Dict{Any,Any} with 2 entries:
   b => b
 ```
 
-Once a schema is computed, it's _applied_ to the formula with
-[`apply_schema`](@ref).  Among other things, this _instantiates_ placeholder
+#### Fully manual: term constructors
+
+While `schema` is a convenient way to generate a schema automatically from a
+data source, in some cases it may be preferable to create a schema manually.  In
+particular, `schema` peforms a complete sweep through the data, and if your
+dataset is very large or truly streaming (online), then this may be
+undesirable.  In such cases, you can construct a schema from instances of the
+relevant concrete terms ([`ContinuousTerm`](@ref) or [`CategoricalTerm`](@ref)),
+in a number of ways.
+
+The constructors for concrete terms provide the maximum level of control.  A
+`ContinuousTerm` stores values for the mean, standard deviation, minimum, and
+maximum, while a `CategoricalTerm` stores the
+[`StatsModels.ContrastsMatrix`](@ref) that defines the mapping from levels to
+predictors, and these need to be manually supplied to the constructors:
+
+!!! warning
+    The format of the invariants stored in a term are implementation details and
+    subject to change.
+
+```jldoctest
+julia> cont_a = ContinuousTerm(:a, 0., 1., -1., 1.)
+a(continuous)
+
+julia> cat_b = CategoricalTerm(:b, StatsModels.ContrastsMatrix(DummyCoding(), [:a, :b, :c]))
+b(DummyCoding:3→2)
+
+julia> sch1 = Dict(term(:a) => cont_a, term(:b) => cat_b)
+Dict{Term,AbstractTerm} with 2 entries:
+  a => a
+  b => b
+```
+
+#### Semi-automatic: data subsets
+
+A slightly more convenient method for generating a schema is provided by
+the [`concrete_term`](@ref) internal function, which extracts invariants from a
+data column and returns a concrete type.  This can be used to generate concrete
+terms from data vectors constructed to have the same invariants that you care
+about in your actual data (e.g., the same unique values for categorical data,
+and the same minimum/maximum values or the same mean/variance for continuous):
+
+```jldoctest
+julia> cont_a2 = concrete_term(term(:a), [-1., 1.])
+a(continuous)
+
+julia> cat_b2 = concrete_term(term(:b), [:a, :b, :c])
+b(DummyCoding:3→2)
+
+julia> sch2 = Dict(term(:a) => cont_a2, term(:b) => cat_b2)
+Dict{Term,AbstractTerm} with 2 entries:
+  a => a
+  b => b
+```
+
+Third, you could call `schema` on a `NamedTuple` of vectors (e.g., a
+`Tables.ColumnTable`) with the necessary invariants:
+
+```jldoctest
+julia> sch3 = schema((a=[-1., 1], b=[:a, :b, :c]))
+Dict{Any,Any} with 2 entries:
+  a => a
+  b => b
+```
+
+### Semantics time (`apply_schema`)
+
+The next stage of life for a formula happens when _semantic_ information is
+available, which includes the schema of the data to be transformed as well as
+the _context_, or the type of model that will be fit.  This stage is implemented
+by [`apply_schema`](@ref).  Among other things, this _instantiates_ placeholder
 terms:
+
 * `Term`s become `ContinuousTerm`s or `CategoricalTerm`s
 * `ConstantTerm`s become `InterceptTerm`s
 * Tuples of terms become [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
   they should be concatenated into a single model matrix
+* Any model-specific (context-specific) interpretation of the terms is made, including
+  transforming calls to functions that have special meaning in particular
+  contexts into their special term types (see the section on [Extending
+  `@formula` syntax](@ref extending) below)
 
 ```jldoctest 1
 julia> f = @formula(y ~ 1 + a + b * c)
@@ -208,9 +293,9 @@ two arguments).  Because `apply_schema` dispatches on the term, schema, and
 model type, this stage allows generic context-aware transformations, based on
 _both_ the source (schema) _and_ the destination (model type).  This is the
 primary mechanisms by which the formula DSL can be extended ([see
-below](#Extending-@formula-syntax-1) for more details)
+below](@ref extending) for more details)
 
-### Data time
+### Data time (`modelcols`)
 
 At the end of "schema time", a formula encapsulates all the information needed
 to convert a table into a numeric model matrix.  That is, it is ready for "data
@@ -279,7 +364,7 @@ julia> modelcols(t, df)
 ```
 
 
-## Extending `@formula` syntax
+## [Extending `@formula` syntax](@id extending)
 
 Package authors may want to create additional syntax to the `@formula` DSL so
 their users can conveniently specify particular kinds of models.  StatsModels.jl
