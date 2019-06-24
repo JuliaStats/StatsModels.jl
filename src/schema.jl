@@ -34,7 +34,7 @@ delegates the constructor as well as `getindex`, `get`, `merge!`, `merge`,
 """
 struct Schema
     schema::Dict{Term,AbstractTerm}
-    Schema(x) = new(Dict{Term,AbstractTerm}(x))
+    Schema(x...) = new(Dict{Term,AbstractTerm}(x...))
 end
 
 function Base.show(io::IO, schema::Schema)
