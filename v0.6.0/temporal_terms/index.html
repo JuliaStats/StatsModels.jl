@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Temporal variables and Time Series Terms · StatsModels.jl</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link href="../assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>StatsModels.jl</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="../search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li><a class="toctext" href="../">Introduction</a></li><li><a class="toctext" href="../formula/">Modeling tabular data</a></li><li><a class="toctext" href="../internals/">Internals and extending the <code>@formula</code></a></li><li><a class="toctext" href="../contrasts/">Contrast coding categorical variables</a></li><li class="current"><a class="toctext" href>Temporal variables and Time Series Terms</a><ul class="internal"><li><a class="toctext" href="#Temporal-Terms-(Lag/Lead)-1">Temporal Terms (Lag/Lead)</a></li></ul></li><li><a class="toctext" href="../api/">API documentation</a></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Temporal variables and Time Series Terms</a></li></ul><a class="edit-page" href="https://github.com/JuliaStats/StatsModels.jl/blob/master/docs/src/temporal_terms.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Temporal variables and Time Series Terms</span><a class="fa fa-bars" href="#"></a></div></header><h2><a class="nav-anchor" id="Temporal-Terms-(Lag/Lead)-1" href="#Temporal-Terms-(Lag/Lead)-1">Temporal Terms (Lag/Lead)</a></h2><p>When working with time series data it is common to want to access past or future values of your predictors. These are called lagged (past) or lead (future) variables.</p><p>StatsModels supports basic lead and lag functionality:</p><ul><li><code>lag(x, n)</code> accesses data for variable <code>x</code> from <code>n</code> rows (time steps) ago.</li><li><code>lead(x, n)</code> accesses data for variable <code>x</code> from <code>n</code> rows (time steps) ahead.</li></ul><p>In both cases, <code>n</code> can be omitted, and it defaults to <code>1</code> row. <code>missing</code> is used for any entries that are lagged or lead out of the table.</p><p>Note that this is a purely structural lead/lag term: it is unaware of any time index of the data. It is up to the user to ensure the data is sorted, and following a regular time interval, which may require inserting additional rows containing <code>missing</code>s  to fill in gaps in irregular data.</p><p>Below is a simple example:</p><pre><code class="language-julia-repl">julia&gt; using StatsModels, DataFrames
+
+julia&gt; df = DataFrame(y=1:5, x=2:2:10)
+5×2 DataFrame
+│ Row │ y     │ x     │
+│     │ Int64 │ Int64 │
+├─────┼───────┼───────┤
+│ 1   │ 1     │ 2     │
+│ 2   │ 2     │ 4     │
+│ 3   │ 3     │ 6     │
+│ 4   │ 4     │ 8     │
+│ 5   │ 5     │ 10    │
+
+julia&gt; f = @formula(y ~ x + lag(x, 2) + lead(x, 2))
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  x(unknown)
+  (x)-&gt;lag(x, 2)
+  (x)-&gt;lead(x, 2)
+
+julia&gt; f = apply_schema(f, schema(f, df))
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  x(continuous)
+  lag(x, 2)
+  lead(x, 2)
+
+julia&gt; modelmatrix(f, df)
+5×3 reshape(::Array{Union{Missing, Float64},2}, 5, 3) with eltype Union{Missing, Float64}:
+  2.0   missing   6.0
+  4.0   missing   8.0
+  6.0  2.0       10.0
+  8.0  4.0         missing
+ 10.0  6.0         missing</code></pre><footer><hr/><a class="previous" href="../contrasts/"><span class="direction">Previous</span><span class="title">Contrast coding categorical variables</span></a><a class="next" href="../api/"><span class="direction">Next</span><span class="title">API documentation</span></a></footer></article></body></html>
