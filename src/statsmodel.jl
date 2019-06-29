@@ -159,7 +159,7 @@ function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
 
     f = mm.mf.f
-    cols, nonmissings = missing_omit(columntable(data), f)
+    cols, nonmissings = missing_omit(columntable(data), f.rhs)
     new_x = modelcols(f.rhs, cols)
     y_pred = predict(mm.model, reshape(new_x, size(new_x, 1), :);
                      kwargs...)

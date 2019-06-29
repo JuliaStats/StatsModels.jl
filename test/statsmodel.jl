@@ -110,6 +110,14 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     @test_throws KeyError predict(m2, d3)
     # @test_throws ArgumentError predict(m2, d3)
 
+    ## predict with dataframe that doesn't have the dependent variable
+    d4 = deepcopy(d)
+    deletecols!(d4, [:y])
+    @test predict(m, d4) == predict(m, d)
+
+    ## attempting to fit with d4 should fail since it doesn't have :y
+    @test_throws ErrorException fit(DummyMod, f, d4)
+
     ## fit with contrasts specified
     d[:x2p] = CategoricalVector{Union{Missing, Int}}(d[:x2])
     f3 = @formula(y ~ x1p + x2p)
