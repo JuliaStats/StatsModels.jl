@@ -13,6 +13,7 @@ my_tests = ["formula.jl",
             "temporal_terms.jl",
             "schema.jl",
             "modelmatrix.jl",
+            "modelframe.jl",
             "statsmodel.jl",
             "contrasts.jl",
             "extension.jl"]

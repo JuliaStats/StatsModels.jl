@@ -172,11 +172,16 @@ end
 
 Base.size(mm::ModelMatrix, dim...) = size(mm.m, dim...)
 
+asgn(f::FormulaTerm) = asgn(f.rhs)
+asgn(mt::MatrixTerm) = asgn(mt.terms)
+asgn(t) = mapreduce(((i,t), ) -> i*ones(width(t)),
+                    append!,
+                    enumerate(vectorize(t)),
+                    init=Int[])
+
 function ModelMatrix{T}(mf::ModelFrame) where T<:AbstractMatrix{<:AbstractFloat}
     mat = modelmatrix(mf)
-    asgn = mapreduce((it)->first(it)*ones(width(last(it))), append!,
-                     enumerate(vectorize(mf.f.rhs)), init=Int[])
-    ModelMatrix(convert(T, mat), asgn)
+    ModelMatrix(convert(T, mat), asgn(mf.f))
 end
 
 ModelMatrix(mf::ModelFrame) = ModelMatrix{Matrix{Float64}}(mf)
