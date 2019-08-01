@@ -419,6 +419,8 @@ converted to a `NamedTuple` of `Vectors` (e.g., a `Tables.ColumnTable`).
 """
 function modelcols(t, d::D) where D
     Tables.istable(d) || throw(ArgumentError("Data of type $D is not a table!"))
+    d isa NamedTuple && throw(ArgumentError("don't know how to generate modelcols for " *
+                                            "term $t. Did you forget to call apply_schema?"))
     modelcols(t, columntable(d))
 end
 
