@@ -374,4 +374,10 @@
         end
     end
 
+    @testset "#136" begin
+        t = (x = rand(100), y = randn(100));
+        f = @formula(y ~ x)
+        @test_throws ArgumentError modelcols(f, t)
+    end
+
 end
