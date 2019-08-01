@@ -53,24 +53,24 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 @testset "stat model types" begin
 
     ## Test fitting
-    d = DataFrame()
-    d[:y] = [1:4;]
-    d[:x1] = Vector{Union{Missing, Int}}(5:8)
-    d[:x2] = [9:12;]
-    d[:x3] = [13:16;]
-    d[:x4] = [17:20;]
-    d[:x1p] = CategoricalArray{Union{Missing, Int}}(d[:x1])
+    d = DataFrame(y = 1:4,
+                  x1 = allowmissing(5:8),
+                  x2 = 9:12,
+                  x3 = 13:16,
+                  x4 = 17:20)
+
+    d.x1p = categorical(d.x1)
 
     f = @formula(y ~ x1 * x2)
     m = fit(DummyMod, f, d)
-    @test response(m) == Array(d[:y])
+    @test response(m) == Array(d.y)
 
     ## coefnames delegated to model frame by default
     @test coefnames(m) == coefnames(ModelFrame(f, d)) == ["(Intercept)", "x1", "x2", "x1 & x2"]
 
     ## test prediction method
     ## vanilla
-    @test predict(m) == [ ones(size(d,1)) Array(d[:x1]) Array(d[:x2]) Array(d[:x1]).*Array(d[:x2]) ] * collect(1:4)
+    @test predict(m) == [ ones(size(d,1)) Array(d.x1) Array(d.x2) Array(d.x1).*Array(d.x2) ] * collect(1:4)
 
     ## new data from matrix
     mm = ModelMatrix(ModelFrame(f, d))
@@ -103,7 +103,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     ## predict w/ new data with _extra_ levels (throws an error)
     d3 = deepcopy(d)
     d3[1, :x1] = 0
-    d3[:x1p] = CategoricalVector{Union{Missing, Int}}(d3[:x1])
+    d3.x1p = categorical(d3.x1)
     # TODO: check for level mismatch earlier...this throws a KeyError when it
     # goes to do the lookup in the contrasts matrix from the previously
     # generated categorical term.
@@ -112,14 +112,14 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     ## predict with dataframe that doesn't have the dependent variable
     d4 = deepcopy(d)
-    deletecols!(d4, [:y])
+    select!(d4, Not(:y))
     @test predict(m, d4) == predict(m, d)
 
     ## attempting to fit with d4 should fail since it doesn't have :y
     @test_throws ErrorException fit(DummyMod, f, d4)
 
     ## fit with contrasts specified
-    d[:x2p] = CategoricalVector{Union{Missing, Int}}(d[:x2])
+    d.x2p = categorical(d.x2)
     f3 = @formula(y ~ x1p + x2p)
     m3 = fit(DummyMod, f3, d)
     fit(DummyMod, f3, d, contrasts = Dict(:x1p => EffectsCoding()))

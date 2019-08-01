@@ -6,13 +6,12 @@
 
     sparsetype = SparseMatrixCSC{Float64,Int}
 
-    d = DataFrame()
-    d[:y] = [1:4;]
-    d[:x1] = [5:8;]
-    d[:x2] = [9:12;]
-    d[:x3] = [13:16;]
-    d[:x4] = [17:20;]
-    d[:x1p] = CategoricalArray(d[:x1])
+    d = DataFrame(y = 1:4,
+                  x1 = 5:8,
+                  x2 = 9:12,
+                  x3 = 13:16,
+                  x4 = 17:20)
+    d.x1p = categorical(d.x1)
 
     d_orig = deepcopy(d)
     
@@ -64,7 +63,7 @@
     @test mm.m == [ones(4) x1 x2 x1.*x2]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
-    d[:x1] = CategoricalArray(x1)
+    d.x1 = categorical(x1)
     x1e = [[0, 1, 0, 0] [0, 0, 1, 0] [0, 0, 0, 1]]
     f = @formula(y ~ 1 + x1 * x2)
     mf = ModelFrame(f, d)
@@ -81,7 +80,7 @@
     @test response(mf) == y''
 
     d = deepcopy(d_orig)
-    d[:x1] = CategoricalArray{Union{Missing, Float64}}(d[:x1])
+    d.x1 = CategoricalArray{Union{Missing, Float64}}(d.x1)
 
     f = @formula(y ~ 1 + x2 + x3 + x3*x2)
     mm = ModelMatrix(ModelFrame(f, d))
@@ -144,7 +143,7 @@
     @test size(mm_sub) == (3,3)
 
     ## Missing data
-    d[:x1m] = [5, 6, missing, 7]
+    d.x1m = [5, 6, missing, 7]
     mf = ModelFrame(@formula(y ~ 1 + x1m), d)
     mm = ModelMatrix(mf)
     @test mm.m[:, 2] == d[completecases(d), :x1m]
@@ -162,7 +161,7 @@
                       z = repeat([:e, :f], inner = 4))
         categorical!(d)
         cs = Dict([Pair(name, EffectsCoding()) for name in names(d)])
-        d[:n] = 1.:8
+        d.n = 1.:8
     
     
         ## No intercept
@@ -182,7 +181,7 @@
         ## promotion blocked when we block default model=StatisticalModel
         mf = ModelFrame(@formula(n ~ 0 + x), d, model=Nothing, contrasts=cs)
         mm = ModelMatrix(mf)
-        @test all(mm.m .== ifelse.(d[:x] .== :a, -1, 1))
+        @test all(mm.m .== ifelse.(d.x .== :a, -1, 1))
         @test coefnames(mf) == ["x: b"]
         
     
@@ -315,7 +314,7 @@
         @test coefnames(mf) == ["(Intercept)", "1 | x"]
 
         mf = ModelFrame(@formula(y ~ 0 + (1 | x)), d)
-        @test all(ModelMatrix(mf).m .== float.(1 .| d[:x]))
+        @test all(ModelMatrix(mf).m .== float.(1 .| d.x))
         @test coefnames(mf) == ["1 | x"]
     end
 
