@@ -419,6 +419,11 @@ converted to a `NamedTuple` of `Vectors` (e.g., a `Tables.ColumnTable`).
 """
 function modelcols(t, d::D) where D
     Tables.istable(d) || throw(ArgumentError("Data of type $D is not a table!"))
+    ## throw an error for t which don't have a more specific modelcols method defined
+    ## TODO: this seems like it ought to be handled by dispatching on something
+    ## like modelcols(::Any, ::NamedTuple) or modelcols(::AbstractTerm, ::NamedTuple)
+    ## but that causes ambiguity errors or under-constrained modelcols methods for
+    ## custom term types...
     d isa NamedTuple && throw(ArgumentError("don't know how to generate modelcols for " *
                                             "term $t. Did you forget to call apply_schema?"))
     modelcols(t, columntable(d))
