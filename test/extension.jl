@@ -24,6 +24,9 @@ StatsModels.apply_schema(t::NonMatrixTerm, sch, Mod::Type) =
     NonMatrixTerm(apply_schema(t.term, sch, Mod))
 StatsModels.modelcols(t::NonMatrixTerm, d) = modelcols(t.term, d)
 
+struct DummyTerm <: AbstractTerm
+end
+
 @testset "Extended formula/models" begin
     d = (z = rand(10), y = rand(10), x = collect(1:10))
     sch = schema(d)
@@ -87,5 +90,7 @@ StatsModels.modelcols(t::NonMatrixTerm, d) = modelcols(t.term, d)
         
     end
 
+    @testset "Fallback" begin
+        @test_throws ArgumentError modelcols(DummyTerm(), (a=[1], ))
+    end
 end
-
