@@ -352,9 +352,11 @@ Base.show(io::IO, t::ConstantTerm) = print(io, t.n)
 Base.show(io::IO, t::FormulaTerm) = print(io, "$(t.lhs) ~ $(t.rhs)")
 function Base.show(io::IO, mime::MIME"text/plain", t::FormulaTerm; prefix="")
     println(io, "FormulaTerm")
-    print(io, "Response:")
-    show(io, mime, t.lhs, prefix="\n  ")
-    println(io)
+    if t.lhs !== nothing
+        print(io, "Response:")
+        show(io, mime, t.lhs, prefix="\n  ")
+        println(io)
+    end
     print(io, "Predictors:")
     show(io, mime, t.rhs, prefix="\n  ")
 end
@@ -395,6 +397,7 @@ Base.show(io::IO, mime::MIME"text/plain", t::MatrixTerm; prefix="") =
 
 
 Base.:~(lhs::TermOrTerms, rhs::TermOrTerms) = FormulaTerm(lhs, rhs)
+Base.:~(rhs::TermOrTerms) = FormulaTerm(nothing, rhs)
 
 Base.:&(terms::AbstractTerm...) = InteractionTerm(terms)
 Base.:&(term::AbstractTerm) = term
@@ -428,6 +431,8 @@ function modelcols(t, d::D) where D
                                             "term $t. Did you forget to call apply_schema?"))
     modelcols(t, columntable(d))
 end
+
+modelcols(::Nothing, ::NamedTuple) = nothing
 
 """
     modelcols(ts::NTuple{N, AbstractTerm}, data) where N
@@ -566,7 +571,7 @@ omitsintercept(t::AbstractTerm) =
     ConstantTerm(-1) ∈ terms(t)
 
 hasresponse(t) = false
-hasresponse(t::FormulaTerm{LHS}) where {LHS} = LHS !== nothing
+hasresponse(t::FormulaTerm{LHS}) where {LHS} = LHS !== Nothing
 
 # convenience converters
 """

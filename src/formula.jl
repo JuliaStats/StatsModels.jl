@@ -59,7 +59,7 @@ The rules that are applied are
 """
 macro formula(ex)
     is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
-    length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
+    length(ex.args) in (2,3) ||  throw(ArgumentError("malformed expression in formula $ex"))
     terms!(sort_terms!(parse!(ex)))
 end
 

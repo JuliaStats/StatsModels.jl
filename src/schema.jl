@@ -8,6 +8,7 @@
 # TODO: handle streaming (Data.RowTable) by iterating over rows and updating
 # schemas in place
 
+terms(t) = AbstractTerm[]
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
 terms(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
@@ -243,6 +244,8 @@ has_schema(t::Union{ContinuousTerm,CategoricalTerm}) = true
 has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
 has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
+# because apply_schema(x::Any, ...) = x
+has_schema(t) = true
 
 struct FullRank
     schema::Schema
