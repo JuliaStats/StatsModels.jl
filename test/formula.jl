@@ -22,6 +22,7 @@
     t = @formula(y ~ 0)
     @test hasintercept(t) == false
     @test omitsintercept(t) == true
+    @test hasresponse(t)
     @test t.rhs == ConstantTerm(0)
     @test issetequal(terms(t), term.((:y, 0)))
 
