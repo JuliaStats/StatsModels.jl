@@ -8,7 +8,6 @@ using DataStructures
 
 using SparseArrays
 using LinearAlgebra
-using Missings
 
 using Tables: ColumnTable
 

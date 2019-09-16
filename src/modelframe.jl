@@ -68,7 +68,7 @@ function missing_omit(d::T) where T<:ColumnTable
     rows = findall(nonmissings)
     d_nonmissing =
         NamedTuple{Tables.names(T)}(tuple((copyto!(similar(col,
-                                                           Missings.T(eltype(col)),
+                                                           Base.nonmissingtype(eltype(col)),
                                                            length(rows)),
                                                    view(col, rows)) for col in d)...))
     d_nonmissing, nonmissings
