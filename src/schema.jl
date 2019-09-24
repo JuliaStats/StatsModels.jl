@@ -198,6 +198,8 @@ concrete_term(t::Term, x, hint::AbstractTerm) = hint
 concrete_term(t, d, hint) = t
 
 concrete_term(t::Term, xs::AbstractVector{<:Number}, ::Nothing) = concrete_term(t, xs, ContinuousTerm)
+# and for missing values
+concrete_term(t::Term, xs::AbstractVector{Union{Missing,T}} where T<:Number, ::Nothing) = concrete_term(t, xs, ContinuousTerm)
 function concrete_term(t::Term, xs::AbstractVector, ::Type{ContinuousTerm})
     μ, σ2 = StatsBase.mean_and_var(xs)
     min, max = extrema(xs)
