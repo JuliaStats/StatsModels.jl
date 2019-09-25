@@ -488,7 +488,7 @@ modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
 # layer of indirection
 function copy end
 copy(x::Any) = Base.copy(x)
-copy(m::Missing) = deepcopy(m)
+copy(m::Missing) = m
 
 modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
 
