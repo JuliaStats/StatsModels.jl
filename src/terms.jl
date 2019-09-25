@@ -511,7 +511,7 @@ lazy_modelcols(x, d) = modelcols(x, d)
 # layer of indirection
 function copy end
 copy(x::Any) = Base.copy(x)
-copy(m::Missing) = deepcopy(m)
+copy(m::Missing) = m
 
 modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
 
