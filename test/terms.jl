@@ -40,7 +40,7 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test isequal(t0m.mean, mean(vals0m))
         @test isequal(t0m.var, var(vals0m))
         @test isequal(t0m.min, min(vals0m...))
-        @test isqual(t0m.max, max(vals0m...))
+        @test isequal(t0m.max, max(vals0m...))
 
         t1 = concrete_term(t, [:a, :b, :c])
         @test t1.contrasts isa StatsModels.ContrastsMatrix{DummyCoding}
