@@ -31,6 +31,17 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test t0.min == 1.0
         @test t0.max == 3.0
 
+        vals0m = [3, missing, 1]
+        t0m = concrete_term(t, vals0m)
+        @test string(t0m) == "aaa"
+        @test mimestring(t0m) == "aaa(continuous)"
+        # compute all these values to make sure the behavior of terms matches
+        # the behavior of other relevant packages
+        @test isequal(t0m.mean, mean(vals0m))
+        @test isequal(t0m.var, var(vals0m))
+        @test isequal(t0m.min, min(vals0m...))
+        @test isqual(t0m.max, max(vals0m...))
+
         t1 = concrete_term(t, [:a, :b, :c])
         @test t1.contrasts isa StatsModels.ContrastsMatrix{DummyCoding}
         @test string(t1) == "aaa"
