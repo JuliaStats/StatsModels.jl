@@ -207,8 +207,13 @@ function termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Intege
     levels[not_base]
 end
 
-Base.getindex(contrasts::ContrastsMatrix{C,T}, rowinds, colinds) where {C,T} =
-    getindex(contrasts.matrix, getindex.(Ref(contrasts.invindex), rowinds), colinds)
+function Base.getindex(contrasts::ContrastsMatrix{C,T}, rowinds, colinds) where {C,T}
+    # allow rows to be missing
+    rows = get.(Ref(contrasts.invindex), rowinds, missing)
+    # create a row of nothing but missings for missing values
+    mrow = reduce(vcat, [missing for c in getindex(contrasts.matrix, 1, colinds)])
+    vcat([r === missing ? mrow : getindex(contrasts.matrix, r, colinds) for r in rows])
+end
 
 # Making a contrast type T only requires that there be a method for
 # contrasts_matrix(T,  baseind, n) and optionally termnames(T, levels, baseind)
