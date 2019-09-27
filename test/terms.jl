@@ -92,4 +92,61 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
 
         @test terms2 == terms3
     end
+
+    @testset "Intercept and response traits" begin
+
+        has_responses = [term(:y), term(1), InterceptTerm{true}(), term(:y)+term(:z),
+                        term(:y) + term(0), term(:y) + InterceptTerm{false}()]
+        no_responses = [term(0), InterceptTerm{false}()]
+
+        has_intercepts = [term(1), InterceptTerm{true}()]
+        omits_intercepts = [term(0), term(-1), InterceptTerm{false}()]
+
+        using StatsModels: hasresponse, hasintercept, omitsintercept
+
+        a = term(:a)
+
+        for lhs in has_responses, rhs in has_intercepts
+            @test hasresponse(lhs ~ rhs)
+            @test hasintercept(lhs ~ rhs)
+            @test !omitsintercept(lhs ~ rhs)
+
+            @test hasresponse(lhs ~ rhs + a)
+            @test hasintercept(lhs ~ rhs + a)
+            @test !omitsintercept(lhs ~ rhs + a)
+
+        end
+
+        for lhs in no_responses, rhs in has_intercepts
+            @test !hasresponse(lhs ~ rhs)
+            @test hasintercept(lhs ~ rhs)
+            @test !omitsintercept(lhs ~ rhs)
+
+            @test !hasresponse(lhs ~ rhs + a)
+            @test hasintercept(lhs ~ rhs + a)
+            @test !omitsintercept(lhs ~ rhs + a)
+        end
+
+        for lhs in has_responses, rhs in omits_intercepts
+            @test hasresponse(lhs ~ rhs)
+            @test !hasintercept(lhs ~ rhs)
+            @test omitsintercept(lhs ~ rhs)
+
+            @test hasresponse(lhs ~ rhs + a)
+            @test !hasintercept(lhs ~ rhs + a)
+            @test omitsintercept(lhs ~ rhs + a)
+        end
+
+        for lhs in no_responses, rhs in omits_intercepts
+            @test !hasresponse(lhs ~ rhs)
+            @test !hasintercept(lhs ~ rhs)
+            @test omitsintercept(lhs ~ rhs)
+
+            @test !hasresponse(lhs ~ rhs + a)
+            @test !hasintercept(lhs ~ rhs + a)
+            @test omitsintercept(lhs ~ rhs + a)
+        end
+
+    end
+    
 end
