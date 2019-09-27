@@ -1,6 +1,6 @@
 abstract type AbstractTerm end
-const TupleTerm = NTuple{N, AbstractTerm} where N
 const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
+const TupleTerm = NTuple{N, TermOrTerms} where N
 
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))

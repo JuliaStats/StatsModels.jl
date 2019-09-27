@@ -5,6 +5,13 @@ function mimestring(mime::Type{<:MIME}, x)
 end
 mimestring(x) = mimestring(MIME"text/plain", x)
 
+struct MultiTerm <: AbstractTerm
+    terms::StatsModels.TupleTerm
+end
+StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
+    apply_schema.(mt.terms, Ref(sch), Mod)
+
+
 @testset "terms" begin
 
     using Statistics
@@ -68,5 +75,21 @@ mimestring(x) = mimestring(MIME"text/plain", x)
         c = term(:c)
         @test (a+b)+c == (a,b,c)
         @test a+(b+c) == (a,b,c)
+    end
+
+    @testset "expand nested tuples of terms during apply_schema" begin
+        sch = schema((a=rand(10), b=rand(10), c=rand(10)))
+
+        # nested tuples of terms are expanded by apply_schema
+        terms = (term(:a), (term(:b), term(:c)))
+        terms2 = apply_schema(terms, sch, Nothing)
+        @test terms2 isa NTuple{3, ContinuousTerm}
+        @test terms2 == apply_schema(term.((:a, :b, :c)), sch, Nothing)
+
+        # a term that generates multiple terms after apply_schema
+        mterms = (terms[1], MultiTerm(terms[2]))
+        terms3 = apply_schema(mterms, sch, Nothing)
+
+        @test terms2 == terms3
     end
 end
