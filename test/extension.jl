@@ -93,4 +93,8 @@ end
     @testset "Fallback" begin
         @test_throws ArgumentError modelcols(DummyTerm(), (a=[1], ))
     end
+
+    @testset "Ambiguity detection" begin
+        @test isempty(Test.detect_ambiguities(StatsModels))
+    end
 end
