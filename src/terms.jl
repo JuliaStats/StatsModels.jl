@@ -572,8 +572,8 @@ omitsintercept(t::TermOrTerms) =
 hasresponse(t) = false
 hasresponse(t::FormulaTerm) =
     t.lhs !== nothing && 
-    t.lhs != ConstantTerm(0) &&
-    t.lhs != InterceptTerm{false}()
+    t.lhs !== ConstantTerm(0) &&
+    t.lhs !== InterceptTerm{false}()
 
 # convenience converters
 """
