@@ -108,6 +108,11 @@ The left-hand side has one term `y` which means that the response variable is
 the column from the data named `:y`.  The response can be accessed with the
 analogous `response(f, df)` function.
 
+!!! note
+    
+    To make a "one-sided" formula (with no response), put a `0` on the left-hand
+    side, like `@formula(0 ~ 1 + a + b)`.
+
 The right hand side is made up of a number of different **terms**, separated by
 `+`: `1 + a + b + c + b&c`.  Each term corresponds to one or more columns in the
 generated model matrix: 
