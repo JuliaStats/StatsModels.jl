@@ -5,16 +5,24 @@
     y, x1, x2, x3, a, b, c, onet = term.((:y, :x1, :x2, :x3, :a, :b, :c, 1))
 
     ## totally empty
-    @test_broken t = @eval @formula $(:($nothing ~ 0))
-    @test_broken hasresponse(t) == false
-    @test_broken hasintercept(t) == false
-    @test_broken t.rhs == ConstantTerm(0)
-    @test_broken issetequal(terms(t), [ConstantTerm(0)])
+    t = @formula(0 ~ 0)
+    @test !hasresponse(t)
+    @test !hasintercept(t)
+    @test omitsintercept(t)
+    @test t.rhs == ConstantTerm(0)
+    @test issetequal(terms(t), [ConstantTerm(0)])
+
+    ## empty lhs, intercept on rhs
+    t = @formula(0 ~ 1)
+    @test !hasresponse(t)
+    @test hasintercept(t)
+    @test !omitsintercept(t)
 
     ## empty RHS
     t = @formula(y ~ 0)
     @test hasintercept(t) == false
     @test omitsintercept(t) == true
+    @test hasresponse(t)
     @test t.rhs == ConstantTerm(0)
     @test issetequal(terms(t), term.((:y, 0)))
 

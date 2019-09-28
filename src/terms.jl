@@ -559,14 +559,21 @@ StatsBase.coefnames(t::InteractionTerm) =
 ################################################################################
 # old Terms features:
 
-hasintercept(t::AbstractTerm) = InterceptTerm{true}() ∈ terms(t) || ConstantTerm(1) ∈ terms(t)
-omitsintercept(t::AbstractTerm) =
+hasintercept(f::FormulaTerm) = hasintercept(f.rhs)
+hasintercept(t::TermOrTerms) =
+    InterceptTerm{true}() ∈ terms(t) ||
+    ConstantTerm(1) ∈ terms(t)
+omitsintercept(f::FormulaTerm) = omitsintercept(f.rhs)
+omitsintercept(t::TermOrTerms) =
     InterceptTerm{false}() ∈ terms(t) ||
     ConstantTerm(0) ∈ terms(t) ||
     ConstantTerm(-1) ∈ terms(t)
 
 hasresponse(t) = false
-hasresponse(t::FormulaTerm{LHS}) where {LHS} = LHS !== nothing
+hasresponse(t::FormulaTerm) =
+    t.lhs !== nothing && 
+    t.lhs !== ConstantTerm(0) &&
+    t.lhs !== InterceptTerm{false}()
 
 # convenience converters
 """
