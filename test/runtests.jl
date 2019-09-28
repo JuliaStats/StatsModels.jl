@@ -8,7 +8,8 @@ using StatsBase
 
 using StatsModels: ContrastsMatrix
 
-my_tests = ["formula.jl",
+my_tests = ["ambiguity.jl",
+            "formula.jl",
             "terms.jl",
             "temporal_terms.jl",
             "schema.jl",
