@@ -401,23 +401,29 @@ poly(x, n) = x^n
 const POLY_CONTEXT = Any
 
 # struct for behavior
-struct PolyTerm <: AbstractTerm
-    term::ContinuousTerm
-    deg::Int
+struct PolyTerm{T,D} <: AbstractTerm
+    term::T
+    deg::D
 end
 
 Base.show(io::IO, p::PolyTerm) = print(io, "poly($(p.term), $(p.deg))")
 
-function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+# first pass: create PolyTerm
+StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+                         sch::StatsModels.Schema,
+                         Mod::Type{<:POLY_CONTEXT}) =
+    apply_schema(PolyTerm(t.args_parsed...), sch, Mod)
+
+# second pass: apply schema to internal Terms and check for proper types
+function StatsModels.apply_schema(t::PolyTerm,
                                   sch::StatsModels.Schema,
                                   Mod::Type{<:POLY_CONTEXT})
-    term = apply_schema(t.args_parsed[1], sch, Mod)
+    term = apply_schema(t.term, sch, Mod)
     isa(term, ContinuousTerm) ||
         throw(ArgumentError("PolyTerm only works with continuous terms (got $term)"))
-    deg = t.args_parsed[2]
-    isa(deg, ConstantTerm) ||
-        throw(ArgumentError("PolyTerm degree must be a number (got $deg)"))
-    PolyTerm(term, deg.n)
+    isa(t.deg, ConstantTerm) ||
+        throw(ArgumentError("PolyTerm degree must be a number (got $t.deg)"))
+    PolyTerm(term, t.deg.n)
 end
 
 function StatsModels.modelcols(p::PolyTerm, d::NamedTuple)
