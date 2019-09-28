@@ -384,6 +384,8 @@ Extensions have three components:
 These correspond to the stages summarized above (syntax time, schema time, and
 data time)
 
+### An example of custom syntax: `poly`
+
 As an example, we'll add syntax for specifying a [polynomial
 regression](https://en.wikipedia.org/wiki/Polynomial_regression) model, which
 fits a regression using polynomial basis functions of a continuous predictor.
@@ -490,6 +492,8 @@ julia> coefnames(f.rhs)
  "b^2 & a"
 
 ```
+
+### Defining the context where special syntax applies
 
 It's also possible to _block_ interpretation of the `poly` syntax as special in
 certain contexts by adding additional (more specific) methods.  For instance, we
@@ -607,6 +611,51 @@ b^2          3.1132    0.0813107  38.2877    <1e-99
 
 (a `GeneralizeLinearModel` with a `Normal` distribution is equivalent to a
 `LinearModel`)
+
+### [Making special syntax "runtime friendly"] (@id extend-runtime)
+
+When used from the `@formula` macro, special syntax relies on dispatching on the
+`FunctionTerm{MyFunction}` type.  But when creating a formula at run-time
+without the `@formula` macro, `FunctionTerm`s aren't available, and so care must
+be taken to make sure you provide a runtime replacement.  The example for `poly`
+above shows how to do this, but we spell it out here in more detail.
+
+The first step is to make sure you can create a schema-less instance of the
+`AbstractTerm` that implements your special syntax behavior.  That's why for the
+`poly` example, that means we need to be able to create a
+`PolyTerm(term(column_name), term(poly_degree))`.  In order to do this, the
+types of the `term` and `deg` fields aren't specified but are parameters of the
+`PolyTerm` type.
+
+The second step is to provide an `apply_schema` method that upgrades a
+schema-less instance to one with a schema (i.e., one that can be used with
+`modelcols`).  For example, we've specified `apply_schema(pt::PolyTerm, ...)`
+which calls `apply_schema` on the wrapped `pt.term`, returning a new `PolyTerm`
+with the instantiated result.  This might seem like unnecessary indirection,
+given that `apply_schema(::FunctionTerm{typeof(poly)}, ...)` simply returns a
+schema-less `PolyTerm`.  But it means that users can do things like
+
+```jldoctest 1
+julia> ff = apply_schema(term(:y) ~ term(1) + term(:a) + PolyTerm(term(:b), term(2)),
+                         schema(data),
+                         StatisticalModel)
+
+julia> modelcols(ff.rhs, data)
+```
+
+This is workable if a little verbose, so the third (optional) step is to provide
+additional "runtime" methods for the function that's used in the `@formula`
+form:
+
+```jldoctest 1
+julia> poly(t::Symbol, d::Int) = PolyTerm(term(t), term(d))
+
+julia> ff = apply_schema(term(:y) ~ term(1) + term(:a) + poly(:b, 2),
+                         schema(data),
+                         StatisticalModel)
+
+julia> modelcols(ff.rhs, data)
+```
 
 ### Summary
 

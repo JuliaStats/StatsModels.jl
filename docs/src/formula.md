@@ -289,8 +289,9 @@ Predictors:
     function (like `|` for
     [MixedModels.jl](https://github.com/dmbates/MixedModels.jl), or `absorb`
     for [Econometrics.jl](https://github.com/Nosferican/Econometrics.jl)).  In
-    these cases, use the corresponding constructors for the actual terms themselves
-    (e.g., `RanefTerm` and `FixedEffectsTerm` respectively).
+    these cases, you should use the corresponding constructors for the actual
+    terms themselves (e.g., `RanefTerm` and `FixedEffectsTerm` respectively), as
+    long as the packages have [implemented support for them](@ref extend-runtime).
 
 The [`term`](@ref) function constructs a term of the appropriate type from
 symbols and numbers, which makes it easy to work with collections of mixed type:
