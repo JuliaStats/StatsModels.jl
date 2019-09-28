@@ -410,11 +410,15 @@ end
 
 Base.show(io::IO, p::PolyTerm) = print(io, "poly($(p.term), $(p.deg))")
 
-# first pass: create PolyTerm
-StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
-                         sch::StatsModels.Schema,
-                         Mod::Type{<:POLY_CONTEXT}) =
+# use a "two-pass" apply_schema to better support runtime use outside @formula
+# (see section below)
+
+# first pass: create schema-less PolyTerm
+function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+                                  sch::StatsModels.Schema,
+                                  Mod::Type{<:POLY_CONTEXT})
     apply_schema(PolyTerm(t.args_parsed...), sch, Mod)
+end
 
 # second pass: apply schema to internal Terms and check for proper types
 function StatsModels.apply_schema(t::PolyTerm,
@@ -495,9 +499,13 @@ julia> coefnames(f.rhs)
 
 ### Defining the context where special syntax applies
 
-It's also possible to _block_ interpretation of the `poly` syntax as special in
-certain contexts by adding additional (more specific) methods.  For instance, we
-could block `PolyTerm`s being generated for `GLM.LinearModel`:
+The third argument to `apply_schema` determines the contexts in which the
+special `poly` syntax applies.
+
+For instance, it's possible to _block_ interpretation of the `poly` syntax as
+special in certain contexts by adding additional (more specific) methods.  If
+for some reason we wanted to block `PolyTerm`s being generated for
+`GLM.LinearModel`, then we just need to add the appropriate method:
 
 ```jldoctest 1
 julia> using GLM
@@ -507,8 +515,9 @@ julia> StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
                                 Mod::Type{GLM.LinearModel}) = t
 ```
 
-Now the `poly` is interpreted by default as the "vanilla" function defined
-first, which just raises its first argument to the designated power:
+Now in the context of a `LinearModel`, the `poly` is interpreted as a call to
+the "vanilla" function defined first, which just raises its first argument to
+the designated power:
 
 ```jldoctest 1
 julia> f = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
@@ -615,7 +624,7 @@ b^2          3.1132     0.0813107  38.2877    <1e-99   2.95384     3.27257
 ### [Making special syntax "runtime friendly"] (@id extend-runtime)
 
 When used from the `@formula` macro, special syntax relies on dispatching on the
-`FunctionTerm{MyFunction}` type.  But when creating a formula at run-time
+`FunctionTerm{MyFunction}` type.  But when creating a formula at runtime
 without the `@formula` macro, `FunctionTerm`s aren't available, and so care must
 be taken to make sure you provide a runtime replacement.  The example for `poly`
 above shows how to do this, but we spell it out here in more detail.

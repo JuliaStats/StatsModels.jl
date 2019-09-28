@@ -269,7 +269,7 @@ julia> modelmatrix(@formula(y ~ 1 + b + identity(1+b)), df)
 
 ## Constructing a formula programmatically
 
-A formula can be constructed at run-time by creating `Term`s and combining them
+A formula can be constructed at runtime by creating `Term`s and combining them
 with the formula operators `+`, `&`, and `~`:
 
 ```jldoctest 1
@@ -287,7 +287,7 @@ Predictors:
 !!! warning
 
     Even though the `@formula` macro supports arbitrary julia functions,
-    run-time (programmatic) formula construction does not.  This is because to
+    runtime (programmatic) formula construction does not.  This is because to
     resolve a symbol giving a function's _name_ into the actual _function_
     itself, it's necessary to `eval`.  In practice this is not often an issue,
     _except_ in cases where a package provides special syntax by overloading a
