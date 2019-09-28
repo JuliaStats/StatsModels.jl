@@ -21,7 +21,7 @@ Below is a simple example:
 julia> using StatsModels, DataFrames
 
 julia> df = DataFrame(y=1:5, x=2:2:10)
-5×2 DataFrame
+5×2 DataFrames.DataFrame
 │ Row │ y     │ x     │
 │     │ Int64 │ Int64 │
 ├─────┼───────┼───────┤
@@ -50,10 +50,10 @@ Predictors:
   lead(x, 2)
 
 julia> modelmatrix(f, df)
-5×3 reshape(::Array{Union{Missing, Float64},2}, 5, 3) with eltype Union{Missing, Float64}:
-  2.0   missing   6.0
-  4.0   missing   8.0
-  6.0  2.0       10.0
-  8.0  4.0         missing
- 10.0  6.0         missing
+5×3 reshape(::Array{Union{Missing, Int64},2}, 5, 3) with eltype Union{Missing, Int64}:
+  2   missing   6
+  4   missing   8
+  6  2         10
+  8  4           missing
+ 10  6           missing
 ```

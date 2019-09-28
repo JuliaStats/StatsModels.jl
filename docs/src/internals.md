@@ -137,7 +137,7 @@ function.  By default, it will create a schema for every column in the data:
 julia> using DataFrames    # for pretty printing---any Table will do
 
 julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"], 3))
-9×4 DataFrame
+9×4 DataFrames.DataFrame
 │ Row │ y          │ a     │ b         │ c      │
 │     │ Float64    │ Int64 │ Float64   │ String │
 ├─────┼────────────┼───────┼───────────┼────────┤
@@ -343,7 +343,7 @@ julia> pred
 julia> using Tables
 
 julia> modelcols(f, first(Tables.rowtable(df)))
-(0.23603334566204692, [1.0, 1.0, 0.986666, 0.0, 0.0, 0.0, 0.0])
+(0.23603334566204692, [1.0, 1.0, 0.9866663668987996, 0.0, 0.0, 0.0, 0.0])
 
 ```
 
@@ -446,7 +446,7 @@ Now, we can use `poly` in a formula:
 
 ```jldoctest 1
 julia> data = DataFrame(y = rand(4), a = rand(4), b = [1:4;])
-4×3 DataFrame
+4×3 DataFrames.DataFrame
 │ Row │ y          │ a        │ b     │
 │     │ Float64    │ Float64  │ Int64 │
 ├─────┼────────────┼──────────┼───────┤
@@ -581,31 +581,31 @@ julia> sim_dat = DataFrame(b=randn(100));
 julia> sim_dat[:y] = randn(100) .+ 1 .+ 2*sim_dat[:b] .+ 3*sim_dat[:b].^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
-StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
 
 y ~ 1 + :(poly(b, 2))
 
 Coefficients:
-────────────────────────────────────────────────────
-             Estimate  Std.Error   t value  Pr(>|t|)
-────────────────────────────────────────────────────
-(Intercept)  0.911363   0.310486   2.93528    0.0042
-poly(b, 2)   2.94442    0.191024  15.4139     <1e-27
-────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────────────────
+             Estimate  Std. Error   t value  Pr(>|t|)  Lower 95%  Upper 95%
+───────────────────────────────────────────────────────────────────────────
+(Intercept)  0.911363    0.310486   2.93528    0.0042   0.295214    1.52751
+poly(b, 2)   2.94442     0.191024  15.4139     <1e-27   2.56534     3.3235
+───────────────────────────────────────────────────────────────────────────
 
 julia> fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
-StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1},Normal{Float64},IdentityLink},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{GeneralizedLinearModel{GLM.GlmResp{Array{Float64,1},Normal{Float64},IdentityLink},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
 
 y ~ 1 + poly(b, 2)
 
 Coefficients:
-───────────────────────────────────────────────────
-             Estimate  Std.Error  z value  Pr(>|z|)
-───────────────────────────────────────────────────
-(Intercept)  0.829374  0.131582    6.3031    <1e-9
-b^1          2.13096   0.100552   21.1926    <1e-98
-b^2          3.1132    0.0813107  38.2877    <1e-99
-───────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────────────────
+             Estimate  Std. Error  z value  Pr(>|z|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)  0.829374   0.131582    6.3031    <1e-9    0.571478    1.08727
+b^1          2.13096    0.100552   21.1926    <1e-98   1.93388     2.32804
+b^2          3.1132     0.0813107  38.2877    <1e-99   2.95384     3.27257
+──────────────────────────────────────────────────────────────────────────
 
 ```
 
@@ -639,8 +639,20 @@ schema-less `PolyTerm`.  But it means that users can do things like
 julia> ff = apply_schema(term(:y) ~ term(1) + term(:a) + PolyTerm(term(:b), term(2)),
                          schema(data),
                          StatisticalModel)
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  a(continuous)
+  poly(b, 2)
 
 julia> modelcols(ff.rhs, data)
+4×4 Array{Float64,2}:
+ 1.0  0.488613  1.0   1.0
+ 1.0  0.210968  2.0   4.0
+ 1.0  0.951916  3.0   9.0
+ 1.0  0.999905  4.0  16.0
 ```
 
 This is workable if a little verbose, so the third (optional) step is to provide
@@ -649,12 +661,25 @@ form:
 
 ```jldoctest 1
 julia> poly(t::Symbol, d::Int) = PolyTerm(term(t), term(d))
+poly (generic function with 2 methods)
 
 julia> ff = apply_schema(term(:y) ~ term(1) + term(:a) + poly(:b, 2),
                          schema(data),
                          StatisticalModel)
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  a(continuous)
+  poly(b, 2)
 
 julia> modelcols(ff.rhs, data)
+4×4 Array{Float64,2}:
+ 1.0  0.488613  1.0   1.0
+ 1.0  0.210968  2.0   4.0
+ 1.0  0.951916  3.0   9.0
+ 1.0  0.999905  4.0  16.0
 ```
 
 ### Summary
