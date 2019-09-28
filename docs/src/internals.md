@@ -578,7 +578,7 @@ a formula with a call to `poly`:
 ```jldoctest 1
 julia> sim_dat = DataFrame(b=randn(100));
 
-julia> sim_dat[:y] = randn(100) .+ 1 .+ 2*sim_dat[:b] .+ 3*sim_dat[:b].^2;
+julia> sim_dat.y = randn(100) .+ 1 .+ 2*sim_dat.b .+ 3*sim_dat.b.^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
 StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}

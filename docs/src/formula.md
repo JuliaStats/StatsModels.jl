@@ -232,7 +232,7 @@ a             0.357482    0.342126   1.04489     0.3363   -0.479669    1.19463
 b             2.32528     3.13735    0.741159    0.4866   -5.35154    10.0021
 ──────────────────────────────────────────────────────────────────────────────
 
-julia> df[:log_y] = log.(df[:y]);
+julia> df.log_y = log.(df.y);
 
 julia> lm(@formula(log_y ~ 1 + a + b), df)            # equivalent
 StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
@@ -357,7 +357,7 @@ julia> β_true = 1:8;
 
 julia> ϵ = randn(100)*0.1;
 
-julia> data[:y] = X*β_true .+ ϵ;
+julia> data.y = X*β_true .+ ϵ;
 
 julia> mod = fit(LinearModel, @formula(y ~ 1 + a*b), data)
 StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
