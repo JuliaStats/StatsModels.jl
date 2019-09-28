@@ -92,7 +92,7 @@ FormulaTerm{Term,Term}
 
 The reason that the actual construction of higher-order terms is done after the
 macro is expanded is that it makes it much easier to create a formula
-programatically:
+programmatically:
 
 ```jldoctest 1
 julia> f = Term(:y) ~ sum(term.([1, :a, :b, :c]))
