@@ -82,8 +82,8 @@ termnames(C::MyCoding, levels, baseind) = ...
 abstract type AbstractContrasts end
 
 # Contrasts + Levels (usually from data) = ContrastsMatrix
-struct ContrastsMatrix{C <: AbstractContrasts, T}
-    matrix::Matrix{Float64}
+mutable struct ContrastsMatrix{C <: AbstractContrasts, T}
+    matrix::Union{Nothing, Matrix{Float64}}
     termnames::Vector{T}
     levels::Vector{T}
     contrasts::C
@@ -178,9 +178,7 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
 
     tnames = termnames(contrasts, c_levels, baseind)
 
-    mat = contrasts_matrix(contrasts, baseind, n)
-
-    ContrastsMatrix{C,T}(mat, tnames, c_levels, contrasts)
+    ContrastsMatrix{C,T}(nothing, tnames, c_levels, contrasts)
 end
 
 ContrastsMatrix(c::Type{<:AbstractContrasts}, levels::AbstractVector) =
@@ -206,6 +204,30 @@ function termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Intege
     not_base = [1:(baseind-1); (baseind+1):length(levels)]
     levels[not_base]
 end
+
+function Base.getproperty(cm::ContrastsMatrix, sym::Symbol)
+    if sym == :matrix && getfield(cm, :matrix) === nothing
+        contrasts = cm.contrasts
+        # find index of base level. use contrasts.base, then default (1).
+        baseind = contrasts.base === nothing ?
+            1 :
+            findfirst(isequal(contrasts.base), cm.levels)
+        if baseind === nothing
+            throw(ArgumentError("base level $(contrasts.base) not found in levels " *
+                                "$(cm.levels)."))
+        end
+
+        n = length(cm.levels)
+        mat = contrasts_matrix(cm.contrasts, baseind, n)
+        
+        setfield!(cm, :matrix, mat)
+        return mat
+    else
+        return getfield(cm, sym)
+    end
+end
+
+    
 
 Base.getindex(contrasts::ContrastsMatrix{C,T}, rowinds, colinds) where {C,T} =
     getindex(contrasts.matrix, getindex.(Ref(contrasts.invindex), rowinds), colinds)
