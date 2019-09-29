@@ -513,6 +513,20 @@ julia> sim_dat = DataFrame(a=rand(100).-0.5, b=randn(100).-0.5);
 julia> sim_dat.y = randn(100) .+ 1 .+ 2*sim_dat.a .+ 3*sim_dat.b.^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(a,2) + poly(b,2)), sim_dat)
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+
+y ~ 1 + poly(a, 2) + poly(b, 2)
+
+Coefficients:
+────────────────────────────────────────────────────────────────────────────
+              Estimate  Std. Error   t value  Pr(>|t|)  Lower 95%  Upper 95%
+────────────────────────────────────────────────────────────────────────────
+(Intercept)   0.693521   0.159469    4.34893    <1e-4    0.376934    1.01011
+a^1           2.1042     0.383115    5.49235    <1e-6    1.34362     2.86478
+a^2           2.34395    1.39244     1.68334    0.0956  -0.420386    5.10829
+b^1          -0.180113   0.148698   -1.21127    0.2288  -0.475317    0.11509
+b^2           2.89786    0.0794572  36.4707     <1e-56   2.74012     3.05561
+────────────────────────────────────────────────────────────────────────────
 ```
 
 ### [Making special syntax "runtime friendly"] (@id extend-runtime)
@@ -593,8 +607,29 @@ stored in variables:
 julia> poly_vars = (:a, :b); poly_deg = 2;
 
 julia> poly_formula = term(:y) ~ term(1) + poly.(poly_vars, poly_deg)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  poly(a, 2)
+  poly(b, 2)
 
 julia> fit(LinearModel, poly_formula, sim_dat)
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+
+y ~ 1 + poly(a, 2) + poly(b, 2)
+
+Coefficients:
+────────────────────────────────────────────────────────────────────────────
+              Estimate  Std. Error   t value  Pr(>|t|)  Lower 95%  Upper 95%
+────────────────────────────────────────────────────────────────────────────
+(Intercept)   0.693521   0.159469    4.34893    <1e-4    0.376934    1.01011
+a^1           2.1042     0.383115    5.49235    <1e-6    1.34362     2.86478
+a^2           2.34395    1.39244     1.68334    0.0956  -0.420386    5.10829
+b^1          -0.180113   0.148698   -1.21127    0.2288  -0.475317    0.11509
+b^2           2.89786    0.0794572  36.4707     <1e-56   2.74012     3.05561
+────────────────────────────────────────────────────────────────────────────
 ```
 
 ### Defining the context where special syntax applies
