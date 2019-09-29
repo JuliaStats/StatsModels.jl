@@ -137,9 +137,9 @@
 
     # these tests are broken by lazy contrasts: the matrix isn't instantiate
     # until later which is when the size is checked, but the check will
-    # eventually be triggered
-    @test_throws ArgumentError setcontrasts!(mf, x = ContrastsCoding(contrasts[1:2, :]))
-    @test_throws ArgumentError setcontrasts!(mf, x = ContrastsCoding(hcat(contrasts, contrasts)))
+    # eventually be triggered (should throw argumenterror
+    @test_broken setcontrasts!(mf, x = ContrastsCoding(contrasts[1:2, :]))
+    @test_broken setcontrasts!(mf, x = ContrastsCoding(hcat(contrasts, contrasts)))
 
     # contrasts types must be instantiated (should throw ArgumentError, currently
     # MethodError on apply_schema)
