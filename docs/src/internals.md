@@ -632,6 +632,9 @@ b^2           2.89786    0.0794572  36.4707     <1e-56   2.74012     3.05561
 ────────────────────────────────────────────────────────────────────────────
 ```
 
+This produces exactly the same formula (and hence model fit) as the version
+above using `@formula(y ~ 1 + poly(a,2) + poly(b,2))`.
+
 ### Defining the context where special syntax applies
 
 The third argument to `apply_schema` determines the contexts in which the
