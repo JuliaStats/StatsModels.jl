@@ -205,6 +205,8 @@ function termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Intege
     levels[not_base]
 end
 
+isinstantiated(cm::ContrastsMatrix) = getfield(cm, :matrix) !== nothing
+
 function Base.getproperty(cm::ContrastsMatrix, sym::Symbol)
     if sym == :matrix && getfield(cm, :matrix) === nothing
         contrasts = cm.contrasts

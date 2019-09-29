@@ -134,6 +134,10 @@
                                 1 -1 -.5]
 
     # throw argument error if number of levels mismatches
+
+    # these tests are broken by lazy contrasts: the matrix isn't instantiate
+    # until later which is when the size is checked, but the check will
+    # eventually be triggered
     @test_throws ArgumentError setcontrasts!(mf, x = ContrastsCoding(contrasts[1:2, :]))
     @test_throws ArgumentError setcontrasts!(mf, x = ContrastsCoding(hcat(contrasts, contrasts)))
 
@@ -141,4 +145,30 @@
     # MethodError on apply_schema)
     @test_broken setcontrasts!(mf, x = DummyCoding)
 
+    @testset "Lazy contrasts" begin
+        cm = ContrastsMatrix(DummyCoding(), [:a, :b, :c])
+
+        # matrix is initially Nothing:
+        @test !StatsModels.isinstantiated(cm)
+        @test getfield(cm, :matrix) === nothing
+
+        # other metadata is there:
+        @test cm.levels == [:a, :b, :c]
+        @test cm.invindex == Dict(:a=>1, :b=>2, :c=>3)
+        @test cm.contrasts isa DummyCoding
+        @test cm.termnames == [:b, :c]
+
+        # matrix instantiated after getproperty:
+        mat = cm.matrix
+        @test mat == [0. 0.
+                      1. 0.
+                      0. 1.]
+
+        # everything else unchanged:
+        @test cm.levels == [:a, :b, :c]
+        @test cm.invindex == Dict(:a=>1, :b=>2, :c=>3)
+        @test cm.contrasts isa DummyCoding
+        @test cm.termnames == [:b, :c]
+
+    end
 end
