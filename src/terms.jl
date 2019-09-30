@@ -229,6 +229,8 @@ struct CategoricalTerm{C,T,N} <: AbstractTerm
 end
 width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 
+CategoricalArrays.levels(t::CategoricalTerm) = t.contrasts.levels
+
 # constructor that computes the width based on the contrasts matrix
 CategoricalTerm(sym::Symbol, contrasts::ContrastsMatrix{C,T}) where {C,T} =
     CategoricalTerm{C,T,length(contrasts.termnames)}(sym, contrasts)
@@ -403,6 +405,7 @@ Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms
 Base.:+(terms::AbstractTerm...) = (unique(terms)..., )
 Base.:+(as::TupleTerm, b::AbstractTerm) = (as..., b)
 Base.:+(a::AbstractTerm, bs::TupleTerm) = (a, bs...)
+Base.:+(as::TupleTerm, bs::TupleTerm) = (as..., bs...)
 
 ################################################################################
 # evaluating terms with data to generate model matrix entries
