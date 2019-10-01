@@ -551,8 +551,10 @@ term(i))`:
 
 ```jldoctest 1
 julia> pt = poly(:a, 3)
+poly(a, 3)
 
 julia> typeof(pt) # contains schema-less `Term`
+PolyTerm{Term,ConstantTerm{Int64}}
 ```
 
 !!! note
@@ -570,8 +572,12 @@ Now we can programmatically construct `PolyTerm`s at run-time:
 julia> my_col = :a; my_degree = 3;
 
 julia> poly(my_col, my_degree)
+poly(a, 3)
 
 julia> poly.([:a, :b], my_degree)
+2-element Array{PolyTerm{Term,ConstantTerm{Int64}},1}:
+ poly(a, 3)
+ poly(b, 3)
 ```
 
 These run-time `PolyTerm`s are "schema-less" though, and to be able to construct
@@ -586,10 +592,17 @@ with the instantiated result:
 julia> pt = apply_schema(PolyTerm(term(:b), term(2)),
                          schema(data),
                          StatisticalModel)
+poly(b, 2)
 
 julia> typeof(pt) # now holds a `ContinuousTerm`
+PolyTerm{ContinuousTerm{Float64},Int64}
 
 julia> modelcols(pt, data)
+4×2 Array{Int64,2}:
+ 1   1
+ 2   4
+ 3   9
+ 4  16
 ```
 
 Now with these methods in place, we can run exactly the same polynomial
