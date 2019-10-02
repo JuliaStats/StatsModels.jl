@@ -1,5 +1,9 @@
 ```@meta
 CurrentModule = StatsModels
+DocTestSetup = quote
+    using StatsModels
+    using LinearAlgebra
+end
 ```
 
 # Modeling categorical data
@@ -14,7 +18,7 @@ The following contrast coding systems are implemented:
 * [`DummyCoding`](@ref)
 * [`EffectsCoding`](@ref)
 * [`HelmertCoding`](@ref)
-* [`ContrastsCoding`](@ref)
+* [`HypothesisCoding`](@ref)
 
 ## How to specify contrast coding
 
@@ -44,13 +48,14 @@ ContrastsMatrix
 DummyCoding
 EffectsCoding
 HelmertCoding
-ContrastsCoding
+HypothesisCoding
 ```
 
 ### Special internal contrasts
 
 ```@docs
 FullDummyCoding
+ContrastsCoding
 ```
 
 ## Further details
