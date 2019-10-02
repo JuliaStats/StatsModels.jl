@@ -132,19 +132,19 @@ StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
 
 function _return_predictions(yp::AbstractVector, nonmissings, len)
-    out = missings(eltype(yp), len)
+    out = Vector{Union{eltype(yp),Missing}}(missing, len)
     out[nonmissings] = yp
     out
 end
 
 function _return_predictions(yp::AbstractMatrix, nonmissings, len)
-    out = missings(eltype(yp), (len, 3))
+    out = Matrix{Union{eltype(yp),Missing}}(missing, len, 3)
     out[nonmissings, :] = yp
     DataFrame(prediction = out[:,1], lower = out[:,2], upper = out[:,3])
 end
 
 function _return_predictions(yp::NamedTuple, nonmissings, len)
-    y = missings(eltype(yp[:prediction]), len)
+    y = Vector{Union{eltype(yp.prediction),Missing}}(missing, len)
     l, h = similar(y), similar(y)
     out = (prediction = y, lower = l, upper = h)
     for key in (:prediction, :lower, :upper)

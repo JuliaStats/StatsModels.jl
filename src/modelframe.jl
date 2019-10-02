@@ -53,11 +53,12 @@ function _nonmissing!(res, col)
     end
 end
 
-function _nonmissing!(res, col::CategoricalArray{>: Missing})
-    @inbounds for (i, el) in enumerate(col.refs)
-        res[i] &= el > 0
-    end
-end
+# TODO: find another way to optimize this without taking a dependency
+# function _nonmissing!(res, col::CategoricalArray{>: Missing})
+#     @inbounds for (i, el) in enumerate(col.refs)
+#         res[i] &= el > 0
+#     end
+# end
 
 function missing_omit(d::T) where T<:ColumnTable
     nonmissings = trues(length(first(d)))
