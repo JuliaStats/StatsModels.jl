@@ -113,6 +113,12 @@
                                         1  1]
     @test coefnames(mf_missing) == ["(Intercept)"; "x: b"]
 
+    # Sequential difference coding
+    setcontrasts!(mf, x = SeqDiffCoding())
+    seqdiff_contr = pinv([-1 1 0
+                          0 -1 1]);
+    @test ModelMatrix(mf).m ≈ hcat(ones(6), seqdiff_contr[[2, 1, 3, 1, 1, 2], :])
+
     # Things that are bad to do:
     # Applying contrasts that only have a subset of data levels:
     @test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = [:a, :b]))
@@ -132,6 +138,37 @@
                                 1  0  1
                                 1  0  1
                                 1 -1 -.5]
+
+    contrasts2 = [1 0
+                  1 1
+                  0 1]
+    setcontrasts!(mf, x = StatsModels.ContrastsCoding(contrasts2))
+    @test ModelMatrix(mf).m == [1  1  1
+                                1  1  0
+                                1  0  1
+                                1  1  0
+                                1  1  0
+                                1  1  1]
+
+    hypotheses2 = pinv(contrasts2)
+    setcontrasts!(mf, x = StatsModels.HypothesisCoding(hypotheses2))
+    @test ModelMatrix(mf).m ≈ [1  1  1
+                               1  1  0
+                               1  0  1
+                               1  1  0
+                               1  1  0
+                               1  1  1]
+
+    # different results for non-orthogonal hypotheses/contrasts:
+    hypotheses3 = [1 1 0
+                   0 1 1]
+    setcontrasts!(mf, x = StatsModels.HypothesisCoding(hypotheses3))
+    @test !(ModelMatrix(mf).m ≈ [1  1  1
+                                 1  1  0
+                                 1  0  1
+                                 1  1  0
+                                 1  1  0
+                                 1  1  1])
 
     # throw argument error if number of levels mismatches
     @test_throws ArgumentError setcontrasts!(mf, x = StatsModels.ContrastsCoding(contrasts[1:2, :]))

@@ -213,7 +213,7 @@ Base.getindex(contrasts::ContrastsMatrix{C,T}, rowinds, colinds) where {C,T} =
 # Making a contrast type T only requires that there be a method for
 # contrasts_matrix(T,  baseind, n) and optionally termnames(T, levels, baseind)
 # The rest is boilerplate.
-for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
+for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCoding]
     @eval begin
         mutable struct $contrastType <: AbstractContrasts
             base::Any
@@ -366,6 +366,52 @@ function contrasts_matrix(C::HelmertCoding, baseind, n)
     mat = mat[[baseind; 1:(baseind-1); (baseind+1):end], :]
     return mat
 end
+
+"""
+    SeqDiffCoding([base[, levels]])
+
+Codes each level in order to test "sequential difference" hypotheses, which
+compares each level to the level below it (starting with the second level).
+Specifically, the ``n``th predictor tests the hypothesis that the difference
+between levels ``n`` and ``n+1`` is zero.
+
+# Examples
+
+```jldoctest seqdiff
+julia> seqdiff = StatsModels.ContrastsMatrix(SeqDiffCoding(), ["a", "b", "c", "d"]).matrix
+4×3 Array{Float64,2}:
+ -0.75  -0.5  -0.25
+  0.25  -0.5  -0.25
+  0.25   0.5  -0.25
+  0.25   0.5   0.75
+```
+
+The interpretation of sequential difference coding may be hard to see from the
+contrasts matrix itself.  The corresponding hypothesis matrix shows a clearer
+picture.  From the rows of the hypothesis matrix, we can see that these
+contrasts test the difference between the first and second levels, the second
+and third, and the third and fourth, respectively:
+
+```jldoctest seqdiff
+julia> round.(pinv(seqdiff), digits=2)
+3×4 Array{Float64,2}:
+ -1.0   1.0  -0.0   0.0
+ -0.0  -1.0   1.0  -0.0
+  0.0  -0.0  -1.0   1.0
+```
+
+"""
+SeqDiffCoding
+
+function contrasts_matrix(C::SeqDiffCoding, baseind, n)
+    mat = zeros(n, n-1)
+    for col in 1:n-1
+        mat[1:col, col] .= col-n
+        mat[col+1:end, col] .= col
+    end
+    return mat ./ n
+end
+
 
 """
     HypothesisCoding(hypotheses::Matrix[, levels]])

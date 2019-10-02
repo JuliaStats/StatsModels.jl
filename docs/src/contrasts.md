@@ -19,6 +19,7 @@ The following contrast coding systems are implemented:
 * [`EffectsCoding`](@ref)
 * [`HelmertCoding`](@ref)
 * [`HypothesisCoding`](@ref)
+* [`SeqDiffCoding`](@ref)
 
 ## How to specify contrast coding
 
@@ -48,6 +49,7 @@ ContrastsMatrix
 DummyCoding
 EffectsCoding
 HelmertCoding
+SeqDiffCoding
 HypothesisCoding
 ```
 

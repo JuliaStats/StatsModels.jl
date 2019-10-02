@@ -24,6 +24,7 @@ export
     EffectsCoding,
     DummyCoding,
     HelmertCoding,
+    SeqDiffCoding,
     HypothesisCoding,
     
     coefnames,
