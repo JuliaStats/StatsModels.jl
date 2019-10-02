@@ -368,10 +368,83 @@ function contrasts_matrix(C::HelmertCoding, baseind, n)
 end
 
 """
-    ContrastsCoding(mat::Matrix[, base[, levels]])
+    HypothesisCoding(hypotheses::Matrix[, levels]])
+
+Specify how to code a categorical variable in terms of a *hypothesis matrix*.
+For a variable with ``k`` levels, this should be a ``k-1 \times k`` matrix.
+Each row of the hypothesis corresponds to the hypothesis tested by the
+corresponding predictor, given as the weights given to the "cell mean" of each
+of the ``k`` values of the predictor.
+
+For instance, if we have a variable which has four levels A, B, C, and D, and we
+want to test the hypothesis that the difference between the average outcome for
+levels A and B is different from zero, the corresponding row of the hypothesis
+matrix would be `[-1, 1, 0, 0]`.  Likewise, to test whether the difference
+between B and C is different from zero, the hypothesis vector would be `[0, -1,
+1, 0]`.  To test each "successive difference" hypothesis, the full hypothesis
+matrix would be
+
+```jldoctest hyp
+julia> sdiff_hypothesis = [-1  1  0  0
+                            0 -1  1  0
+                            0  0 -1  1];
+```
+
+Contrasts are derived the hypothesis matrix by taking the pseudoinverse:
+
+```jldoctest hyp
+julia> sdiff_contrasts = pinv(sdiff_hypothesis)
+4×3 Array{Float64,2}:
+ -0.75  -0.5  -0.25
+  0.25  -0.5  -0.25
+  0.25   0.5  -0.25
+  0.25   0.5   0.75
+```
+
+Which is what is produced by constructing a [`ContrastsMatrix`](@ref) from a
+`HypothesisCoding` instance:
+
+```jldoctest hyp
+julia> StatsModels.ContrastsMatrix(HypothesisCoding(sdiff_hypothesis), ["a", "b", "c", "d"]).matrix
+4×3 Array{Float64,2}:
+ -0.75  -0.5  -0.25
+  0.25  -0.5  -0.25
+  0.25   0.5  -0.25
+  0.25   0.5   0.75
+```
+
+
+"""
+mutable struct HypothesisCoding <: AbstractContrasts
+    hypotheses::Matrix
+    contrasts::Matrix
+    base::Nothing
+    levels::Union{Vector,Nothing}
+
+    function HypothesisCoding(hypotheses, base, levels)
+        contrasts = pinv(hypotheses)
+        check_contrasts_size(contrasts, levels)
+        new(hypotheses, contrasts, base, levels)
+    end
+end
+
+HypothesisCoding(mat::Matrix; levels=nothing) =
+    HypothesisCoding(mat, nothing, levels)
+
+function contrasts_matrix(C::HypothesisCoding, baseind, n)
+    check_contrasts_size(C.contrasts, n)
+    C.contrasts
+end
+
+
+"""
+    StatsModels.ContrastsCoding(mat::Matrix[, base[, levels]])
 
 Coding by manual specification of contrasts matrix. For k levels, the contrasts
-must be a k by k-1 Matrix.
+must be a k by k-1 Matrix.  The contrasts in this matrix will be copied directly
+into the model matrix; if you want to specify your contrasts as hypotheses (i.e., 
+weights assigned to each group's cell mean), you should use 
+[`HypothesisCoding`](@ref) instead.
 """
 mutable struct ContrastsCoding <: AbstractContrasts
     mat::Matrix
@@ -379,14 +452,14 @@ mutable struct ContrastsCoding <: AbstractContrasts
     levels::Union{Vector,Nothing}
 
     function ContrastsCoding(mat, base, levels)
-        if levels !== nothing
-            check_contrasts_size(mat, length(levels))
-        end
+        check_contrasts_size(mat, levels)
         new(mat, base, levels)
     end
 end
 
-check_contrasts_size(mat::Matrix, n_lev) =
+check_contrasts_size(mat::Matrix, ::Nothing) = check_contrasts_size(mat, size(mat,1))
+check_contrasts_size(mat::Matrix, levels::Vector) = check_contrasts_size(mat, length(levels))
+check_contrasts_size(mat::Matrix, n_lev::Int) =
     size(mat) == (n_lev, n_lev-1) ||
     throw(ArgumentError("contrasts matrix wrong size for $n_lev levels. " *
                         "Expected $((n_lev, n_lev-1)), got $(size(mat))"))

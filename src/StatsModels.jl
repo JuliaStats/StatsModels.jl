@@ -24,8 +24,8 @@ export
     EffectsCoding,
     DummyCoding,
     HelmertCoding,
-    ContrastsCoding,
-
+    HypothesisCoding,
+    
     coefnames,
     dropterm,
     setcontrasts!,
