@@ -196,3 +196,42 @@ function Base.show(io::IO, model::TableModels)
         end
     end
 end
+
+function model_matrix(f::FormulaTerm, data, contrasts;
+                      model::Type{M}=StatisticalModel) where M
+    data, _ = missing_omit(Tables.columntable(data), f)
+    sch = schema(f, data, contrasts)
+    f = apply_schema(f, sch, M)
+    f, modelcols(f, data)
+end
+
+formula(x::StatisticalModel) =
+    throw(ArgumentError("formula not implemented for $(nameof(typeof(x)))"))
+
+StatsBase.coefnames(x::StatisticalModel) = coefnames(formula(x).rhs)
+
+get_type(::ContinuousTerm{T}) where {T} = T
+
+function StatsBase.predict(mm::StatisticalModel, data;
+                           interval::Union{Symbol,Nothing}=nothing, level::Real=0.95)
+    Tables.istable(data) ||
+        throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
+
+    cols, nonmissings = missing_omit(columntable(data), f.rhs)
+    new_x = modelcols(f.rhs, cols)
+    nr = size(new_x, 1)
+    y_pred = Tables.allocatecolumn(Union{get_type(f.lhs), Missing}, nr)
+    fill!(y_pred, missing)
+    if interval === nothing
+        predict!(view(y_pred, nonmissings), model, reshape(new_x, nr, :); kwargs...)
+        return y_pred
+    else
+        lower = missings(Float64, nr)
+        upper = missings(Float64, nr)
+        tup = (prediction=view(y_pred, nonmissings),
+               lower=view(lower, nonmissings),
+               upper=view(upper, nonmissings))
+        predict!(tup, model, reshape(new_x, nr, :); kwargs...)
+        return (prediction=y_pred, lower=lower, upper=upper)
+    end
+end
