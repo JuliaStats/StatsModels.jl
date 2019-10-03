@@ -40,6 +40,13 @@ function StatsBase.predict(mod::DummyMod, newX::Matrix;
         throw(ArgumentError("value not allowed for interval"))
     end
 end
+StatsBase.dof(mod::DummyMod) = length(mod.beta)
+StatsBase.dof_residual(mod::DummyMod) = length(mod.y) - length(mod.beta)
+StatsBase.nobs(mod::DummyMod) = length(mod.y)
+StatsBase.deviance(mod::DummyMod) = sum((response(mod) .- predict(mod)).^2)
+# Incorrect but simple definition
+StatsModels.isnested(mod1::DummyMod, mod2::DummyMod; atol::Real=0.0) =
+    dof(mod1) <= dof(mod2)
 
 # A dummy RegressionModel type that does not support intercept
 struct DummyModNoIntercept <: RegressionModel
@@ -83,6 +90,11 @@ function StatsBase.predict(mod::DummyModNoIntercept, newX::Matrix;
         throw(ArgumentError("value not allowed for interval"))
     end
 end
+StatsBase.dof(mod::DummyModNoIntercept) = length(mod.beta)
+StatsBase.dof_residual(mod::DummyModNoIntercept) = length(mod.y) - length(mod.beta)
+StatsBase.nobs(mod::DummyModNoIntercept) = length(mod.y)
+StatsBase.deviance(mod::DummyModNoIntercept) = sum((response(mod) .- predict(mod)).^2)
+# isnested not implemented to test fallback
 
 ## Another dummy model type to test fall-through show method
 struct DummyModTwo <: RegressionModel
@@ -210,5 +222,67 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     m2 = fit(DummyModTwo, f, d)
     show(io, m2)
+
+end
+
+@testset "lrtest" begin
+
+    y = collect(1:4)
+    x1 = 2:5
+    x2 = [1, 5, 3, 1]
+
+    m0 = DummyMod([1], ones(4, 1), y)
+    m1 = DummyMod([1, 0.3], [ones(4, 1) x1], y)
+    m2 = DummyMod([1, 0.25, 0.05, 0.04], [ones(4, 1) x1 x2 x1.*x2], y)
+
+    @test_throws ArgumentError lrtest(m0)
+    @test_throws ArgumentError lrtest(m0, m0)
+    @test_throws ArgumentError lrtest(m0, m2, m1)
+    @test_throws ArgumentError lrtest(m1, m0, m2)
+    @test_throws ArgumentError lrtest(m2, m0, m1)
+
+    m1b = DummyMod([1, 0.3], [ones(3, 1) x1[2:end]], y[2:end])
+    @test_throws ArgumentError lrtest(m0, m1b)
+
+    lr1 = lrtest(m0, m1)
+    @test isnan(lr1.pval[1])
+    @test lr1.pval[2] ≈ 0.0010484433450981662
+    @test sprint(show, lr1) == """
+        Likelihood-ratio test: 2 models fitted on 4 observations
+        ──────────────────────────────────────────────
+             DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
+        ──────────────────────────────────────────────
+        [1]    1         14.0000                      
+        [2]    2     1    3.2600   -10.7400     0.0010
+        ──────────────────────────────────────────────"""
+
+    m0 = DummyModNoIntercept(Float64[], ones(4, 0), y)
+    m1 = DummyModNoIntercept([0.3], reshape(x1, :, 1), y)
+    m2 = DummyModNoIntercept([0.25, 0.05, 0.04], [x1 x2 x1.*x2], y)
+
+    @test_throws ArgumentError lrtest(m0)
+    @test_throws ArgumentError lrtest(m0, m0)
+    @test_throws ArgumentError lrtest(m0, m2, m1)
+    @test_throws ArgumentError lrtest(m1, m0, m2)
+    @test_throws ArgumentError lrtest(m2, m0, m1)
+
+    m1b = DummyModNoIntercept([0.3], reshape(x1[2:end], :, 1), y[2:end])
+    @test_throws ArgumentError lrtest(m0, m1b)
+
+    # Incorrect, but check that it doesn't throw an error
+    lr2 = @test_logs((:warn, "Could not check whether models are nested " *
+                     "as model type DummyModNoIntercept does not implement isnested: " *
+                     "results may not be meaningful"),
+                     lrtest(m0, m1))
+    @test isnan(lr2.pval[1])
+    @test lr2.pval[2] ≈ 1.2147224767092312e-5
+    @test sprint(show, lr2) == """
+        Likelihood-ratio test: 2 models fitted on 4 observations
+        ──────────────────────────────────────────────
+             DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
+        ──────────────────────────────────────────────
+        [1]    0         30.0000                      
+        [2]    1     1   10.8600   -19.1400      <1e-4
+        ──────────────────────────────────────────────"""
 
 end
