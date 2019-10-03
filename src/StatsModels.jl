@@ -4,6 +4,7 @@ using Tables
 using StatsBase
 using ShiftedArrays: lag, lead
 using DataStructures
+using DataAPI: levels
 
 using SparseArrays
 using LinearAlgebra
