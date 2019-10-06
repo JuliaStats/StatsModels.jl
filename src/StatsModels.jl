@@ -63,5 +63,6 @@ include("temporal_terms.jl")
 include("formula.jl")
 include("modelframe.jl")
 include("statsmodel.jl")
+include("data.jl")
 
 end # module StatsModels
