@@ -7,8 +7,6 @@ struct DummyMod <: RegressionModel
     y::Vector
 end
 
-StatsBase.predict(mod::DummyMod) = mod.x * mod.beta
-StatsBase.predict(mod::DummyMod, newX::Matrix) = newX * mod.beta
 ## dumb fit method: just copy the x and y input over
 StatsBase.fit(::Type{DummyMod}, x::Matrix, y::Vector) =
     DummyMod(collect(1:size(x, 2)), x, y)
@@ -19,6 +17,29 @@ StatsBase.coeftable(mod::DummyMod) =
               ["'beta' value"],
               ["" for n in 1:size(mod.x,2)],
               0)
+# dumb predict: return values predicted by "beta" and dummy confidence bounds
+function StatsBase.predict(mod::DummyMod;
+                           interval::Union{Nothing,Symbol}=nothing)
+    pred = mod.x * mod.beta
+    if interval === nothing
+        return pred
+    elseif interval === :prediction
+        return (prediction=pred, lower=pred .- 1, upper=pred .+ 1)
+    else
+        throw(ArgumentError("value not allowed for interval"))
+    end
+end
+function StatsBase.predict(mod::DummyMod, newX::Matrix;
+                           interval::Union{Nothing,Symbol}=nothing)
+    pred = newX * mod.beta
+    if interval === nothing
+        return pred
+    elseif interval === :prediction
+        return (prediction=pred, lower=pred .- 1, upper=pred .+ 1)
+    else
+        throw(ArgumentError("value not allowed for interval"))
+    end
+end
 
 # A dummy RegressionModel type that does not support intercept
 struct DummyModNoIntercept <: RegressionModel
@@ -39,8 +60,29 @@ StatsBase.coeftable(mod::DummyModNoIntercept) =
               ["'beta' value"],
               ["" for n in 1:size(mod.x,2)],
               0)
-StatsBase.predict(mod::DummyModNoIntercept) = mod.x * mod.beta
-StatsBase.predict(mod::DummyModNoIntercept, newX::Matrix) = newX * mod.beta
+# dumb predict: return values predicted by "beta" and dummy confidence bounds
+function StatsBase.predict(mod::DummyModNoIntercept;
+                           interval::Union{Nothing,Symbol}=nothing)
+    pred = mod.x * mod.beta
+    if interval === nothing
+        return pred
+    elseif interval === :prediction
+        return (prediction=pred, lower=pred .- 1, upper=pred .+ 1)
+    else
+        throw(ArgumentError("value not allowed for interval"))
+    end
+end
+function StatsBase.predict(mod::DummyModNoIntercept, newX::Matrix;
+                           interval::Union{Nothing,Symbol}=nothing)
+    pred = newX * mod.beta
+    if interval === nothing
+        return pred
+    elseif interval === :prediction
+        return (prediction=pred, lower=pred .- 1, upper=pred .+ 1)
+    else
+        throw(ArgumentError("value not allowed for interval"))
+    end
+end
 
 ## Another dummy model type to test fall-through show method
 struct DummyModTwo <: RegressionModel
@@ -74,10 +116,21 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     ## new data from matrix
     mm = ModelMatrix(ModelFrame(f, d))
-    @test predict(m, mm.m) == mm.m * collect(1:4)
+    p = predict(m, mm.m)
+    @test p == mm.m * collect(1:4)
+    p2 = predict(m, mm.m, interval=:prediction)
+    @test p2 isa NamedTuple
+    @test p2.prediction == p
+    @test p2.lower == p .- 1
+    @test p2.upper == p .+ 1
 
     ## new data from DataFrame (via ModelMatrix)
-    @test predict(m, d) == predict(m, mm.m)
+    @test predict(m, d) == p
+    p3 = predict(m, d, interval=:prediction)
+    @test p3 isa DataFrame
+    @test p3.prediction == p
+    @test p3.lower == p .- 1
+    @test p3.upper == p .+ 1
 
     d2 = deepcopy(d)
     d2[3, :x1] = missing
