@@ -370,7 +370,7 @@ end
 """
     SeqDiffCoding([base[, levels]])
 
-Codes each level in order to test "sequential difference" hypotheses, which
+Code each level in order to test "sequential difference" hypotheses, which
 compares each level to the level below it (starting with the second level).
 Specifically, the ``n``th predictor tests the hypothesis that the difference
 between levels ``n`` and ``n+1`` is zero.
@@ -414,11 +414,11 @@ end
 
 
 """
-    HypothesisCoding(hypotheses::Matrix[, levels]])
+    HypothesisCoding(hypotheses::Matrix[, levels])
 
 Specify how to code a categorical variable in terms of a *hypothesis matrix*.
 For a variable with ``k`` levels, this should be a ``k-1 \times k`` matrix.
-Each row of the hypothesis corresponds to the hypothesis tested by the
+Each row of the matrix corresponds to the hypothesis tested by the
 corresponding predictor, given as the weights given to the "cell mean" of each
 of the ``k`` values of the predictor.
 
@@ -447,7 +447,7 @@ julia> sdiff_contrasts = pinv(sdiff_hypothesis)
   0.25   0.5   0.75
 ```
 
-Which is what is produced by constructing a [`ContrastsMatrix`](@ref) from a
+The above matrix is what is produced by constructing a [`ContrastsMatrix`](@ref) from a
 `HypothesisCoding` instance:
 
 ```jldoctest hyp
