@@ -54,7 +54,7 @@ Predictors:
   b(unknown) & c(unknown)
 
 julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["d","e","f"], 3))
-9×4 DataFrame
+9×4 DataFrames.DataFrame
 │ Row │ y          │ a     │ b         │ c      │
 │     │ Float64    │ Int64 │ Float64   │ String │
 ├─────┼────────────┼───────┼───────────┼────────┤
@@ -107,6 +107,11 @@ the right `1 + a + b + c + b&c`.
 The left-hand side has one term `y` which means that the response variable is
 the column from the data named `:y`.  The response can be accessed with the
 analogous `response(f, df)` function.
+
+!!! note
+    
+    To make a "one-sided" formula (with no response), put a `0` on the left-hand
+    side, like `@formula(0 ~ 1 + a + b)`.
 
 The right hand side is made up of a number of different **terms**, separated by
 `+`: `1 + a + b + c + b&c`.  Each term corresponds to one or more columns in the
@@ -214,34 +219,34 @@ For instance, to fit a linear regression to a log-transformed response:
 julia> using GLM
 
 julia> lm(@formula(log(y) ~ 1 + a + b), df)
-StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
 
 :(log(y)) ~ 1 + a + b
 
 Coefficients:
-──────────────────────────────────────────────────────
-              Estimate  Std.Error    t value  Pr(>|t|)
-──────────────────────────────────────────────────────
-(Intercept)  -4.16168    2.98788   -1.39285     0.2131
-a             0.357482   0.342126   1.04489     0.3363
-b             2.32528    3.13735    0.741159    0.4866
-──────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────────────────────
+              Estimate  Std. Error    t value  Pr(>|t|)   Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────────
+(Intercept)  -4.16168     2.98788   -1.39285     0.2131  -11.4727      3.14939
+a             0.357482    0.342126   1.04489     0.3363   -0.479669    1.19463
+b             2.32528     3.13735    0.741159    0.4866   -5.35154    10.0021
+──────────────────────────────────────────────────────────────────────────────
 
-julia> df[:log_y] = log.(df[:y]);
+julia> df.log_y = log.(df.y);
 
 julia> lm(@formula(log_y ~ 1 + a + b), df)            # equivalent
-StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
 
 log_y ~ 1 + a + b
 
 Coefficients:
-──────────────────────────────────────────────────────
-              Estimate  Std.Error    t value  Pr(>|t|)
-──────────────────────────────────────────────────────
-(Intercept)  -4.16168    2.98788   -1.39285     0.2131
-a             0.357482   0.342126   1.04489     0.3363
-b             2.32528    3.13735    0.741159    0.4866
-──────────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────────────────────
+              Estimate  Std. Error    t value  Pr(>|t|)   Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────────
+(Intercept)  -4.16168     2.98788   -1.39285     0.2131  -11.4727      3.14939
+a             0.357482    0.342126   1.04489     0.3363   -0.479669    1.19463
+b             2.32528     3.13735    0.741159    0.4866   -5.35154    10.0021
+──────────────────────────────────────────────────────────────────────────────
 
 ```
 
@@ -262,9 +267,9 @@ julia> modelmatrix(@formula(y ~ 1 + b + identity(1+b)), df)
  1.0  0.0203749  1.02037
 ```
 
-## Constructing a formula programatically
+## Constructing a formula programmatically
 
-A formula can be constructed at run-time by creating `Term`s and combining them
+A formula can be constructed at runtime by creating `Term`s and combining them
 with the formula operators `+`, `&`, and `~`:
 
 ```jldoctest 1
@@ -278,6 +283,20 @@ Predictors:
   b(unknown)
   a(unknown) & b(unknown)
 ```
+
+!!! warning
+
+    Even though the `@formula` macro supports arbitrary julia functions,
+    runtime (programmatic) formula construction does not.  This is because to
+    resolve a symbol giving a function's _name_ into the actual _function_
+    itself, it's necessary to `eval`.  In practice this is not often an issue,
+    _except_ in cases where a package provides special syntax by overloading a
+    function (like `|` for
+    [MixedModels.jl](https://github.com/dmbates/MixedModels.jl), or `absorb`
+    for [Econometrics.jl](https://github.com/Nosferican/Econometrics.jl)).  In
+    these cases, you should use the corresponding constructors for the actual
+    terms themselves (e.g., `RanefTerm` and `FixedEffectsTerm` respectively), as
+    long as the packages have [implemented support for them](@ref extend-runtime).
 
 The [`term`](@ref) function constructs a term of the appropriate type from
 symbols and numbers, which makes it easy to work with collections of mixed type:
@@ -338,26 +357,26 @@ julia> β_true = 1:8;
 
 julia> ϵ = randn(100)*0.1;
 
-julia> data[:y] = X*β_true .+ ϵ;
+julia> data.y = X*β_true .+ ϵ;
 
 julia> mod = fit(LinearModel, @formula(y ~ 1 + a*b), data)
-StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
 
 y ~ 1 + a + b + a & b
 
 Coefficients:
-───────────────────────────────────────────────────
-             Estimate  Std.Error  t value  Pr(>|t|)
-───────────────────────────────────────────────────
-(Intercept)   0.98878  0.0384341  25.7266    <1e-43
-a             2.00843  0.0779388  25.7694    <1e-43
-b: e          3.03726  0.0616371  49.2764    <1e-67
-b: f          4.03909  0.0572857  70.5078    <1e-81
-b: g          5.02948  0.0587224  85.6484    <1e-88
-a & b: e      5.9385   0.10753    55.2264    <1e-71
-a & b: f      6.9073   0.112483   61.4075    <1e-75
-a & b: g      7.93918  0.111285   71.3407    <1e-81
-───────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────────────────
+             Estimate  Std. Error  t value  Pr(>|t|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   0.98878   0.0384341  25.7266    <1e-43   0.912447    1.06511
+a             2.00843   0.0779388  25.7694    <1e-43   1.85364     2.16323
+b: e          3.03726   0.0616371  49.2764    <1e-67   2.91484     3.15967
+b: f          4.03909   0.0572857  70.5078    <1e-81   3.92531     4.15286
+b: g          5.02948   0.0587224  85.6484    <1e-88   4.91285     5.14611
+a & b: e      5.9385    0.10753    55.2264    <1e-71   5.72494     6.15207
+a & b: f      6.9073    0.112483   61.4075    <1e-75   6.6839      7.1307
+a & b: g      7.93918   0.111285   71.3407    <1e-81   7.71816     8.16021
+──────────────────────────────────────────────────────────────────────────
 
 ```
 
