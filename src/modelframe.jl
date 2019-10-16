@@ -47,18 +47,9 @@ end
 function _nonmissing!(res, col)
     # workaround until JuliaLang/julia#21256 is fixed
     eltype(col) >: Missing || return
-    
-    @inbounds for (i, el) in enumerate(col)
-        res[i] &= !ismissing(el)
-    end
+    res .&= (!).(ismissing).(col)
 end
 
-# TODO: find another way to optimize this without taking a dependency
-# function _nonmissing!(res, col::CategoricalArray{>: Missing})
-#     @inbounds for (i, el) in enumerate(col.refs)
-#         res[i] &= el > 0
-#     end
-# end
 
 function missing_omit(d::T) where T<:ColumnTable
     nonmissings = trues(length(first(d)))
