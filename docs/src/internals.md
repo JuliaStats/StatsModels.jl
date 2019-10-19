@@ -564,7 +564,7 @@ PolyTerm{Term,ConstantTerm{Int64}}
     construction more convenient.  Second, because of how the `@formula` macro
     generates code, the function that represents special syntax must be
     available in the namespace where `@formula` is _called_.  This is because
-    calls to arbitrary functions `f` are lowered to `FunctionTerm{tyepof(f)}`.
+    calls to arbitrary functions `f` are lowered to `FunctionTerm{typeof(f)}`.
 
 Now we can programmatically construct `PolyTerm`s at run-time:
 
