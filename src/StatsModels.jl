@@ -3,8 +3,8 @@ module StatsModels
 using Tables
 using StatsBase
 using ShiftedArrays: lag, lead
-using CategoricalArrays
 using DataStructures
+using DataAPI: levels
 
 using SparseArrays
 using LinearAlgebra
