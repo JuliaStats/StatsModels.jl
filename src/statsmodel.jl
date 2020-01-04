@@ -196,3 +196,25 @@ function Base.show(io::IO, model::TableModels)
         end
     end
 end
+
+function getparams(model::TableModels, t)
+    m = model.mf.f.rhs.terms
+    i = 1
+    for x in m
+        if (t isa CategoricalTerm || t isa ContinuousTerm) &&
+           (x isa CategoricalTerm || x isa ContinuousTerm)
+            x.sym == t.sym && break
+        elseif t isa InteractionTerm && x isa InteractionTerm
+            xterms = map(s -> s.sym, x.terms)
+            tterms = map(s -> s.sym, t.terms)
+            xterms == tterms && break
+        elseif t isa InterceptTerm{true} && x isa InterceptTerm{true} 
+            break
+        else 
+            error("Not supported yet")
+        end
+        i += 1
+        
+    end
+    return (coefname = coefnames(model)[i], coef = coef(model)[i], stderror = stderror(model)[i])
+end
