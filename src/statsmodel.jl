@@ -197,24 +197,35 @@ function Base.show(io::IO, model::TableModels)
     end
 end
 
-function getparams(model::TableModels, t)
+"""
+    getparams(model::TableModels, t::AbstractTerm)
+
+Returns a named tuple of parameters corresponding to `t`. 
+
+Examples: 
+
+julia> t = (y = rand(100), x = rand(100), b = rand(Bool, 100));
+julia> m = lm(@formula(y ~ x + x & b), t);
+julia> getparams(m, Term(:x))
+
+"""
+function getparams(model::TableModels, t::AbstractTerm)
     m = model.mf.f.rhs.terms
     i = 1
     for x in m
-        if (t isa CategoricalTerm || t isa ContinuousTerm) &&
-           (x isa CategoricalTerm || x isa ContinuousTerm)
-            x.sym == t.sym && break
-        elseif t isa InteractionTerm && x isa InteractionTerm
+        @show typeof(x)
+        if t isa InteractionTerm && x isa InteractionTerm
             xterms = map(s -> s.sym, x.terms)
             tterms = map(s -> s.sym, t.terms)
             xterms == tterms && break
         elseif t isa InterceptTerm{true} && x isa InterceptTerm{true} 
             break
+        elseif x isa CategoricalTerm || x isa ContinuousTerm
+            x.sym == t.sym && break
         else 
-            error("Not supported yet")
+            nothing
         end
         i += 1
-        
     end
     return (coefname = coefnames(model)[i], coef = coef(model)[i], stderror = stderror(model)[i])
 end
