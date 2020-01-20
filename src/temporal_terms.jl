@@ -54,7 +54,6 @@ function Base.show(io::IO, ll::LeadLagTerm{<:Any, F}) where F
     opname = string(nameof(F.instance))
     print(io, "$opname($(ll.term), $(ll.nsteps))")
 end
-function StatsBase.coefnames(ll::LeadLagTerm{<:Any, F}) where F
-    opname = string(nameof(F.instance))
-    coefnames(ll.term) .* "_$opname$(ll.nsteps)"
-end
+StatsBase.coefnames(ll::LeadLagTerm{<:Any, F}) where F = _llcoef(ll, coefnames(ll.term), string(nameof(F.instance)))
+_llcoef(ll::LeadLagTerm, t::Symbol, opname) = Symbol(t, "_$opname$(ll.nsteps)")
+_llcoef(ll::LeadLagTerm, ts, opname) = [Symbol(t, "_$opname$(ll.nsteps)") for t in ts]

@@ -16,7 +16,7 @@ using DataStructures
             @test isequal(pred[:, 3], [missing; missing; missing; 1.0:7])
             @test isequal(pred[:, 4], fill(missing, 10))
 
-            @test coefnames(f)[2] == ["x_lag0", "x_lag1", "x_lag3", "x_lag11"]
+            @test coefnames(f)[2] == [:x_lag0, :x_lag1, :x_lag3, :x_lag11]
         end
 
         @testset "1 arg form" begin
@@ -26,7 +26,7 @@ using DataStructures
             resp, pred = modelcols(f, df)
 
             @test isequal(pred[:, 1], [missing; 1.0:9])
-            @test coefnames(f)[2] == "x_lag1"
+            @test coefnames(f)[2] == :x_lag1
         end
 
         @testset "Row Table" begin
@@ -53,7 +53,7 @@ using DataStructures
             resp, pred = modelcols(neg_f, df);
 
             @test isequal(pred[:, 1], [3.0:10; missing; missing])
-            @test coefnames(neg_f)[2] == "x_lag-2"
+            @test coefnames(neg_f)[2] == Symbol("x_lag-2")
         end
 
         @testset "Categorical Term use" begin
@@ -66,7 +66,7 @@ using DataStructures
             @test isequal(pred[:, 1], [missing; missing; 0; 1])
             @test isequal(pred[:, 2], [missing; missing; 0; 0])
 
-            @test coefnames(f)[2] == ["x: B_lag2", "x: C_lag2"]
+            @test coefnames(f)[2] == [Symbol("x: B_lag2"), Symbol("x: C_lag2")]
         end
 
         @testset "Diff Demo" begin
@@ -107,7 +107,7 @@ using DataStructures
             @test isequal(pred[:, 3], [4.0:10; missing; missing; missing])
             @test isequal(pred[:, 4], fill(missing, 10))
 
-            @test coefnames(f)[2] == ["x_lead0", "x_lead1", "x_lead3", "x_lead11"]
+            @test coefnames(f)[2] == [:x_lead0, :x_lead1, :x_lead3, :x_lead11]
         end
     end
 end

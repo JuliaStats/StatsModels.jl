@@ -14,8 +14,8 @@ StatsBase.response(mod::DummyMod) = mod.y
 ## dumb coeftable: just prints the "beta" values
 StatsBase.coeftable(mod::DummyMod) =
     CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
-              ["'beta' value"],
-              ["" for n in 1:size(mod.x,2)],
+              [Symbol("'beta' value")],
+              [Symbol("") for n in 1:size(mod.x,2)],
               0)
 # dumb predict: return values predicted by "beta" and dummy confidence bounds
 function StatsBase.predict(mod::DummyMod;
@@ -108,7 +108,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     @test response(m) == Array(d.y)
 
     ## coefnames delegated to model frame by default
-    @test coefnames(m) == coefnames(ModelFrame(f, d)) == ["(Intercept)", "x1", "x2", "x1 & x2"]
+    @test coefnames(m) == coefnames(ModelFrame(f, d)) == [:Intercept, :x1, :x2, Symbol("x1 & x2")]
 
     ## test prediction method
     ## vanilla
@@ -138,7 +138,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     ## test copying of names from Terms to CoefTable
     ct = coeftable(m)
-    @test ct.rownms == ["(Intercept)", "x1", "x2", "x1 & x2"]
+    @test ct.rownms == [:Intercept, :x1, :x2, Symbol("x1 & x2")]
 
     ## show with coeftable defined
     io = IOBuffer()
@@ -148,7 +148,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     f2 = @formula(y ~ x1p)
     m2 = fit(DummyMod, f2, d)
 
-    @test coeftable(m2).rownms == ["(Intercept)", "x1p: 6", "x1p: 7", "x1p: 8"]
+    @test coeftable(m2).rownms == [:Intercept, Symbol("x1p: 6"), Symbol("x1p: 7"), Symbol("x1p: 8")]
 
     ## predict w/ new data missing levels
     @test predict(m2, d[2:4, :]) == predict(m2)[2:4]
@@ -190,7 +190,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     m3 = fit(DummyModNoIntercept, f3, d)
     ct2 = coeftable(m2)
     ct3 = coeftable(m3)
-    @test ct3.rownms == ct2.rownms == ["x1", "x2", "x1 & x2"]
+    @test ct3.rownms == ct2.rownms == [:x1, :x2, Symbol("x1 & x2")]
     @test predict(m2, d[2:4, :]) == predict(m2)[2:4]
     @test predict(m3, d[2:4, :]) == predict(m3)[2:4]
 
@@ -202,7 +202,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     m3 = fit(DummyModNoIntercept, f3, d)
     ct2 = coeftable(m2)
     ct3 = coeftable(m3)
-    @test ct2.rownms == ct3.rownms == ["x1p: 6", "x1p: 7", "x1p: 8"]
+    @test ct2.rownms == ct3.rownms == [Symbol("x1p: 6"), Symbol("x1p: 7"), Symbol("x1p: 8")]
     m4 = fit(DummyModNoIntercept, f3, d, contrasts = Dict(:x1p => EffectsCoding()))
     @test predict(m2, d[2:4, :]) == predict(m2)[2:4]
     @test predict(m3, d[2:4, :]) == predict(m3)[2:4]
