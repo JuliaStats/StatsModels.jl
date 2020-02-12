@@ -426,7 +426,12 @@ function modelcols(t, d::D) where D
     ## custom term types...
     d isa NamedTuple && throw(ArgumentError("don't know how to generate modelcols for " *
                                             "term $t. Did you forget to call apply_schema?"))
-    modelcols(t, columntable(d))
+    tab = columntable(d)
+    vars = termvars(t)
+    missing_vars = intersect(vars, setdiff(vars, propertynames(tab)))
+    isempty(missing_vars) ||
+        throw(ArgumentError("term variables missing from table: $missing_vars"))
+    modelcols(t, tab)
 end
 
 """

@@ -45,7 +45,10 @@ function Base.show(io::IO, schema::Schema)
     end
 end
 
-Base.getindex(schema::Schema, key) = getindex(schema.schema, key)
+function Base.getindex(schema::Schema, key)
+    key ∈ keys(schema) || throw(ArgumentError("term $key not found in schema"))
+    getindex(schema.schema, key)
+end
 Base.get(schema::Schema, key, default) = get(schema.schema, key, default)
 Base.merge(a::Schema, b::Schema) = Schema(merge(a.schema, b.schema))
 Base.merge!(a::Schema, b::Schema) = (merge!(a.schema, b.schema); a)
@@ -166,10 +169,14 @@ a(continuous)
 """
 concrete_term(t::Term, d, hints::Dict{Symbol}) =
     concrete_term(t, d, get(hints, t.sym, nothing))
-concrete_term(t::Term, dt::ColumnTable, hint) =
-    concrete_term(t, getproperty(dt, t.sym), hint)
-concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol}) =
-    concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
+function concrete_term(t::Term, dt::ColumnTable, hint)
+    t.sym ∈ propertynames(dt) || throw(ArgumentError("variable $t not found in table"))
+    concrete_term(t, Tables.getcolumn(dt, t.sym), hint)
+end
+function concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol})
+    t.sym ∈ propertynames(dt) || throw(ArgumentError("variable $t not found in table"))
+    concrete_term(t, Tables.getcolumn(dt, t.sym), get(hints, t.sym, nothing))
+end
 concrete_term(t::Term, d) = concrete_term(t, d, nothing)
 
 # second possible fix for #97
