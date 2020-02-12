@@ -485,12 +485,22 @@ modelcols(t::Term, d::NamedTuple) =
                         "Use apply_schema to create concrete terms first"))
 
 # TODO: @generated to unroll the getfield stuff
-modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
+function modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names}
+    missing_vars = intersect(Names, setdiff(Names, propertynames(d)))
+    isempty(missing_vars) ||
+        throw(ArgumentError("term variables missing from table: $missing_vars"))
     ft.fanon.(getfield.(Ref(d), Names)...)
+end
 
-modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
+function modelcols(t::ContinuousTerm, d::NamedTuple)
+    t.sym ∈ propertynames(d) || throw(ArgumentError("term variable missing from table: $t.sym"))
+    copy.(d[t.sym])
+end
 
-modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
+function modelcols(t::CategoricalTerm, d::NamedTuple)
+    t.sym ∈ propertynames(d) || throw(ArgumentError("term variable missing from table: $t.sym"))
+    t.contrasts[d[t.sym], :]
+end
 
 
 """
