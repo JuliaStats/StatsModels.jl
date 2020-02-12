@@ -171,11 +171,11 @@ concrete_term(t::Term, d, hints::Dict{Symbol}) =
     concrete_term(t, d, get(hints, t.sym, nothing))
 function concrete_term(t::Term, dt::ColumnTable, hint)
     t.sym ∈ propertynames(dt) || throw(ArgumentError("variable $t not found in table"))
-    concrete_term(t, Tables.getcolumn(dt, t.sym), hint)
+    concrete_term(t, getproperty(dt, t.sym), hint)
 end
 function concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol})
     t.sym ∈ propertynames(dt) || throw(ArgumentError("variable $t not found in table"))
-    concrete_term(t, Tables.getcolumn(dt, t.sym), get(hints, t.sym, nothing))
+    concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
 end
 concrete_term(t::Term, d) = concrete_term(t, d, nothing)
 
