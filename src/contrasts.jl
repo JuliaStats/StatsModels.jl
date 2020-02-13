@@ -213,7 +213,7 @@ Base.getindex(contrasts::ContrastsMatrix{C,T}, rowinds, colinds) where {C,T} =
 # Making a contrast type T only requires that there be a method for
 # contrasts_matrix(T,  baseind, n) and optionally termnames(T, levels, baseind)
 # The rest is boilerplate.
-for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
+for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCoding]
     @eval begin
         mutable struct $contrastType <: AbstractContrasts
             base::Any
@@ -368,10 +368,135 @@ function contrasts_matrix(C::HelmertCoding, baseind, n)
 end
 
 """
-    ContrastsCoding(mat::Matrix[, base[, levels]])
+    SeqDiffCoding([base[, levels]])
+
+Code each level in order to test "sequential difference" hypotheses, which
+compares each level to the level below it (starting with the second level).
+Specifically, the ``n``th predictor tests the hypothesis that the difference
+between levels ``n`` and ``n+1`` is zero.
+
+# Examples
+
+```jldoctest seqdiff
+julia> seqdiff = StatsModels.ContrastsMatrix(SeqDiffCoding(), ["a", "b", "c", "d"]).matrix
+4×3 Array{Float64,2}:
+ -0.75  -0.5  -0.25
+  0.25  -0.5  -0.25
+  0.25   0.5  -0.25
+  0.25   0.5   0.75
+```
+
+The interpretation of sequential difference coding may be hard to see from the
+contrasts matrix itself.  The corresponding hypothesis matrix shows a clearer
+picture.  From the rows of the hypothesis matrix, we can see that these
+contrasts test the difference between the first and second levels, the second
+and third, and the third and fourth, respectively:
+
+```jldoctest seqdiff
+julia> round.(pinv(seqdiff), digits=2)
+3×4 Array{Float64,2}:
+ -1.0   1.0  -0.0   0.0
+ -0.0  -1.0   1.0  -0.0
+  0.0  -0.0  -1.0   1.0
+```
+
+"""
+SeqDiffCoding
+
+function contrasts_matrix(C::SeqDiffCoding, baseind, n)
+    mat = zeros(n, n-1)
+    for col in 1:n-1
+        mat[1:col, col] .= col-n
+        mat[col+1:end, col] .= col
+    end
+    return mat ./ n
+end
+
+
+"""
+    HypothesisCoding(hypotheses::Matrix[, levels])
+
+Specify how to code a categorical variable in terms of a *hypothesis matrix*.
+For a variable with ``k`` levels, this should be a ``k-1 \times k`` matrix.
+Each row of the matrix corresponds to a hypothesis about the mean
+outcomes under each of the ``k`` levels of the predictor.  The entries in the
+row give the weights assigned to each of these ``k`` means, and the
+corresponding predictor in a regression model estimates the weighted sum of
+these cell means.
+
+For instance, if we have a variable which has four levels A, B, C, and D, and we
+want to test the hypothesis that the difference between the average outcomes for
+levels A and B is different from zero, the corresponding row of the hypothesis
+matrix would be `[-1, 1, 0, 0]`.  Likewise, to test whether the difference
+between B and C is different from zero, the hypothesis vector would be `[0, -1,
+1, 0]`.  To test each "successive difference" hypothesis, the full hypothesis
+matrix would be
+
+```jldoctest hyp
+julia> sdiff_hypothesis = [-1  1  0  0
+                            0 -1  1  0
+                            0  0 -1  1];
+```
+
+Contrasts are derived the hypothesis matrix by taking the pseudoinverse:
+
+```jldoctest hyp
+julia> sdiff_contrasts = pinv(sdiff_hypothesis)
+4×3 Array{Float64,2}:
+ -0.75  -0.5  -0.25
+  0.25  -0.5  -0.25
+  0.25   0.5  -0.25
+  0.25   0.5   0.75
+```
+
+The above matrix is what is produced by constructing a [`ContrastsMatrix`](@ref) from a
+`HypothesisCoding` instance:
+
+```jldoctest hyp
+julia> StatsModels.ContrastsMatrix(HypothesisCoding(sdiff_hypothesis), ["a", "b", "c", "d"]).matrix
+4×3 Array{Float64,2}:
+ -0.75  -0.5  -0.25
+  0.25  -0.5  -0.25
+  0.25   0.5  -0.25
+  0.25   0.5   0.75
+```
+
+The interpretation of the such "sequential difference" contrasts are clear when
+expressed as a hypothesis matrix, but it is not obvious just from looking at the
+contrasts matrix.  For this reason `HypothesisCoding` is preferred for
+specifying custom contrast coding schemes over `ContrastsCoding`.
+
+"""
+mutable struct HypothesisCoding <: AbstractContrasts
+    hypotheses::Matrix
+    contrasts::Matrix
+    base::Nothing
+    levels::Union{Vector,Nothing}
+
+    function HypothesisCoding(hypotheses, base, levels)
+        contrasts = pinv(hypotheses)
+        check_contrasts_size(contrasts, levels)
+        new(hypotheses, contrasts, base, levels)
+    end
+end
+
+HypothesisCoding(mat::Matrix; levels=nothing) =
+    HypothesisCoding(mat, nothing, levels)
+
+function contrasts_matrix(C::HypothesisCoding, baseind, n)
+    check_contrasts_size(C.contrasts, n)
+    C.contrasts
+end
+
+
+"""
+    StatsModels.ContrastsCoding(mat::Matrix[, base[, levels]])
 
 Coding by manual specification of contrasts matrix. For k levels, the contrasts
-must be a k by k-1 Matrix.
+must be a k by k-1 Matrix.  The contrasts in this matrix will be copied directly
+into the model matrix; if you want to specify your contrasts as hypotheses (i.e., 
+weights assigned to each group's cell mean), you should use 
+[`HypothesisCoding`](@ref) instead.
 """
 mutable struct ContrastsCoding <: AbstractContrasts
     mat::Matrix
@@ -379,14 +504,17 @@ mutable struct ContrastsCoding <: AbstractContrasts
     levels::Union{Vector,Nothing}
 
     function ContrastsCoding(mat, base, levels)
-        if levels !== nothing
-            check_contrasts_size(mat, length(levels))
-        end
+        Base.depwarn("`ContrastsCoding(contrasts)` is deprecated and will not be exported" *
+                     " in the future, use `HypothesisCoding(pinv(contrasts))` instead.",
+                     :ContrastsCoding)
+        check_contrasts_size(mat, levels)
         new(mat, base, levels)
     end
 end
 
-check_contrasts_size(mat::Matrix, n_lev) =
+check_contrasts_size(mat::Matrix, ::Nothing) = check_contrasts_size(mat, size(mat,1))
+check_contrasts_size(mat::Matrix, levels::Vector) = check_contrasts_size(mat, length(levels))
+check_contrasts_size(mat::Matrix, n_lev::Int) =
     size(mat) == (n_lev, n_lev-1) ||
     throw(ArgumentError("contrasts matrix wrong size for $n_lev levels. " *
                         "Expected $((n_lev, n_lev-1)), got $(size(mat))"))

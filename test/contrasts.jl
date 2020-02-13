@@ -113,6 +113,12 @@
                                         1  1]
     @test coefnames(mf_missing) == ["(Intercept)"; "x: b"]
 
+    # Sequential difference coding
+    setcontrasts!(mf, x = SeqDiffCoding())
+    seqdiff_contr = pinv([-1 1 0
+                          0 -1 1]);
+    @test ModelMatrix(mf).m ≈ hcat(ones(6), seqdiff_contr[[2, 1, 3, 1, 1, 2], :])
+
     # Things that are bad to do:
     # Applying contrasts that only have a subset of data levels:
     @test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = [:a, :b]))
@@ -125,7 +131,7 @@
     contrasts = [0  1
                  -1 -.5
                  1  -.5]
-    setcontrasts!(mf, x = ContrastsCoding(contrasts))
+    setcontrasts!(mf, x = StatsModels.ContrastsCoding(contrasts))
     @test ModelMatrix(mf).m == [1 -1 -.5
                                 1  0  1
                                 1  1 -.5
@@ -133,12 +139,80 @@
                                 1  0  1
                                 1 -1 -.5]
 
+    contrasts2 = [1 0
+                  1 1
+                  0 1]
+    setcontrasts!(mf, x = StatsModels.ContrastsCoding(contrasts2))
+    @test ModelMatrix(mf).m == [1  1  1
+                                1  1  0
+                                1  0  1
+                                1  1  0
+                                1  1  0
+                                1  1  1]
+
+    hypotheses2 = pinv(contrasts2)
+    setcontrasts!(mf, x = StatsModels.HypothesisCoding(hypotheses2))
+    @test ModelMatrix(mf).m ≈ [1  1  1
+                               1  1  0
+                               1  0  1
+                               1  1  0
+                               1  1  0
+                               1  1  1]
+
+    # different results for non-orthogonal hypotheses/contrasts:
+    hypotheses3 = [1 1 0
+                   0 1 1]
+    setcontrasts!(mf, x = StatsModels.HypothesisCoding(hypotheses3))
+    @test !(ModelMatrix(mf).m ≈ [1  1  1
+                                 1  1  0
+                                 1  0  1
+                                 1  1  0
+                                 1  1  0
+                                 1  1  1])
+
     # throw argument error if number of levels mismatches
-    @test_throws ArgumentError setcontrasts!(mf, x = ContrastsCoding(contrasts[1:2, :]))
-    @test_throws ArgumentError setcontrasts!(mf, x = ContrastsCoding(hcat(contrasts, contrasts)))
+    @test_throws ArgumentError setcontrasts!(mf, x = StatsModels.ContrastsCoding(contrasts[1:2, :]))
+    @test_throws ArgumentError setcontrasts!(mf, x = StatsModels.ContrastsCoding(hcat(contrasts, contrasts)))
 
     # contrasts types must be instantiated (should throw ArgumentError, currently
     # MethodError on apply_schema)
     @test_broken setcontrasts!(mf, x = DummyCoding)
 
+    @testset "hypothesis coding" begin
+
+        # to get the scaling right, divide by three (because three levels)
+        effects_hyp = [-1 2 -1
+                       -1 -1 2] ./ 3
+
+        @test modelmatrix(setcontrasts!(mf, x = HypothesisCoding(effects_hyp))) ≈
+            modelmatrix(setcontrasts!(mf, x = EffectsCoding()))
+
+        d2 = DataFrame(y = rand(100),
+                       x = repeat([:a, :b, :c, :d], inner=25))
+
+        sdiff_hyp = HypothesisCoding([-1 1 0 0
+                                      0 -1 1 0
+                                      0 0 -1 1])
+
+        effects_hyp = HypothesisCoding([-1 3 -1 -1
+                                        -1 -1 3 -1
+                                        -1 -1 -1 3] ./ 4)
+
+        f = apply_schema(@formula(y ~ 1 + x), schema(d2))
+
+        f_sdiff = apply_schema(f, schema(d2, Dict(:x => sdiff_hyp)))
+        f_effects = apply_schema(f, schema(d2, Dict(:x => effects_hyp)))
+
+        y_means = by(d2, :x, :y => mean).y_mean
+        
+        y, X_sdiff = modelcols(f_sdiff, d2)
+        @test X_sdiff \ y ≈ [mean(y_means); diff(y_means)]
+
+        y, X_effects = modelcols(f_effects, d2)
+        @test X_effects \ y ≈ [mean(y_means); y_means[2:end] .- mean(y_means)]
+
+        @test X_effects ≈ modelcols(apply_schema(f.rhs,
+                                                 schema(d2, Dict(:x=>EffectsCoding()))),
+                                    d2)
+    end
 end
