@@ -423,7 +423,7 @@ corresponding predictor, given as the weights given to the "cell mean" of each
 of the ``k`` values of the predictor.
 
 For instance, if we have a variable which has four levels A, B, C, and D, and we
-want to test the hypothesis that the difference between the average outcome for
+want to test the hypothesis that the difference between the average outcomes for
 levels A and B is different from zero, the corresponding row of the hypothesis
 matrix would be `[-1, 1, 0, 0]`.  Likewise, to test whether the difference
 between B and C is different from zero, the hypothesis vector would be `[0, -1,
