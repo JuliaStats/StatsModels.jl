@@ -418,7 +418,7 @@ end
 
 Specify how to code a categorical variable in terms of a *hypothesis matrix*.
 For a variable with ``k`` levels, this should be a ``k-1 \times k`` matrix.
-Each row of the matrix corresponds corresponds to a hypothesis about the mean
+Each row of the matrix corresponds to a hypothesis about the mean
 outcomes under each of the ``k`` levels of the predictor.  The entries in the
 row give the weights assigned to each of these ``k`` means, and the
 corresponding predictor in a regression model estimates the weighted sum of
