@@ -418,9 +418,11 @@ end
 
 Specify how to code a categorical variable in terms of a *hypothesis matrix*.
 For a variable with ``k`` levels, this should be a ``k-1 \times k`` matrix.
-Each row of the matrix corresponds to the hypothesis tested by the
-corresponding predictor, given as the weights given to the "cell mean" of each
-of the ``k`` values of the predictor.
+Each row of the matrix corresponds corresponds to a hypothesis about the mean
+outcomes under each of the ``k`` levels of the predictor.  The entries in the
+row give the weights assigned to each of these ``k`` means, and the
+corresponding predictor in a regression model estimates the weighted sum of
+these cell means.
 
 For instance, if we have a variable which has four levels A, B, C, and D, and we
 want to test the hypothesis that the difference between the average outcomes for
@@ -459,6 +461,10 @@ julia> StatsModels.ContrastsMatrix(HypothesisCoding(sdiff_hypothesis), ["a", "b"
   0.25   0.5   0.75
 ```
 
+The interpretation of the such "sequential difference" contrasts are clear when
+expressed as a hypothesis matrix, but it is not obvious just from looking at the
+contrasts matrix.  For this reason `HypothesisCoding` is preferred for
+specifying custom contrast coding schemes over `ContrastsCoding`.
 
 """
 mutable struct HypothesisCoding <: AbstractContrasts
@@ -498,6 +504,9 @@ mutable struct ContrastsCoding <: AbstractContrasts
     levels::Union{Vector,Nothing}
 
     function ContrastsCoding(mat, base, levels)
+        Base.depwarn("`ContrastsCoding(contrasts)` is deprecated and will not be exported" *
+                     " in the future, use `HypothesisCoding(pinv(contrasts))` instead.",
+                     :ContrastsCoding)
         check_contrasts_size(mat, levels)
         new(mat, base, levels)
     end

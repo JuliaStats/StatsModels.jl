@@ -26,6 +26,7 @@ export
     HelmertCoding,
     SeqDiffCoding,
     HypothesisCoding,
+    ContrastsCoding,
     
     coefnames,
     dropterm,
