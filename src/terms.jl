@@ -2,6 +2,8 @@ abstract type AbstractTerm end
 const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 const TupleTerm = NTuple{N, TermOrTerms} where N
 
+Base.broadcastable(x::AbstractTerm) = Ref(x)
+
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
 
