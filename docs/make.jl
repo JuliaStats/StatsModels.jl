@@ -1,5 +1,8 @@
 using Documenter, StatsModels
 
+using Pkg
+Pkg.precompile()
+
 makedocs(
     sitename = "StatsModels.jl",
     pages = [
