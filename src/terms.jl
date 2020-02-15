@@ -396,15 +396,39 @@ Base.show(io::IO, mime::MIME"text/plain", t::MatrixTerm; prefix="") =
 # operators on Terms that create new terms:
 
 
-Base.:~(lhs::TermOrTerms, rhs::TermOrTerms) = FormulaTerm(lhs, rhs)
+Base.:~(lhs::TermOrTerms, rhs::TermOrTerms) = FormulaTerm(lhs, cleanup(rhs))
 
-Base.:&(terms::AbstractTerm...) = InteractionTerm(terms)
 Base.:&(term::AbstractTerm) = term
-Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
+Base.:&(a::AbstractTerm, b::AbstractTerm) = InteractionTerm((a,b))
+Base.:&(terms::AbstractTerm...) = reduce(&, terms)
 
-Base.:+(terms::AbstractTerm...) = (unique(terms)..., )
+# associative rule
+Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
+Base.:&(term::AbstractTerm, it::InteractionTerm) = InteractionTerm((term, it.terms...))
+
+# distributive rule
+Base.:&(term::AbstractTerm, terms::TupleTerm) = term .& terms
+Base.:&(terms::TupleTerm, term::AbstractTerm) = terms .& term
+Base.:&(as::TupleTerm, bs::TupleTerm) = ((a & b for a in as for b in bs)..., )
+
+# + concatenates terms
+Base.:+(terms::AbstractTerm...) = (unique(reduce(+, terms))..., )
+Base.:+(a::AbstractTerm) = a
+Base.:+(a::AbstractTerm, b::AbstractTerm) = (a,b)
+
+# associative rule for +
 Base.:+(as::TupleTerm, b::AbstractTerm) = (as..., b)
 Base.:+(a::AbstractTerm, bs::TupleTerm) = (a, bs...)
+Base.:+(as::TupleTerm, bs::TupleTerm) = (as..., bs...)
+
+
+cleanup(terms::TupleTerm) = tuple(sort!(unique!([terms...]), by=degree)...)
+cleanup(x) = x
+
+degree(::AbstractTerm) = 1
+degree(t::InteractionTerm) = mapreduce(degree, +, t.terms)
+# dirty hack
+degree(::FunctionTerm{typeof(|)}) = Inf
 
 ################################################################################
 # evaluating terms with data to generate model matrix entries

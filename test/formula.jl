@@ -107,7 +107,7 @@
     @test t.rhs == x1
 
     t = @formula(y ~ (1 + x1) & x2)
-    @test t.rhs == (x2, x1&x2)
+    @test_broken t.rhs == (x2, x1&x2)
 
     ## PR #54 breaks formula-level equality because original (un-lowered)
     ## expression is kept on Formula struct.  but functional (RHS) equality

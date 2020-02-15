@@ -8,7 +8,7 @@
 ## in R as y ~ a + b + a:b is written :(y ~ a + b + a&b) in Julia.
 ## The equivalent R expression, y ~ a*b, is the same in Julia
 
-## The lhs of a one-sided formula is 'nothing'
+## The lhs of a one-sided formula is 0
 ## The rhs of a formula can be 1
 
 is_call(ex::Expr) = Meta.isexpr(ex, :call)
@@ -60,7 +60,7 @@ The rules that are applied are
 macro formula(ex)
     is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
     length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
-    terms!(sort_terms!(parse!(ex)))
+    terms!(parse!(ex))
 end
 
 """
@@ -173,7 +173,7 @@ end
 
 const SPECIALS = (:+, :&, :*, :~)
 
-parse!(x) = parse!(x, [And1, Star, AssociativeRule, Distributive])
+parse!(x) = parse!(x, [And1, Star])
 parse!(x, rewrites) = x
 function parse!(ex::Expr, rewrites::Vector)
     @debug "parsing $ex"
@@ -246,34 +246,4 @@ function terms!(ex::Expr)
         ex.args[end].args .= terms!.(ex.args[end].args)
     end
     return ex
-end
-
-
-function sort_terms!(ex::Expr)
-    check_call(ex)
-    if ex.args[1] ∈ ASSOCIATIVE
-        sort!(view(ex.args, 2:length(ex.args)), by=degree)
-    elseif is_call(ex, :capture_call)
-        sort_terms!.(ex.args[end].args)
-    else
-        # recursively sort children
-        sort_terms!.(ex.args)
-    end
-    ex
-end
-sort_terms!(x) = x
-
-degree(i::Integer) = 0
-degree(::Symbol) = 1
-function degree(ex::Expr)
-    check_call(ex)
-    if ex.args[1] == :&
-        length(ex.args) - 1
-    elseif ex.args[1] == :|
-        # put ranef terms at end
-        typemax(Int)
-    else
-        # arbitrary functions are treated as main effect terms
-        1
-    end
 end
