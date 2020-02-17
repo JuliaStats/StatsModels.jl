@@ -414,7 +414,7 @@ end
 
 
 """
-    HypothesisCoding(hypotheses::Matrix[, levels])
+    HypothesisCoding(hypotheses::AbstractMatrix[, levels])
 
 Specify how to code a categorical variable in terms of a *hypothesis matrix*.
 For a variable with ``k`` levels, this should be a ``k-1 \times k`` matrix.
@@ -467,30 +467,33 @@ contrasts matrix.  For this reason `HypothesisCoding` is preferred for
 specifying custom contrast coding schemes over `ContrastsCoding`.
 
 """
-mutable struct HypothesisCoding <: AbstractContrasts
-    hypotheses::Matrix
-    contrasts::Matrix
+mutable struct HypothesisCoding{T<:AbstractMatrix} <: AbstractContrasts
+    hypotheses::T
+    contrasts::T
     base::Nothing
     levels::Union{Vector,Nothing}
+    labels::Union{Vector,Nothing}
 
-    function HypothesisCoding(hypotheses, base, levels)
-        contrasts = pinv(hypotheses)
+    function HypothesisCoding(hypotheses::T, base, levels, labels) where {T}
+        contrasts = convert(T, pinv(hypotheses))
         check_contrasts_size(contrasts, levels)
-        new(hypotheses, contrasts, base, levels)
+        new{T}(hypotheses, contrasts, base, levels, labels)
     end
 end
 
-HypothesisCoding(mat::Matrix; levels=nothing) =
-    HypothesisCoding(mat, nothing, levels)
+HypothesisCoding(mat::AbstractMatrix; levels=nothing, labels=nothing) =
+    HypothesisCoding(mat, nothing, levels, labels)
 
 function contrasts_matrix(C::HypothesisCoding, baseind, n)
     check_contrasts_size(C.contrasts, n)
     C.contrasts
 end
 
+termnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
+    something(C.labels, levels[1:length(levels) .!= baseind])
 
 """
-    StatsModels.ContrastsCoding(mat::Matrix[, base[, levels]])
+    StatsModels.ContrastsCoding(mat::AbstractMatrix[, base[, levels]])
 
 Coding by manual specification of contrasts matrix. For k levels, the contrasts
 must be a k by k-1 Matrix.  The contrasts in this matrix will be copied directly
@@ -498,17 +501,17 @@ into the model matrix; if you want to specify your contrasts as hypotheses (i.e.
 weights assigned to each group's cell mean), you should use 
 [`HypothesisCoding`](@ref) instead.
 """
-mutable struct ContrastsCoding <: AbstractContrasts
-    mat::Matrix
+mutable struct ContrastsCoding{T<:AbstractMatrix} <: AbstractContrasts
+    mat::T
     base::Any
     levels::Union{Vector,Nothing}
 
-    function ContrastsCoding(mat, base, levels)
+    function ContrastsCoding(mat::T, base, levels) where {T}
         Base.depwarn("`ContrastsCoding(contrasts)` is deprecated and will not be exported" *
                      " in the future, use `HypothesisCoding(pinv(contrasts))` instead.",
                      :ContrastsCoding)
         check_contrasts_size(mat, levels)
-        new(mat, base, levels)
+        new{T}(mat, base, levels)
     end
 end
 
@@ -520,7 +523,7 @@ check_contrasts_size(mat::Matrix, n_lev::Int) =
                         "Expected $((n_lev, n_lev-1)), got $(size(mat))"))
 
 ## constructor with optional keyword arguments, defaulting to nothing
-ContrastsCoding(mat::Matrix; base=nothing, levels=nothing) =
+ContrastsCoding(mat::AbstractMatrix; base=nothing, levels=nothing) =
     ContrastsCoding(mat, base, levels)
 
 function contrasts_matrix(C::ContrastsCoding, baseind, n)
