@@ -530,3 +530,19 @@ function contrasts_matrix(C::ContrastsCoding, baseind, n)
     check_contrasts_size(C.mat, n)
     C.mat
 end
+
+## hypothesis matrix
+needs_intercept(mat) =
+    (rank(mat) < size(mat, 1)) &&
+    !all(mapslices(sum, mat, dims=1) .< 10eps(eltype(mat)))
+
+hypothesis_matrix(contrasts::AbstractContrasts, baseind, n; kwargs...) =
+    hypothesis_matrix(contrasts_matrix(contrasts, baseind, n); kwargs...)
+
+function hypothesis_matrix(cm::AbstractMatrix; intercept=needs_intercept(cm))
+    if intercept
+        cm = hcat(ones(size(cm, 1)), cm)
+    end
+    hypotheses = pinv(cm)'
+end
+
