@@ -195,6 +195,8 @@
                                                 labels = ["x"])
     @test_throws ArgumentError HypothesisCoding(Dict("x" => [], "y" => []),
                                                 labels = ["x", "y", "z"])
+    @test_throws ArgumentError HypothesisCoding(Dict("x" => [], "y" => []),
+                                                labels = ["x", "z"])
 
     # throw argument error if number of levels mismatches
     @test_throws ArgumentError setcontrasts!(mf, x = StatsModels.ContrastsCoding(contrasts[1:2, :]))
