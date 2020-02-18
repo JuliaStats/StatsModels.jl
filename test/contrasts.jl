@@ -162,13 +162,39 @@
     # different results for non-orthogonal hypotheses/contrasts:
     hypotheses3 = [1 1 0
                    0 1 1]
-    setcontrasts!(mf, x = StatsModels.HypothesisCoding(hypotheses3))
+    hc3 = HypothesisCoding(hypotheses3)
+    setcontrasts!(mf, x = hc3)
     @test !(ModelMatrix(mf).m ≈ [1  1  1
                                  1  1  0
                                  1  0  1
                                  1  1  0
                                  1  1  0
                                  1  1  1])
+
+    # accepts <:AbstractMatrix
+    hypotheses4 = hcat([1, 1, 0], [0, 1, 1])'
+    hc4 = HypothesisCoding(hypotheses4)
+    @test hc4.contrasts ≈ hc3.contrasts
+
+    hc5 = HypothesisCoding(Dict("a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]))
+    @test hc5.contrasts[:, hc5.labels .== "a_and_b"] ≈ hc3.contrasts[:,1]
+    @test hc5.contrasts[:, hc5.labels .== "b_and_c"] ≈ hc3.contrasts[:,2]
+
+    hc6 = HypothesisCoding(Dict("a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]),
+                           labels = ["a_and_b", "b_and_c"])
+    @test hc6.contrasts ≈ hc3.contrasts
+
+    # re-ordering labels
+    hc7 = HypothesisCoding(Dict("a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]),
+                           labels = reverse(["a_and_b", "b_and_c"]))
+    @test !(hc7.contrasts ≈ hc3.contrasts)
+    @test hc7.contrasts[:, 2:-1:1] ≈ hc3.contrasts
+
+    # error for mismatching levels
+    @test_throws ArgumentError HypothesisCoding(Dict("x" => [], "y" => []),
+                                                labels = ["x"])
+    @test_throws ArgumentError HypothesisCoding(Dict("x" => [], "y" => []),
+                                                labels = ["x", "y", "z"])
 
     # throw argument error if number of levels mismatches
     @test_throws ArgumentError setcontrasts!(mf, x = StatsModels.ContrastsCoding(contrasts[1:2, :]))
