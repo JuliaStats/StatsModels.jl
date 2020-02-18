@@ -174,11 +174,12 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
     end
 
     # find index of base level. use contrasts.base, then default (1).
-    baseind = contrasts.base === nothing ?
+    base_level = baselevel(contrasts)
+    baseind = base_level === nothing ?
               1 :
-              findfirst(isequal(contrasts.base), c_levels)
+              findfirst(isequal(base_level), c_levels)
     if baseind === nothing
-        throw(ArgumentError("base level $(contrasts.base) not found in levels " *
+        throw(ArgumentError("base level $(base_level) not found in levels " *
                             "$c_levels."))
     end
 
@@ -229,6 +230,8 @@ for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCodin
         $contrastType(; base=nothing, levels=nothing) = $contrastType(base, levels)
     end
 end
+
+baselevel(c::C) where {C<:AbstractContrasts} = hasfield(C, :base) ? c.base : nothing
 
 """
     FullDummyCoding()
@@ -419,7 +422,7 @@ end
 
 
 """
-    HypothesisCoding(hypotheses::AbstractMatrix[, levels])
+    HypothesisCoding(hypotheses::AbstractMatrix; levels=nothing, labels=nothing)
 
 Specify how to code a categorical variable in terms of a *hypothesis matrix*.
 For a variable with ``k`` levels, this should be a ``k-1 \times k`` matrix.
@@ -471,24 +474,30 @@ expressed as a hypothesis matrix, but it is not obvious just from looking at the
 contrasts matrix.  For this reason `HypothesisCoding` is preferred for
 specifying custom contrast coding schemes over `ContrastsCoding`.
 
+Optional arguments `levels` and `labels` give the ordering of mapping between
+levels and columns of the hypothesis matrix, and the labels for the generated
+contrasts, respetively.
 """
 mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: AbstractContrasts
     hypotheses::T
     contrasts::S
-    base::Nothing
     levels::Union{Vector,Nothing}
     labels::Union{Vector,Nothing}
 
-    function HypothesisCoding(hypotheses::T, base, levels, labels) where {T}
+    function HypothesisCoding(hypotheses::T, levels, labels) where {T}
+        labels == nothing &&
+            throw(ArgumentError("must specify contrast labels with " *
+                                "HypothesisCoding(; labels=) or " *
+                                "HypothesisCoding(Dict(label1=>hyp1, label2=>hyp2, ...))"))
         contrasts = pinv(hypotheses)
         S = typeof(contrasts)
         check_contrasts_size(contrasts, levels)
-        new{T,S}(hypotheses, contrasts, base, levels, labels)
+        new{T,S}(hypotheses, contrasts, levels, labels)
     end
 end
 
 HypothesisCoding(mat::AbstractMatrix; levels=nothing, labels=nothing) =
-    HypothesisCoding(mat, nothing, levels, labels)
+    HypothesisCoding(mat, levels, labels)
 
 """
     HypothesisCoding(hypotheses::Dict[; labels=, levels=])
@@ -530,15 +539,14 @@ weights assigned to each group's cell mean), you should use
 """
 mutable struct ContrastsCoding{T<:AbstractMatrix} <: AbstractContrasts
     mat::T
-    base::Any
     levels::Union{Vector,Nothing}
 
-    function ContrastsCoding(mat::T, base, levels) where {T}
+    function ContrastsCoding(mat::T, levels) where {T}
         Base.depwarn("`ContrastsCoding(contrasts)` is deprecated and will not be exported" *
                      " in the future, use `HypothesisCoding(pinv(contrasts))` instead.",
                      :ContrastsCoding)
         check_contrasts_size(mat, levels)
-        new{T}(mat, base, levels)
+        new{T}(mat, levels)
     end
 end
 
@@ -550,8 +558,8 @@ check_contrasts_size(mat::Matrix, n_lev::Int) =
                         "Expected $((n_lev, n_lev-1)), got $(size(mat))"))
 
 ## constructor with optional keyword arguments, defaulting to nothing
-ContrastsCoding(mat::AbstractMatrix; base=nothing, levels=nothing) =
-    ContrastsCoding(mat, base, levels)
+ContrastsCoding(mat::AbstractMatrix; levels=nothing) =
+    ContrastsCoding(mat, levels)
 
 function contrasts_matrix(C::ContrastsCoding, baseind, n)
     check_contrasts_size(C.mat, n)

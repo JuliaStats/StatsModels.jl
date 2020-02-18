@@ -151,8 +151,13 @@
                                 1  1  0
                                 1  1  1]
 
+
     hypotheses2 = pinv(contrasts2)
-    setcontrasts!(mf, x = StatsModels.HypothesisCoding(hypotheses2))
+    # need labels for hypothesis coding
+    @test_throws ArgumentError HypothesisCoding(hypotheses2)
+
+    hyp_labels = ["2a+b-c", "-a+b+2c"]
+    setcontrasts!(mf, x = HypothesisCoding(hypotheses2, labels=hyp_labels))
     @test ModelMatrix(mf).m ≈ [1  1  1
                                1  1  0
                                1  0  1
@@ -163,7 +168,8 @@
     # different results for non-orthogonal hypotheses/contrasts:
     hypotheses3 = [1 1 0
                    0 1 1]
-    hc3 = HypothesisCoding(hypotheses3)
+    hyp_labels3 = ["a+b", "b+c"]
+    hc3 = HypothesisCoding(hypotheses3, labels=hyp_labels3)
     setcontrasts!(mf, x = hc3)
     @test !(ModelMatrix(mf).m ≈ [1  1  1
                                  1  1  0
@@ -174,18 +180,19 @@
 
     # accepts <:AbstractMatrix
     hypotheses4 = hcat([1, 1, 0], [0, 1, 1])'
-    hc4 = HypothesisCoding(hypotheses4)
+    hc4 = HypothesisCoding(hypotheses4, labels=hyp_labels3)
     @test hc4.contrasts ≈ hc3.contrasts
 
+    # specify labels via Dict
     hc5 = HypothesisCoding(Dict("a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]))
     @test hc5.contrasts[:, hc5.labels .== "a_and_b"] ≈ hc3.contrasts[:,1]
     @test hc5.contrasts[:, hc5.labels .== "b_and_c"] ≈ hc3.contrasts[:,2]
 
+    # specify order of labels via labels= kwarg
     hc6 = HypothesisCoding(Dict("a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]),
                            labels = ["a_and_b", "b_and_c"])
     @test hc6.contrasts ≈ hc3.contrasts
 
-    # re-ordering labels
     hc7 = HypothesisCoding(Dict("a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]),
                            labels = reverse(["a_and_b", "b_and_c"]))
     @test !(hc7.contrasts ≈ hc3.contrasts)
@@ -213,7 +220,9 @@
         effects_hyp = [-1 2 -1
                        -1 -1 2] ./ 3
 
-        @test modelmatrix(setcontrasts!(mf, x = HypothesisCoding(effects_hyp))) ≈
+        @test modelmatrix(setcontrasts!(mf,
+                                        x = HypothesisCoding(effects_hyp,
+                                                             labels=levels(d.x)[2:end]))) ≈
             modelmatrix(setcontrasts!(mf, x = EffectsCoding()))
 
         d2 = DataFrame(y = rand(100),
@@ -221,11 +230,13 @@
 
         sdiff_hyp = HypothesisCoding([-1 1 0 0
                                       0 -1 1 0
-                                      0 0 -1 1])
+                                      0 0 -1 1],
+                                     labels = ["b-a", "c-b", "d-c"])
 
         effects_hyp = HypothesisCoding([-1 3 -1 -1
                                         -1 -1 3 -1
-                                        -1 -1 -1 3] ./ 4)
+                                        -1 -1 -1 3] ./ 4,
+                                       labels = levels(d2.x)[2:end])
 
         f = apply_schema(@formula(y ~ 1 + x), schema(d2))
 
