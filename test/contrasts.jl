@@ -102,9 +102,10 @@
     @test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = ["a", "b", "c"]))
 
     # Missing data is handled gracefully, dropping columns when a level is lost
-    allowmissing!(d,:x)
-    d[3, :x] = missing
-    mf_missing = ModelFrame(@formula(y ~ x), d,
+    dm = deepcopy(d)
+    allowmissing!(dm,:x)
+    dm[3, :x] = missing
+    mf_missing = ModelFrame(@formula(y ~ x), dm,
                             contrasts = Dict(:x => EffectsCoding()))
     @test ModelMatrix(mf_missing).m == [1  1
                                         1 -1
