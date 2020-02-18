@@ -481,8 +481,8 @@ contrasts, respetively.
 mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: AbstractContrasts
     hypotheses::T
     contrasts::S
-    levels::Union{Vector,Nothing}
-    labels::Union{Vector,Nothing}
+    levels::Union{AbstractVector,Nothing}
+    labels::AbstractVector
 
     function HypothesisCoding(hypotheses::T, levels, labels) where {T}
         labels == nothing &&
