@@ -467,17 +467,18 @@ contrasts matrix.  For this reason `HypothesisCoding` is preferred for
 specifying custom contrast coding schemes over `ContrastsCoding`.
 
 """
-mutable struct HypothesisCoding{T<:AbstractMatrix} <: AbstractContrasts
+mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: AbstractContrasts
     hypotheses::T
-    contrasts::T
+    contrasts::S
     base::Nothing
     levels::Union{Vector,Nothing}
     labels::Union{Vector,Nothing}
 
     function HypothesisCoding(hypotheses::T, base, levels, labels) where {T}
-        contrasts = convert(T, pinv(hypotheses))
+        contrasts = pinv(hypotheses)
+        S = typeof(contrasts)
         check_contrasts_size(contrasts, levels)
-        new{T}(hypotheses, contrasts, base, levels, labels)
+        new{T,S}(hypotheses, contrasts, base, levels, labels)
     end
 end
 
