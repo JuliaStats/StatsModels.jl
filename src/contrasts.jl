@@ -560,10 +560,13 @@ needs_intercept(mat) =
 hypothesis_matrix(contrasts::AbstractContrasts, baseind, n; kwargs...) =
     hypothesis_matrix(contrasts_matrix(contrasts, baseind, n); kwargs...)
 
-function hypothesis_matrix(cm::AbstractMatrix; intercept=needs_intercept(cm))
+function hypothesis_matrix(cm::AbstractMatrix; intercept=needs_intercept(cm), pretty=true)
     if intercept
         cm = hcat(ones(size(cm, 1)), cm)
     end
     hypotheses = pinv(cm)'
+    if pretty
+        rationalize.(hypotheses, tol=1e-10)
+    end
 end
 
