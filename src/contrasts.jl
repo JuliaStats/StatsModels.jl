@@ -485,6 +485,27 @@ end
 HypothesisCoding(mat::AbstractMatrix; levels=nothing, labels=nothing) =
     HypothesisCoding(mat, nothing, levels, labels)
 
+"""
+    HypothesisCoding(hypotheses::Dict[; labels=, levels=])
+
+Specify hypotheses as `label=>hypothesis_vector` pairs.  If labels are specified
+via keyword argument, the hypothesis vectors will be concatenated in that order.
+"""
+function HypothesisCoding(
+    hypotheses::Dict{<:Any,<:AbstractVector};
+    labels=collect(keys(hypotheses)),
+    levels=nothing
+)
+    !isempty(setdiff(keys(hypotheses), labels)) &&
+        throw(ArgumentError("labels mismatch between hypotheses " *
+                            "($(collect(keys(hypotheses)))) " *
+                            "and labels kw arg ($labels)"))
+    
+    mat = reduce(hcat, hypotheses[label] for label in labels)'
+    HypothesisCoding(mat; labels=labels, levels=levels)
+end
+
+
 function contrasts_matrix(C::HypothesisCoding, baseind, n)
     check_contrasts_size(C.contrasts, n)
     C.contrasts
