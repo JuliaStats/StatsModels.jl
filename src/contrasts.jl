@@ -82,18 +82,18 @@ termnames(C::MyCoding, levels, baseind) = ...
 abstract type AbstractContrasts end
 
 # Contrasts + Levels (usually from data) = ContrastsMatrix
-struct ContrastsMatrix{C <: AbstractContrasts, T}
+struct ContrastsMatrix{C <: AbstractContrasts, T, S}
     matrix::Matrix{Float64}
-    termnames::Vector{T}
+    termnames::Vector{S}
     levels::Vector{T}
     contrasts::C
     invindex::Dict{T,Int}
-    function ContrastsMatrix{C,T}(matrix,
-                                  termnames::Vector{T},
-                                  levels::Vector{T},
-                                  contrasts::C) where {T,C <: AbstractContrasts}
+    function ContrastsMatrix(matrix::AbstractMatrix,
+                             termnames::Vector{S},
+                             levels::Vector{T},
+                             contrasts::C) where {S,T,C <: AbstractContrasts}
         invindex = Dict{T,Int}(x=>i for (i,x) in enumerate(levels))
-        new(matrix, termnames, levels, contrasts, invindex)
+        new{C,T,S}(matrix, termnames, levels, contrasts, invindex)
     end
 end
 
@@ -180,7 +180,7 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
 
     mat = contrasts_matrix(contrasts, baseind, n)
 
-    ContrastsMatrix{C,T}(mat, tnames, c_levels, contrasts)
+    ContrastsMatrix(mat, tnames, c_levels, contrasts)
 end
 
 ContrastsMatrix(c::Type{<:AbstractContrasts}, levels::AbstractVector) =
@@ -253,8 +253,7 @@ mutable struct FullDummyCoding <: AbstractContrasts
 end
 
 ContrastsMatrix(C::FullDummyCoding, levels::AbstractVector{T}) where {T} =
-    ContrastsMatrix{FullDummyCoding,T}(Matrix(1.0I, length(levels), length(levels)),
-                                       levels, levels, C)
+    ContrastsMatrix(Matrix(1.0I, length(levels), length(levels)), levels, levels, C)
 
 "Promote contrasts matrix to full rank version"
 Base.convert(::Type{ContrastsMatrix{FullDummyCoding}}, C::ContrastsMatrix) =
