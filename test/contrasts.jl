@@ -189,7 +189,7 @@
     hc7 = HypothesisCoding(Dict("a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]),
                            labels = reverse(["a_and_b", "b_and_c"]))
     @test !(hc7.contrasts ≈ hc3.contrasts)
-    @test hc7.contrasts[:, 2:-1:1] ≈ hc3.contrasts
+    @test hc7.contrasts[:, reverse(1:2)] ≈ hc3.contrasts
 
     # error for mismatching levels
     @test_throws ArgumentError HypothesisCoding(Dict("x" => [], "y" => []),
