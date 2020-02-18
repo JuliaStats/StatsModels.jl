@@ -496,7 +496,7 @@ function HypothesisCoding(
     labels=collect(keys(hypotheses)),
     levels=nothing
 )
-    !isempty(setdiff(keys(hypotheses), labels)) &&
+    !isempty(symdiff(keys(hypotheses), labels)) &&
         throw(ArgumentError("labels mismatch between hypotheses " *
                             "($(collect(keys(hypotheses)))) " *
                             "and labels kw arg ($labels)"))
