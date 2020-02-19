@@ -624,7 +624,7 @@ the intercept column.
 """
 needs_intercept(mat::AbstractMatrix) =
     (rank(mat) < size(mat, 1)) &&
-    !all(sum(row) < 10eps(eltype(mat)) for row in eachrow(mat))
+    !all(isapprox(sum(col), zero(eltype(mat)), rtol=1e-5) for col in eachcol(mat))
 
 """
     hypothesis_matrix(cmat::AbstractMatrix; intercept=needs_intercept(cm), pretty=true)

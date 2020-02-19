@@ -256,4 +256,47 @@
                                                  schema(d2, Dict(:x=>EffectsCoding()))),
                                     d2)
     end
+
+    @testset "hypothesis_matrix" begin
+        using StatsModels: contrasts_matrix, hypothesis_matrix, needs_intercept
+
+        cmat = contrasts_matrix(DummyCoding(), 1, 4)
+        @test needs_intercept(cmat) == true
+        cmat1 = hypothesis_matrix(cmat)
+        @test cmat1 ≈
+            [ 1 0 0 0
+             -1 1 0 0
+             -1 0 1 0
+             -1 0 0 1]
+        @test eltype(cmat1) <: Integer
+        @test eltype(hypothesis_matrix(cmat1, pretty=false)) == eltype(cmat)
+
+        # incorrect interpretation without considering intercept:
+        @test hypothesis_matrix(cmat, intercept=false) ≈
+            [0 1 0 0
+             0 0 1 0
+             0 0 0 1]
+        
+
+        cmat2 = contrasts_matrix(HelmertCoding(), 1, 4)
+        @test needs_intercept(cmat2) == false
+        hmat2 = hypothesis_matrix(cmat2) 
+        @test hmat2 ≈
+            [-1/2   1/2   0    0
+             -1/6  -1/6   1/3  0
+             -1/12 -1/12 -1/12 1/4]
+
+        @test eltype(hmat2) <: Rational
+        
+        @test hypothesis_matrix(cmat2, intercept=true) ≈
+            vcat([1/4 1/4 1/4 1/4], hmat2)
+
+        cmat3 = [-1. -1
+                  1   0
+                  0   1]
+        @test needs_intercept(cmat3) == false
+        cmat3p = copy(cmat3)
+        cmat3p[1] += 1e-3
+        @test needs_intercept(cmat3p) == true
+    end
 end
