@@ -482,13 +482,15 @@ mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: Abstrac
     hypotheses::T
     contrasts::S
     levels::Union{AbstractVector,Nothing}
-    labels::AbstractVector
+    labels::Union{AbstractVector,Nothing}
 
     function HypothesisCoding(hypotheses::T, levels, labels) where {T}
-        labels == nothing &&
-            throw(ArgumentError("must specify contrast labels with " *
-                                "HypothesisCoding(hypotheses; labels=...) or " *
-                                "HypothesisCoding(Dict(label1=>hyp1, label2=>hyp2, ...))"))
+        labels == nothing && 
+            Base.depwarn(
+                "HypothesisCoding without specified contrast labels is deprecated.  " *
+                "Specify contrast labels with `HypothesisCoding(; labels=[...])` " *
+                "or HypothesisCoding(Dict(label1=>hyp1, label2=>hyp2, ...))",
+                :HypothesisCoding)
         contrasts = pinv(hypotheses)
         S = typeof(contrasts)
         check_contrasts_size(contrasts, levels)

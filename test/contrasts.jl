@@ -154,7 +154,7 @@
 
     hypotheses2 = pinv(contrasts2)
     # need labels for hypothesis coding
-    @test_throws ArgumentError HypothesisCoding(hypotheses2)
+    @test_warn "labels" HypothesisCoding(hypotheses2)
 
     hyp_labels = ["2a+b-c", "-a+b+2c"]
     setcontrasts!(mf, x = HypothesisCoding(hypotheses2, labels=hyp_labels))
