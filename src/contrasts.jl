@@ -614,19 +614,94 @@ function contrasts_matrix(C::ContrastsCoding, baseind, n)
 end
 
 ## hypothesis matrix
+"""
+    needs_intercept(mat::AbstractMatrix)
+
+Returns `true` if a contrasts matrix `mat` needs to consider the intercept to
+determine the corresponding hypothesis matrix.  This is determined by whether
+`rank(mat)` is less than the number of rows and any column is not orthogonal to
+the intercept column.
+"""
 needs_intercept(mat::AbstractMatrix) =
     (rank(mat) < size(mat, 1)) &&
-    !all(sum(row) < 10eps(eltype(mat)) for row in eachrow(x))
+    !all(sum(row) < 10eps(eltype(mat)) for row in eachrow(mat))
 
-hypothesis_matrix(contrasts::AbstractContrasts, baseind, n; kwargs...) =
-    hypothesis_matrix(contrasts_matrix(contrasts, baseind, n); kwargs...)
+"""
+    hypothesis_matrix(cmat::AbstractMatrix; intercept=needs_intercept(cm), pretty=true)
+    hypothesis_matrix(contrasts::AbstractContrasts, n; baseind=1, kwargs...)
+    hypothesis_matrix(cmat::ContrastsMatrix; kwargs...)
 
+Compute the hypotehsis matrix for a contrasts matrix using the generalized
+pseudo-inverse (`LinearAlgebra.pinv`).  `intercept` determines whether a column
+of ones is included before taking the pseudoinverse, which is needed for
+contrasts where the columns are not orthogonal to the intercept (e.g., have
+non-zero mean).  If `pretty=true` (the default), the hypotheses are rounded to
+`Int`s if possible and `Rational`s if not, using a tolerance of `1e-10`.
+
+Note that this assumes a *balanced design* where there are the same number of
+observations in every cell.  This is only important for non-orthgonal contrasts
+(including contrasts where the contrasts are not orthogonal with the intercept).
+
+# Examples
+
+```jldoctest
+julia> cmat = StatsModels.contrasts_matrix(DummyCoding(), 1, 4)
+4×3 Array{Float64,2}:
+ 0.0  0.0  0.0
+ 1.0  0.0  0.0
+ 0.0  1.0  0.0
+ 0.0  0.0  1.0
+
+julia> StatsModels.hypothesis_matrix(cmat)
+4×4 Array{Int64,2}:
+ 1  -1  -1  -1
+ 0   1   0   0
+ 0   0   1   0
+ 0   0   0   1
+
+julia> StatsModels.hypothesis_matrix(cmat, intercept=false) # wrong without intercept!!
+4×3 Array{Int64,2}:
+ 0  0  0
+ 1  0  0
+ 0  1  0
+ 0  0  1
+
+julia> StatsModels.hypothesis_matrix(cmat, pretty=false) # ugly
+4×4 Adjoint{Float64,Array{Float64,2}}:
+  1.0          -1.0          -1.0          -1.0        
+ -2.23753e-16   1.0           4.94472e-17   1.04958e-16
+  6.91749e-18  -2.42066e-16   1.0          -1.31044e-16
+ -1.31485e-16   9.93754e-17   9.93754e-17   1.0        
+
+julia> StatsModels.hypothesis_matrix(StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b", "c", "d"]))
+4×4 Array{Int64,2}:
+ 1  -1  -1  -1
+ 0   1   0   0
+ 0   0   1   0
+ 0   0   0   1
+
+```
+"""
 function hypothesis_matrix(cm::AbstractMatrix; intercept=needs_intercept(cm), pretty=true)
     if intercept
         cm = hcat(ones(size(cm, 1)), cm)
     end
-    hypotheses = pinv(cm)'
-    if pretty
-        rationalize.(hypotheses, tol=1e-10)
+    hypotheses = pinv(cm)
+    pretty ? pretty_mat(hypotheses) : hypotheses
+end
+
+hypothesis_matrix(contrasts::AbstractContrasts, n; baseind=1, kwargs...) =
+    hypothesis_matrix(contrasts_matrix(contrasts, baseind, n); kwargs...)
+
+hypothesis_matrix(cmat::ContrastsMatrix; kwargs...) =
+    hypothesis_matrix(cmat.matrix; kwargs...)
+
+function pretty_mat(mat::AbstractMatrix; tol=10*eps(eltype(mat)))
+    fracs = rationalize.(mat, tol=tol)
+    if all(denominator.(fracs) .== 1)
+        return Int.(fracs)
+    else
+        return fracs
     end
 end
+    
