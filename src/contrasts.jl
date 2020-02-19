@@ -59,7 +59,7 @@ C(levels = ::Vector{Any}, base = ::Any) # specify levels and base
   which is directly copied into the model matrix.
 
 The last two coding types, `HypothesisCoding` and `StatsModels.ContrastsCoding`,
-provides a way to manually specify a contrasts matrix. For a variable `x` with
+provide a way to manually specify a contrasts matrix. For a variable `x` with
 `k` levels, a contrasts matrix `M` is a `k×k-1` matrix, that maps the `k` levels
 onto `k-1` model matrix columns.  Specifically, let `X` be the full-rank
 indicator matrix for `x`, where `X[i,j] = 1` if `x[i] == levels(x)[j]`, and 0
@@ -476,7 +476,7 @@ specifying custom contrast coding schemes over `ContrastsCoding`.
 
 Optional arguments `levels` and `labels` give the ordering of mapping between
 levels and columns of the hypothesis matrix, and the labels for the generated
-contrasts, respetively.
+contrasts, respectively.
 """
 mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: AbstractContrasts
     hypotheses::T
@@ -487,7 +487,7 @@ mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: Abstrac
     function HypothesisCoding(hypotheses::T, levels, labels) where {T}
         labels == nothing &&
             throw(ArgumentError("must specify contrast labels with " *
-                                "HypothesisCoding(; labels=) or " *
+                                "HypothesisCoding(hypotheses; labels=...) or " *
                                 "HypothesisCoding(Dict(label1=>hyp1, label2=>hyp2, ...))"))
         contrasts = pinv(hypotheses)
         S = typeof(contrasts)
@@ -515,7 +515,7 @@ function HypothesisCoding(
                             "($(collect(keys(hypotheses)))) " *
                             "and labels kw arg ($labels)"))
     
-    mat = reduce(hcat, hypotheses[label] for label in labels)'
+    mat = reduce(hcat, collect(hypotheses[label] for label in labels))'
     HypothesisCoding(mat; labels=labels, levels=levels)
 end
 
@@ -541,7 +541,7 @@ mutable struct ContrastsCoding{T<:AbstractMatrix} <: AbstractContrasts
     mat::T
     levels::Union{Vector,Nothing}
 
-    function ContrastsCoding(mat::T, levels) where {T}
+    function ContrastsCoding(mat::T, levels) where {T<:AbstractMatrix}
         Base.depwarn("`ContrastsCoding(contrasts)` is deprecated and will not be exported" *
                      " in the future, use `HypothesisCoding(pinv(contrasts))` instead.",
                      :ContrastsCoding)
@@ -567,9 +567,9 @@ function contrasts_matrix(C::ContrastsCoding, baseind, n)
 end
 
 ## hypothesis matrix
-needs_intercept(mat) =
+needs_intercept(mat::AbstractMatrix) =
     (rank(mat) < size(mat, 1)) &&
-    !all(mapslices(sum, mat, dims=1) .< 10eps(eltype(mat)))
+    !all(sum(row) < 10eps(eltype(mat)) for row in eachrow(x))
 
 hypothesis_matrix(contrasts::AbstractContrasts, baseind, n; kwargs...) =
     hypothesis_matrix(contrasts_matrix(contrasts, baseind, n); kwargs...)
@@ -583,4 +583,3 @@ function hypothesis_matrix(cm::AbstractMatrix; intercept=needs_intercept(cm), pr
         rationalize.(hypotheses, tol=1e-10)
     end
 end
-
