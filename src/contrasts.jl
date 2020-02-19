@@ -231,7 +231,7 @@ for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCodin
     end
 end
 
-baselevel(c::C) where {C<:AbstractContrasts} = hasfield(C, :base) ? c.base : nothing
+baselevel(c::C) where {C<:AbstractContrasts} = :base ∈ fieldnames(C) ? c.base : nothing
 
 """
     FullDummyCoding()
