@@ -502,20 +502,20 @@ HypothesisCoding(mat::AbstractMatrix; levels=nothing, labels=nothing) =
     HypothesisCoding(mat, levels, labels)
 
 """
-    HypothesisCoding(hypotheses::Dict[; labels=, levels=])
+    HypothesisCoding(hypotheses::Dict[; labels=collect(keys(hypotheses)), levels=nothing])
 
 Specify hypotheses as `label=>hypothesis_vector` pairs.  If labels are specified
 via keyword argument, the hypothesis vectors will be concatenated in that order.
+The `levels` argument provides the names of the levels for each entry in the
+hypothesis vectors.  If omitted, `levels()` will be called when constructing a 
+`ContrastsMatrix`
 """
-function HypothesisCoding(
-    hypotheses::Dict{<:Any,<:AbstractVector};
-    labels=collect(keys(hypotheses)),
-    levels=nothing
-)
+function HypothesisCoding(hypotheses::Dict{<:Any,<:AbstractVector};
+                          labels=collect(keys(hypotheses)),
+                          levels=nothing)
     !isempty(symdiff(keys(hypotheses), labels)) &&
-        throw(ArgumentError("labels mismatch between hypotheses " *
-                            "($(collect(keys(hypotheses)))) " *
-                            "and labels kw arg ($labels)"))
+        throw(ArgumentError("mismatching labels between hypotheses and labels keyword argument: " *
+                            "$(join(symdiff(keys(hypotheses), labels), ", "))"))
     
     mat = reduce(hcat, collect(hypotheses[label] for label in labels))'
     HypothesisCoding(mat; labels=labels, levels=levels)
@@ -531,12 +531,13 @@ termnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
     something(C.labels, levels[1:length(levels) .!= baseind])
 
 """
-    StatsModels.ContrastsCoding(mat::AbstractMatrix[, base[, levels]])
+    StatsModels.ContrastsCoding(mat::AbstractMatrix[, levels]])
+    StatsModels.ContrastsCoding(mat::AbstractMatrix[; levels=nothing])
 
 Coding by manual specification of contrasts matrix. For k levels, the contrasts
 must be a k by k-1 Matrix.  The contrasts in this matrix will be copied directly
 into the model matrix; if you want to specify your contrasts as hypotheses (i.e., 
-weights assigned to each group's cell mean), you should use 
+weights assigned to each level's cell mean), you should use 
 [`HypothesisCoding`](@ref) instead.
 """
 mutable struct ContrastsCoding{T<:AbstractMatrix} <: AbstractContrasts
@@ -544,8 +545,11 @@ mutable struct ContrastsCoding{T<:AbstractMatrix} <: AbstractContrasts
     levels::Union{Vector,Nothing}
 
     function ContrastsCoding(mat::T, levels) where {T<:AbstractMatrix}
-        Base.depwarn("`ContrastsCoding(contrasts)` is deprecated and will not be exported" *
-                     " in the future, use `HypothesisCoding(pinv(contrasts))` instead.",
+        Base.depwarn("`ContrastsCoding(contrasts)` is deprecated and will not be" *
+                     " exported in the future.  Future versions will require" *
+                     " `StatsModels.ContrastsCoding` or `using StatsModels: " *
+                     "ContrastsCoding`.  For general users we recommend " *
+                     "`HypothesisCoding(pinv(contrasts))` instead.", 
                      :ContrastsCoding)
         check_contrasts_size(mat, levels)
         new{T}(mat, levels)
