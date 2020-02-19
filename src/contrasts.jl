@@ -283,8 +283,13 @@ Base.convert(::Type{ContrastsMatrix{FullDummyCoding}}, C::ContrastsMatrix) =
 
 """
     DummyCoding([base[, levels]])
+    DummyCoding(; base=nothing, levels=nothing)
 
 Dummy coding generates one indicator column (1 or 0) for each non-base level.
+
+If `levels` are omitted or `nothing`, they are determined from the data using
+`levels()` when constructing `Contrastsmatrix`.  If `base` is omitted or
+`nothing`, the first level is used as the base.
 
 Columns have non-zero mean and are collinear with an intercept column (and
 lower-order columns for interactions) but are orthogonal to each other. In a
@@ -312,6 +317,7 @@ contrasts_matrix(C::DummyCoding, baseind, n) =
 
 """
     EffectsCoding([base[, levels]])
+    EffectsCoding(; base=nothing, levels=nothing)
 
 Effects coding generates columns that code each non-base level as the
 deviation from the base level.  For each non-base level `x` of `variable`, a
@@ -319,6 +325,10 @@ column is generated with 1 where `variable .== x` and -1 where `variable .== bas
 
 `EffectsCoding` is like `DummyCoding`, but using -1 for the base level instead
 of 0.
+
+If `levels` are omitted or `nothing`, they are determined from the data using
+`levels()` when constructing `Contrastsmatrix`.  If `base` is omitted or
+`nothing`, the first level is used as the base.
 
 When all levels are equally frequent, effects coding generates model matrix
 columns that are mean centered (have mean 0).  For more than two levels the
@@ -353,9 +363,14 @@ end
 
 """
     HelmertCoding([base[, levels]])
+    HelmertCoding(; base=nothing, levels=nothing)
 
 Helmert coding codes each level as the difference from the average of the lower
 levels.
+
+If `levels` are omitted or `nothing`, they are determined from the data using
+`levels()` when constructing `Contrastsmatrix`.  If `base` is omitted or
+`nothing`, the first level is used as the base.
 
 For each non-base level, Helmert coding generates a columns with -1 for each of
 n levels below, n for that level, and 0 above.
@@ -395,6 +410,11 @@ Code each level in order to test "sequential difference" hypotheses, which
 compares each level to the level below it (starting with the second level).
 Specifically, the ``n``th predictor tests the hypothesis that the difference
 between levels ``n`` and ``n+1`` is zero.
+
+Differences are computed in order of `levels`.  If `levels` are omitted or
+`nothing`, they are determined from the data using `levels()` when constructing
+`Contrastsmatrix`.  If `base` is omitted or `nothing`, the first level is used
+as the base.
 
 # Examples
 
