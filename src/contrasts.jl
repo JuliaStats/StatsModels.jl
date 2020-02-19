@@ -88,18 +88,18 @@ termnames(C::MyCoding, levels, baseind) = ...
 abstract type AbstractContrasts end
 
 # Contrasts + Levels (usually from data) = ContrastsMatrix
-struct ContrastsMatrix{C <: AbstractContrasts, T, S}
+struct ContrastsMatrix{C <: AbstractContrasts, T, U}
     matrix::Matrix{Float64}
-    termnames::Vector{S}
+    termnames::Vector{U}
     levels::Vector{T}
     contrasts::C
     invindex::Dict{T,Int}
     function ContrastsMatrix(matrix::AbstractMatrix,
-                             termnames::Vector{S},
+                             termnames::Vector{U},
                              levels::Vector{T},
-                             contrasts::C) where {S,T,C <: AbstractContrasts}
+                             contrasts::C) where {U,T,C <: AbstractContrasts}
         invindex = Dict{T,Int}(x=>i for (i,x) in enumerate(levels))
-        new{C,T,S}(matrix, termnames, levels, contrasts, invindex)
+        new{C,T,U}(matrix, termnames, levels, contrasts, invindex)
     end
 end
 
