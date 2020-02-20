@@ -241,10 +241,12 @@ for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCodin
         end
         ## constructor with optional keyword arguments, defaulting to nothing
         $contrastType(; base=nothing, levels=nothing) = $contrastType(base, levels)
+        baselevel(c::$contrastType) = c.base
     end
 end
 
-baselevel(c::C) where {C<:AbstractContrasts} = :base ∈ fieldnames(C) ? c.base : nothing
+# fallback method for other types that might not have base field
+baselevel(c::C) where {C<:AbstractContrasts} = nothing
 
 """
     FullDummyCoding()
