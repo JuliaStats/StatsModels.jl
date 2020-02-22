@@ -456,6 +456,9 @@ function contrasts_matrix(C::SeqDiffCoding, baseind, n)
     return mat ./ n
 end
 
+# TODO: consider customizing term names:
+# termnames(C::SeqDiffCoding, levels::AbstractVector, baseind::Integer) =
+#     ["$(levels[i])-$(levels[i-1])" for i in 2:length(levels)]
 
 """
     HypothesisCoding(hypotheses::AbstractMatrix; levels=nothing, labels=nothing)
