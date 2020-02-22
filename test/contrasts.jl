@@ -269,7 +269,8 @@
              -1 0 1 0
              -1 0 0 1]
         @test eltype(cmat1) <: Integer
-        @test eltype(hypothesis_matrix(cmat1, pretty=false)) == eltype(cmat)
+        @test eltype(hypothesis_matrix(cmat1, tolerance=0)) == eltype(cmat)
+        @test eltype(hypothesis_matrix(cmat1, tolerance=0.0)) == eltype(cmat)
 
         # incorrect interpretation without considering intercept:
         @test hypothesis_matrix(cmat, intercept=false) ≈

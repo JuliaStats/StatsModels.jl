@@ -633,7 +633,7 @@ needs_intercept(mat::AbstractMatrix) =
     !all(isapprox.(sum(mat, dims=1), 0, rtol=1e-5))
 
 """
-    hypothesis_matrix(cmat::AbstractMatrix; intercept=needs_intercept(cm), pretty=true)
+    hypothesis_matrix(cmat::AbstractMatrix; intercept=needs_intercept(cm), tolerance=1e-5)
     hypothesis_matrix(contrasts::AbstractContrasts, n; baseind=1, kwargs...)
     hypothesis_matrix(cmat::ContrastsMatrix; kwargs...)
 
@@ -641,8 +641,9 @@ Compute the hypothesis matrix for a contrasts matrix using the generalized
 pseudo-inverse (`LinearAlgebra.pinv`).  `intercept` determines whether a column
 of ones is included before taking the pseudoinverse, which is needed for
 contrasts where the columns are not orthogonal to the intercept (e.g., have
-non-zero mean).  If `pretty=true` (the default), the hypotheses are rounded to
-`Int`s if possible and `Rational`s if not, using a tolerance of `1e-10`.
+non-zero mean).  If `tolerance != 0` (the default), the hypotheses are rounded
+to `Int`s if possible and `Rational`s if not, using the given tolerance.  If
+`tolerance == 0`, then the hypothesis matrix is returned as-is.
 
 Note that this assumes a *balanced design* where there are the same number of
 observations in every cell.  This is only important for non-orthgonal contrasts
@@ -672,7 +673,7 @@ julia> StatsModels.hypothesis_matrix(cmat, intercept=false) # wrong without inte
  0  1  0
  0  0  1
 
-julia> StatsModels.hypothesis_matrix(cmat, pretty=false) # ugly
+julia> StatsModels.hypothesis_matrix(cmat, tolerance=0) # ugly
 4×4 Adjoint{Float64,Array{Float64,2}}:
   1.0          -1.0          -1.0          -1.0        
  -2.23753e-16   1.0           4.94472e-17   1.04958e-16
@@ -688,12 +689,12 @@ julia> StatsModels.hypothesis_matrix(StatsModels.ContrastsMatrix(DummyCoding(), 
 
 ```
 """
-function hypothesis_matrix(cm::AbstractMatrix; intercept=needs_intercept(cm), pretty=true)
+function hypothesis_matrix(cm::AbstractMatrix; intercept=needs_intercept(cm), tolerance=1e-5)
     if intercept
         cm = hcat(ones(size(cm, 1)), cm)
     end
     hypotheses = pinv(cm)
-    pretty ? pretty_mat(hypotheses) : hypotheses
+    iszero(tolerance) ? hypotheses : pretty_mat(hypotheses, tol=tolerance)
 end
 
 hypothesis_matrix(contrasts::AbstractContrasts, n; baseind=1, kwargs...) =
