@@ -437,11 +437,11 @@ contrasts test the difference between the first and second levels, the second
 and third, and the third and fourth, respectively:
 
 ```jldoctest seqdiff
-julia> round.(pinv(seqdiff), digits=2)
-3×4 Array{Float64,2}:
- -1.0   1.0  -0.0   0.0
- -0.0  -1.0   1.0  -0.0
-  0.0  -0.0  -1.0   1.0
+julia> StatsModels.hypothesis_matrix(seqdiff)
+3×4 Array{Int64,2}:
+ -1   1   0  0
+  0  -1   1  0
+  0   0  -1  1
 ```
 
 """
