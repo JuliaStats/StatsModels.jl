@@ -91,6 +91,38 @@ using DataStructures
                 @test_throws InexactError apply_schema(bad_f, schema(bad_f, df))
             end
         end # Unhappy Path testset
+
+        @testset "Programmatic construction" begin
+            using StatsModels: LeadLagTerm
+
+            df = (y=1:10, x=1:10)
+
+            @testset "one-arg" begin 
+                f = @formula(y ~ lag(x))
+                sch = schema(f, df)
+                ff = apply_schema(f, sch)
+                t1 = ff.rhs.terms[1]
+                t2 = apply_schema(LeadLagTerm{Term, typeof(lag)}(term(:x), 1), sch)
+                t3 = apply_schema(lag(term(:x)), sch)
+
+                @test isequal(modelcols(t1, df), modelcols(t2, df))
+                @test isequal(modelcols(t1, df), modelcols(t3, df))
+                @test coefnames(t1) == coefnames(t2) == coefnames(t3)
+            end
+
+            @testset "two-arg" begin
+                f = @formula(y ~ lag(x, 3))
+                sch = schema(f, df)
+                ff = apply_schema(f, sch)
+                t1 = ff.rhs.terms[1]
+                t2 = apply_schema(LeadLagTerm{Term, typeof(lag)}(term(:x), 3), sch)
+                t3 = apply_schema(lag(term(:x), 3), sch)
+
+                @test isequal(modelcols(t1, df), modelcols(t2, df))
+                @test isequal(modelcols(t1, df), modelcols(t3, df))
+                @test coefnames(t1) == coefnames(t2) == coefnames(t3)
+            end
+        end
     end # Lag testset
 
     # The code for lag and lead is basically the same, as we tested lag comprehensively above
@@ -109,5 +141,39 @@ using DataStructures
 
             @test coefnames(f)[2] == ["x_lead0", "x_lead1", "x_lead3", "x_lead11"]
         end
+
+        @testset "Programmatic construction" begin
+            using StatsModels: LeadLagTerm
+
+            df = (y=1:10, x=1:10)
+
+            @testset "one-arg" begin 
+                f = @formula(y ~ lead(x))
+                sch = schema(f, df)
+                ff = apply_schema(f, sch)
+                t1 = ff.rhs.terms[1]
+                t2 = apply_schema(LeadLagTerm{Term, typeof(lead)}(term(:x), 1), sch)
+                t3 = apply_schema(lead(term(:x)), sch)
+
+                @test isequal(modelcols(t1, df), modelcols(t2, df))
+                @test isequal(modelcols(t1, df), modelcols(t3, df))
+                @test coefnames(t1) == coefnames(t2) == coefnames(t3)
+            end
+
+            @testset "two-arg" begin
+                f = @formula(y ~ lead(x, 3))
+                sch = schema(f, df)
+                ff = apply_schema(f, sch)
+                t1 = ff.rhs.terms[1]
+                t2 = apply_schema(LeadLagTerm{Term, typeof(lead)}(term(:x), 3), sch)
+                t3 = apply_schema(lead(term(:x), 3), sch)
+
+                @test isequal(modelcols(t1, df), modelcols(t2, df))
+                @test isequal(modelcols(t1, df), modelcols(t3, df))
+                @test coefnames(t1) == coefnames(t2) == coefnames(t3)
+            end
+        end
+
+        
     end
 end

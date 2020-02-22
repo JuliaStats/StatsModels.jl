@@ -44,6 +44,14 @@ function apply_schema(t::FunctionTerm{F}, sch::Schema, ctx::Type) where F<:Union
     return LeadLagTerm{typeof(term), F}(term, nsteps)
 end
 
+function apply_schema(t::LeadLagTerm{T, F}, sch::Schema, ctx::Type) where {T,F}
+    term = apply_schema(t.term, sch, ctx)
+    LeadLagTerm{typeof(term), F}(term, t.nsteps)
+end
+
+ShiftedArrays.lead(t::T, n=1) where {T<:AbstractTerm} = LeadLagTerm{T,typeof(lead)}(t, n)
+ShiftedArrays.lag(t::T, n=1) where {T<:AbstractTerm} = LeadLagTerm{T,typeof(lag)}(t, n)
+
 function modelcols(ll::LeadLagTerm{<:Any, F}, d::Tables.ColumnTable) where F
     original_cols = modelcols(ll.term, d)
     return F.instance(original_cols, ll.nsteps)
