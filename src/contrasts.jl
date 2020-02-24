@@ -531,7 +531,7 @@ mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: Abstrac
     levels::Union{AbstractVector,Nothing}
     labels::Union{AbstractVector,Nothing}
 
-    function HypothesisCoding(hypotheses::T, levels, labels) where {T}
+    function HypothesisCoding(hypotheses::T; levels, labels) where {T<:AbstractMatrix}
         labels == nothing && 
             Base.depwarn(
                 "HypothesisCoding without specified contrast labels is deprecated.  " *
@@ -564,7 +564,7 @@ function HypothesisCoding(hypotheses::Dict{<:Any,<:AbstractVector};
         throw(ArgumentError("mismatching labels between hypotheses and labels keyword argument: " *
                             "$(join(symdiff(keys(hypotheses), labels), ", "))"))
     
-    mat = reduce(hcat, collect(hypotheses[label] for label in labels))'
+    mat = reduce(hcat, [hypotheses[label] for label in labels])'
     HypothesisCoding(mat; labels=labels, levels=levels)
 end
 
@@ -705,7 +705,7 @@ hypothesis_matrix(cmat::ContrastsMatrix; kwargs...) =
 
 function pretty_mat(mat::AbstractMatrix; tol=10*eps(eltype(mat)))
     fracs = rationalize.(mat, tol=tol)
-    if all(denominator.(fracs) .== 1)
+    if all(x -> denominator(x) == 1, fracs)
         return Int.(fracs)
     else
         return fracs
