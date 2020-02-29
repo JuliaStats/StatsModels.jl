@@ -61,7 +61,10 @@ julia> modelmatrix(f, df)
 ### Programmatic construction of lead and lag terms
 
 StatsModels.jl provides methods for `lead` and `lag` that allow `LeadLagTerm`s
-to be constructed programmatically (at run time):
+to be constructed programmatically (at run time).  See the section on
+[Constructing a formula programmatically](@ref) for more information.  For a
+short example, you can produce the same formula as above without the `@formula`
+macro like this:
 
 ```jldoctest leadlag
 julia> y, x = term(:y), term(:x);
