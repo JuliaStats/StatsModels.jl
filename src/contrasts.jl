@@ -531,7 +531,7 @@ mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: Abstrac
     levels::Union{AbstractVector,Nothing}
     labels::Union{AbstractVector,Nothing}
 
-    function HypothesisCoding(hypotheses::T; levels, labels) where {T<:AbstractMatrix}
+    function HypothesisCoding(hypotheses::T; levels=nothing, labels=nothing) where {T<:AbstractMatrix}
         labels == nothing && 
             Base.depwarn(
                 "HypothesisCoding without specified contrast labels is deprecated.  " *
@@ -544,9 +544,6 @@ mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: Abstrac
         new{T,S}(hypotheses, contrasts, levels, labels)
     end
 end
-
-HypothesisCoding(mat::AbstractMatrix; levels=nothing, labels=nothing) =
-    HypothesisCoding(mat, levels, labels)
 
 """
     HypothesisCoding(hypotheses::Dict[; labels=collect(keys(hypotheses)), levels=nothing])
