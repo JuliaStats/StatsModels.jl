@@ -99,7 +99,7 @@ using DataStructures
 
             @testset "schema" begin
                 t = lag(term(:x))
-                @test schema(t, df).schema == schema(term(:x), df)
+                @test schema(t, df).schema == schema(term(:x), df).schema
             end
 
             @testset "one-arg" begin 
