@@ -97,6 +97,11 @@ using DataStructures
 
             df = (y=1:10, x=1:10)
 
+            @testset "schema" begin
+                t = lag(term(:x))
+                @test schema(t, df).schema == schema(term(:x), df)
+            end
+
             @testset "one-arg" begin 
                 f = @formula(y ~ lag(x))
                 sch = schema(f, df)
