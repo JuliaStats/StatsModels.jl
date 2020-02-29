@@ -546,22 +546,34 @@ mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: Abstrac
 end
 
 """
-    HypothesisCoding(hypotheses::Dict[; labels=collect(keys(hypotheses)), levels=nothing])
+    HypothesisCoding(hypotheses::Vector{Pair}; levels=nothing)
 
-Specify hypotheses as `label=>hypothesis_vector` pairs.  If labels are specified
-via keyword argument, the hypothesis vectors will be concatenated in that order.
-The `levels` argument provides the names of the levels for each entry in the
-hypothesis vectors.  If omitted, the `levels` function will be called on the data when constructing a 
+Specify hypotheses as a vector of `label=>hypothesis_vector` pairs.  Labels are
+generated from the keys of the pairs.  The `levels` argument provides the names
+of the levels for each entry in the hypothesis vectors.  If omitted, the
+`levels` function will be called on the data when constructing a
 `ContrastsMatrix`
+
+# Example
+
+```jldoctest
+julia> hc = HypothesisCoding(["a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]]);
+
+julia> hc.hypotheses
+2×3 Array{Int64,2}:
+ 1  1  0
+ 0  1  1
+
+julia> hc.labels
+2-element Array{String,1}:
+ "a_and_b"
+ "b_and_c"
+```
 """
-function HypothesisCoding(hypotheses::Dict{<:Any,<:AbstractVector};
-                          labels=collect(keys(hypotheses)),
+function HypothesisCoding(hypotheses::Vector{<:Pair{<:Any,<:AbstractVector}};
                           levels=nothing)
-    !isempty(symdiff(keys(hypotheses), labels)) &&
-        throw(ArgumentError("mismatching labels between hypotheses and labels keyword argument: " *
-                            "$(join(symdiff(keys(hypotheses), labels), ", "))"))
-    
-    mat = reduce(hcat, [hypotheses[label] for label in labels])'
+    labels = first.(hypotheses)
+    mat = reduce(vcat, adjoint.(last.(hypotheses)))
     HypothesisCoding(mat; labels=labels, levels=levels)
 end
 

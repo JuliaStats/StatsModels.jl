@@ -184,28 +184,11 @@
     hc4 = HypothesisCoding(hypotheses4, labels=hyp_labels3)
     @test hc4.contrasts ≈ hc3.contrasts
 
-    # specify labels via Dict
-    hc5 = HypothesisCoding(Dict("a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]))
-    @test hc5.contrasts[:, hc5.labels .== "a_and_b"] ≈ hc3.contrasts[:,1]
-    @test hc5.contrasts[:, hc5.labels .== "b_and_c"] ≈ hc3.contrasts[:,2]
-
-    # specify order of labels via labels= kwarg
-    hc6 = HypothesisCoding(Dict("a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]),
-                           labels = ["a_and_b", "b_and_c"])
-    @test hc6.contrasts ≈ hc3.contrasts
-
-    hc7 = HypothesisCoding(Dict("a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]),
-                           labels = reverse(["a_and_b", "b_and_c"]))
-    @test !(hc7.contrasts ≈ hc3.contrasts)
-    @test hc7.contrasts[:, reverse(1:2)] ≈ hc3.contrasts
-
-    # error for mismatching levels
-    @test_throws ArgumentError HypothesisCoding(Dict("x" => [], "y" => []),
-                                                labels = ["x"])
-    @test_throws ArgumentError HypothesisCoding(Dict("x" => [], "y" => []),
-                                                labels = ["x", "y", "z"])
-    @test_throws ArgumentError HypothesisCoding(Dict("x" => [], "y" => []),
-                                                labels = ["x", "z"])
+    # specify labels via Vector{Pair}
+    hc5 = HypothesisCoding(["a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]])
+    @test hc5.contrasts[:, 1] ≈ hc3.contrasts[:,1]
+    @test hc5.contrasts[:, 2] ≈ hc3.contrasts[:,2]
+    @test hc5.labels == ["a_and_b", "b_and_c"]
 
     # throw argument error if number of levels mismatches
     @test_throws ArgumentError setcontrasts!(mf, x = StatsModels.ContrastsCoding(contrasts[1:2, :]))
