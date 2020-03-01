@@ -246,7 +246,7 @@ for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCodin
 end
 
 # fallback method for other types that might not have base field
-baselevel(c::C) where {C<:AbstractContrasts} = nothing
+baselevel(c::AbstractContrasts) = nothing
 
 """
     FullDummyCoding()
@@ -289,10 +289,9 @@ Base.convert(::Type{ContrastsMatrix{FullDummyCoding}}, C::ContrastsMatrix) =
 
 Dummy coding generates one indicator column (1 or 0) for each non-base level.
 
-If `levels` are omitted or `nothing`, they are determined from the data using
+If `levels` are omitted or `nothing`, they are determined from the data
 by calling the `levels` function on the data when constructing `ContrastsMatrix`.
-If `base` is omitted or
-`nothing`, the first level is used as the base.
+If `base` is omitted or `nothing`, the first level is used as the base.
 
 Columns have non-zero mean and are collinear with an intercept column (and
 lower-order columns for interactions) but are orthogonal to each other. In a
@@ -329,9 +328,9 @@ column is generated with 1 where `variable .== x` and -1 where `variable .== bas
 `EffectsCoding` is like `DummyCoding`, but using -1 for the base level instead
 of 0.
 
-If `levels` are omitted or `nothing`, they are determined from the data using
-`levels()` when constructing `Contrastsmatrix`.  If `base` is omitted or
-`nothing`, the first level is used as the base.
+If `levels` are omitted or `nothing`, they are determined from the data
+by calling the `levels` function when constructing `ContrastsMatrix`. 
+If `base` is omitted or `nothing`, the first level is used as the base.
 
 When all levels are equally frequent, effects coding generates model matrix
 columns that are mean centered (have mean 0).  For more than two levels the
@@ -371,10 +370,9 @@ end
 Helmert coding codes each level as the difference from the average of the lower
 levels.
 
-If `levels` are omitted or `nothing`, they are determined from the data using
-`levels()` when constructing `Contrastsmatrix`.  If `base` is omitted or
-`nothing`, the first level is used as the base.
-
+If `levels` are omitted or `nothing`, they are determined from the data
+by calling the `levels` function when constructing `Contrastsmatrix`. 
+If `base` is omitted or `nothing`, the first level is used as the base.
 For each non-base level, Helmert coding generates a columns with -1 for each of
 n levels below, n for that level, and 0 above.
 
@@ -415,9 +413,9 @@ Specifically, the ``n``th predictor tests the hypothesis that the difference
 between levels ``n`` and ``n+1`` is zero.
 
 Differences are computed in order of `levels`.  If `levels` are omitted or
-`nothing`, they are determined from the data using `levels()` when constructing
-`Contrastsmatrix`.  If `base` is omitted or `nothing`, the first level is used
-as the base.
+`nothing`, they are determined from the data by calling the `levels` function
+when constructing `ContrastsMatrix`.
+If `base` is omitted or `nothing`, the first level is used as the base.
 
 # Examples
 
@@ -600,7 +598,7 @@ mutable struct ContrastsCoding{T<:AbstractMatrix} <: AbstractContrasts
     mat::T
     levels::Union{Vector,Nothing}
 
-    function ContrastsCoding(mat::T, levels) where {T<:AbstractMatrix}
+    function ContrastsCoding(mat::T, levels::Union{AbstractVector,Nothing}) where {T<:AbstractMatrix}
         Base.depwarn("`ContrastsCoding(contrasts)` is deprecated and will not be" *
                      " exported in the future.  Future versions will require" *
                      " `StatsModels.ContrastsCoding` or `using StatsModels: " *
@@ -620,7 +618,7 @@ check_contrasts_size(mat::Matrix, n_lev::Int) =
                         "Expected $((n_lev, n_lev-1)), got $(size(mat))"))
 
 ## constructor with optional keyword arguments, defaulting to nothing
-ContrastsCoding(mat::AbstractMatrix; levels=nothing) =
+ContrastsCoding(mat::AbstractMatrix; levels::Union{AbstractVector,Nothing}=nothing) =
     ContrastsCoding(mat, levels)
 
 function contrasts_matrix(C::ContrastsCoding, baseind, n)
@@ -698,7 +696,8 @@ julia> StatsModels.hypothesis_matrix(StatsModels.ContrastsMatrix(DummyCoding(), 
 
 ```
 """
-function hypothesis_matrix(cm::AbstractMatrix; intercept=needs_intercept(cm), tolerance=1e-5)
+function hypothesis_matrix(cm::AbstractMatrix;
+                           intercept::Bool=needs_intercept(cm), tolerance::Real=1e-5)
     if intercept
         cm = hcat(ones(size(cm, 1)), cm)
     end
@@ -706,13 +705,13 @@ function hypothesis_matrix(cm::AbstractMatrix; intercept=needs_intercept(cm), to
     iszero(tolerance) ? hypotheses : pretty_mat(hypotheses, tol=tolerance)
 end
 
-hypothesis_matrix(contrasts::AbstractContrasts, n; baseind=1, kwargs...) =
+hypothesis_matrix(contrasts::AbstractContrasts, n::Integer; baseind::Integer=1, kwargs...) =
     hypothesis_matrix(contrasts_matrix(contrasts, baseind, n); kwargs...)
 
 hypothesis_matrix(cmat::ContrastsMatrix; kwargs...) =
     hypothesis_matrix(cmat.matrix; kwargs...)
 
-function pretty_mat(mat::AbstractMatrix; tol=10*eps(eltype(mat)))
+function pretty_mat(mat::AbstractMatrix; tol::Real=10*eps(eltype(mat)))
     fracs = rationalize.(mat, tol=tol)
     if all(x -> denominator(x) == 1, fracs)
         return Int.(fracs)
