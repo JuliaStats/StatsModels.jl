@@ -26,6 +26,8 @@ struct LeadLagTerm{T<:AbstractTerm, F<:Union{typeof(lead), typeof(lag)}} <: Abst
     nsteps::Int
 end
 
+terms(t::LeadLagTerm) = (t.term, )
+
 function apply_schema(t::FunctionTerm{F}, sch::Schema, ctx::Type) where F<:Union{typeof(lead), typeof(lag)}
     opname = string(nameof(F.instance))
     if length(t.args_parsed) == 1  # lag(term)
@@ -43,6 +45,14 @@ function apply_schema(t::FunctionTerm{F}, sch::Schema, ctx::Type) where F<:Union
     term = apply_schema(term_parsed, sch, ctx)
     return LeadLagTerm{typeof(term), F}(term, nsteps)
 end
+
+function apply_schema(t::LeadLagTerm{T, F}, sch::Schema, ctx::Type) where {T,F}
+    term = apply_schema(t.term, sch, ctx)
+    LeadLagTerm{typeof(term), F}(term, t.nsteps)
+end
+
+ShiftedArrays.lead(t::T, n=1) where {T<:AbstractTerm} = LeadLagTerm{T,typeof(lead)}(t, n)
+ShiftedArrays.lag(t::T, n=1) where {T<:AbstractTerm} = LeadLagTerm{T,typeof(lag)}(t, n)
 
 function modelcols(ll::LeadLagTerm{<:Any, F}, d::Tables.ColumnTable) where F
     original_cols = modelcols(ll.term, d)

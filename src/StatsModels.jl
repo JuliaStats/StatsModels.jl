@@ -2,6 +2,7 @@ module StatsModels
 
 using Tables
 using StatsBase
+using ShiftedArrays
 using ShiftedArrays: lag, lead
 using DataStructures
 using DataAPI: levels
