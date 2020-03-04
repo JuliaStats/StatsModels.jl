@@ -102,9 +102,10 @@
     @test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = ["a", "b", "c"]))
 
     # Missing data is handled gracefully, dropping columns when a level is lost
-    allowmissing!(d,:x)
-    d[3, :x] = missing
-    mf_missing = ModelFrame(@formula(y ~ x), d,
+    dm = deepcopy(d)
+    allowmissing!(dm,:x)
+    dm[3, :x] = missing
+    mf_missing = ModelFrame(@formula(y ~ x), dm,
                             contrasts = Dict(:x => EffectsCoding()))
     @test ModelMatrix(mf_missing).m == [1  1
                                         1 -1
@@ -150,8 +151,14 @@
                                 1  1  0
                                 1  1  1]
 
+
     hypotheses2 = pinv(contrasts2)
-    setcontrasts!(mf, x = StatsModels.HypothesisCoding(hypotheses2))
+    # need labels for hypothesis coding
+    # TODO for a future release, make this an error
+    # @test_throws ArgumentError HypothesisCoding(hypotheses2)
+
+    hyp_labels = ["2a+b-c", "-a+b+2c"]
+    setcontrasts!(mf, x = HypothesisCoding(hypotheses2, labels=hyp_labels))
     @test ModelMatrix(mf).m ≈ [1  1  1
                                1  1  0
                                1  0  1
@@ -162,13 +169,26 @@
     # different results for non-orthogonal hypotheses/contrasts:
     hypotheses3 = [1 1 0
                    0 1 1]
-    setcontrasts!(mf, x = StatsModels.HypothesisCoding(hypotheses3))
+    hyp_labels3 = ["a+b", "b+c"]
+    hc3 = HypothesisCoding(hypotheses3, labels=hyp_labels3)
+    setcontrasts!(mf, x = hc3)
     @test !(ModelMatrix(mf).m ≈ [1  1  1
                                  1  1  0
                                  1  0  1
                                  1  1  0
                                  1  1  0
                                  1  1  1])
+
+    # accepts <:AbstractMatrix
+    hypotheses4 = hcat([1, 1, 0], [0, 1, 1])'
+    hc4 = HypothesisCoding(hypotheses4, labels=hyp_labels3)
+    @test hc4.contrasts ≈ hc3.contrasts
+
+    # specify labels via Vector{Pair}
+    hc5 = HypothesisCoding(["a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]])
+    @test hc5.contrasts[:, 1] ≈ hc3.contrasts[:,1]
+    @test hc5.contrasts[:, 2] ≈ hc3.contrasts[:,2]
+    @test hc5.labels == ["a_and_b", "b_and_c"]
 
     # throw argument error if number of levels mismatches
     @test_throws ArgumentError setcontrasts!(mf, x = StatsModels.ContrastsCoding(contrasts[1:2, :]))
@@ -184,7 +204,9 @@
         effects_hyp = [-1 2 -1
                        -1 -1 2] ./ 3
 
-        @test modelmatrix(setcontrasts!(mf, x = HypothesisCoding(effects_hyp))) ≈
+        @test modelmatrix(setcontrasts!(mf,
+                                        x = HypothesisCoding(effects_hyp,
+                                                             labels=levels(d.x)[2:end]))) ≈
             modelmatrix(setcontrasts!(mf, x = EffectsCoding()))
 
         d2 = DataFrame(y = rand(100),
@@ -192,11 +214,13 @@
 
         sdiff_hyp = HypothesisCoding([-1 1 0 0
                                       0 -1 1 0
-                                      0 0 -1 1])
+                                      0 0 -1 1],
+                                     labels = ["b-a", "c-b", "d-c"])
 
         effects_hyp = HypothesisCoding([-1 3 -1 -1
                                         -1 -1 3 -1
-                                        -1 -1 -1 3] ./ 4)
+                                        -1 -1 -1 3] ./ 4,
+                                       labels = levels(d2.x)[2:end])
 
         f = apply_schema(@formula(y ~ 1 + x), schema(d2))
 
@@ -214,5 +238,49 @@
         @test X_effects ≈ modelcols(apply_schema(f.rhs,
                                                  schema(d2, Dict(:x=>EffectsCoding()))),
                                     d2)
+    end
+
+    @testset "hypothesis_matrix" begin
+        using StatsModels: contrasts_matrix, hypothesis_matrix, needs_intercept
+
+        cmat = contrasts_matrix(DummyCoding(), 1, 4)
+        @test needs_intercept(cmat) == true
+        cmat1 = hypothesis_matrix(cmat)
+        @test cmat1 ≈
+            [ 1 0 0 0
+             -1 1 0 0
+             -1 0 1 0
+             -1 0 0 1]
+        @test eltype(cmat1) <: Integer
+        @test eltype(hypothesis_matrix(cmat1, tolerance=0)) == eltype(cmat)
+        @test eltype(hypothesis_matrix(cmat1, tolerance=0.0)) == eltype(cmat)
+
+        # incorrect interpretation without considering intercept:
+        @test hypothesis_matrix(cmat, intercept=false) ≈
+            [0 1 0 0
+             0 0 1 0
+             0 0 0 1]
+        
+
+        cmat2 = contrasts_matrix(HelmertCoding(), 1, 4)
+        @test needs_intercept(cmat2) == false
+        hmat2 = hypothesis_matrix(cmat2) 
+        @test hmat2 ≈
+            [-1/2   1/2   0    0
+             -1/6  -1/6   1/3  0
+             -1/12 -1/12 -1/12 1/4]
+
+        @test eltype(hmat2) <: Rational
+        
+        @test hypothesis_matrix(cmat2, intercept=true) ≈
+            vcat([1/4 1/4 1/4 1/4], hmat2)
+
+        cmat3 = [-1. -1
+                  1   0
+                  0   1]
+        @test needs_intercept(cmat3) == false
+        cmat3p = copy(cmat3)
+        cmat3p[1] += 1e-3
+        @test needs_intercept(cmat3p) == true
     end
 end
