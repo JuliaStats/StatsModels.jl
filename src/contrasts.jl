@@ -237,10 +237,10 @@ for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCodin
     @eval begin
         mutable struct $contrastType <: AbstractContrasts
             base::Any
-            levels::Union{Vector,Nothing}
+            levels::Union{AbstractVector,Nothing}
         end
         ## constructor with optional keyword arguments, defaulting to nothing
-        $contrastType(; base=nothing, levels=nothing) = $contrastType(base, levels)
+        $contrastType(; base=nothing, levels::Union{AbstractVector,Nothing}=nothing) = $contrastType(base, levels)
         baselevel(c::$contrastType) = c.base
     end
 end
@@ -529,7 +529,9 @@ mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: Abstrac
     levels::Union{AbstractVector,Nothing}
     labels::Union{AbstractVector,Nothing}
 
-    function HypothesisCoding(hypotheses::T; levels=nothing, labels=nothing) where {T<:AbstractMatrix}
+    function HypothesisCoding(hypotheses::T;
+                              levels::Union{AbstractVector,Nothing}=nothing,
+                              labels::Union{AbstractVector,Nothing}=nothing) where {T<:AbstractMatrix}
         labels == nothing && 
             Base.depwarn(
                 "HypothesisCoding without specified contrast labels is deprecated.  " *
@@ -569,7 +571,7 @@ julia> hc.labels
 ```
 """
 function HypothesisCoding(hypotheses::Vector{<:Pair{<:Any,<:AbstractVector}};
-                          levels=nothing)
+                          levels::Union{AbstractVector,Nothing}=nothing)
     labels = first.(hypotheses)
     mat = reduce(vcat, adjoint.(last.(hypotheses)))
     HypothesisCoding(mat; labels=labels, levels=levels)
