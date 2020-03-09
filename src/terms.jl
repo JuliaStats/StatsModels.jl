@@ -1,3 +1,4 @@
+import Base.== , Base.isequal
 abstract type AbstractTerm end
 const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 const TupleTerm = NTuple{N, TermOrTerms} where N
@@ -38,6 +39,8 @@ struct ConstantTerm{T<:Number} <: AbstractTerm
 end
 width(::ConstantTerm) = 1
 
+==(first::ConstantTerm, second::ConstantTerm) = first.n == second.n
+isequal(first::ConstantTerm, second::ConstantTerm) = isequal(first.n, second.n)
 """
     FormulaTerm{L,R} <: AbstractTerm
 
@@ -53,6 +56,11 @@ struct FormulaTerm{L,R} <: AbstractTerm
     lhs::L
     rhs::R
 end
+
+==(first::FormulaTerm, second::FormulaTerm) = first.lhs == second.lhs &&
+    first.rhs == second.rhs
+isequal(first::FormulaTerm, second::FormulaTerm) = isequal(first.lhs, second.lhs) &&
+    isequal(first.rhs, second.rhs)
 
 """
     FunctionTerm{Forig,Fanon,Names} <: AbstractTerm
@@ -127,6 +135,12 @@ FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
     FunctionTerm{Fo, Fa, names}(forig, fanon, exorig, args_parsed)
 width(::FunctionTerm) = 1
 
+==(first::FunctionTerm, second::FunctionTerm) = first.forig == second.forig &&
+    first.args_parsed == second.args_parsed
+isequal(first::FunctionTerm, second::FunctionTerm) =
+    isequal(first.forig, second.forig)  &&
+    isequal(first.args_parsed, second.args_parsed)
+
 """
     InteractionTerm{Ts} <: AbstractTerm
 
@@ -174,6 +188,10 @@ struct InteractionTerm{Ts} <: AbstractTerm
 end
 width(ts::InteractionTerm) = prod(width(t) for t in ts.terms)
 
+==(first::InteractionTerm, second::InteractionTerm) =
+    first.terms == second.terms
+isequal(first::InteractionTerm, second::InteractionTerm) =
+    isequal(first.terms, second.terms)
 """
     InterceptTerm{HasIntercept} <: AbstractTerm
 
@@ -186,6 +204,10 @@ via the [`implicit_intercept`](@ref) trait).
 """
 struct InterceptTerm{HasIntercept} <: AbstractTerm end
 width(::InterceptTerm{H}) where {H} = H ? 1 : 0
+
+==(first::InterceptTerm, second::InterceptTerm) = width(first) == width(second)
+isequal(first::InterceptTerm, second::InterceptTerm) =
+    isequal(width(first), width(second))
 
 # Typed terms
 
@@ -211,6 +233,14 @@ struct ContinuousTerm{T} <: AbstractTerm
 end
 width(::ContinuousTerm) = 1
 
+==(first::ContinuousTerm, second::ContinuousTerm) = first.sym == second.sym &&
+    first.mean == second.mean && first.var == second.var &&
+    first.min == second.min && first.max == second.max
+
+isequal(first::ContinuousTerm, second::ContinuousTerm) =
+    isequal(first.sym, second.sym) && isequal(first.mean, second.mean) &&
+    isequal(first.var, second.var) && isequal(first.min, second.min) &&
+    isequal(first.max, second.max)
 """
     CategoricalTerm{C,T,N} <: AbstractTerm
 
@@ -233,6 +263,12 @@ width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 CategoricalTerm(sym::Symbol, contrasts::ContrastsMatrix{C,T}) where {C,T} =
     CategoricalTerm{C,T,length(contrasts.termnames)}(sym, contrasts)
 
+==(first::CategoricalTerm, second::CategoricalTerm) =
+    first.sym == second.sym &&  width(first) == width(second) &&
+    first.contrasts == second.contrasts
+isequal(first::CategoricalTerm, second::CategoricalTerm) =
+    isequal(first.sym, second.sym) &&   isequal(width(first), width(second)) &&
+    isequal(first.contrasts, second.contrasts)
 """
     MatrixTerm{Ts} <: AbstractTerm
 
@@ -250,6 +286,10 @@ end
 MatrixTerm(t::AbstractTerm) = MatrixTerm((t, ))
 width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
 
+# ==(first::MatrixTerm, second::MatrixTerm) =
+#    collect_matrix_terms(first.terms) == collect_matrix_terms(second.terms)
+# isequal(first::MatrixTerm, second::MatrixTerm) =
+#    isequal(collect_matrix_terms(first.terms), collect_matrix_terms(second.terms))
 """
     collect_matrix_terms(ts::TupleTerm)
     collect_matrix_terms(t::AbstractTerm) = collect_matrix_term((t, ))

@@ -53,6 +53,33 @@ Base.merge!(a::Schema, b::Schema) = (merge!(a.schema, b.schema); a)
 Base.keys(schema::Schema) = keys(schema.schema)
 Base.haskey(schema::Schema, key) = haskey(schema.schema, key)
 
+function ==(first::Schema, second::Schema)
+    first === second && return true
+    first.schema === second.schema && return true
+    if length(first.schema) != length(second.schema)
+        return false
+    end
+    for key in keys(first)
+        !haskey(second, key) &&
+        get(second, key, nothing) != get(first, key, nothing) && return false
+    end
+    true
+end
+
+function Base.isequal(first::Schema, second::Schema)
+    first === second && return true
+    first.schema === second.schema && return true
+    if length(first.schema) != length(second.schema)
+        return false
+    end
+    for key in keys(first)
+        !haskey(second, key) &&
+        isequal(get(second, key, nothing) != get(first, key, nothing)) &&
+        return false
+    end
+    true
+end
+
 """
     schema([terms::AbstractVector{<:AbstractTerm}, ]data, hints::Dict{Symbol})
     schema(term::AbstractTerm, data, hints::Dict{Symbol})
