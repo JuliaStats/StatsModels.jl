@@ -57,8 +57,8 @@ struct FormulaTerm{L,R} <: AbstractTerm
     rhs::R
 end
 
-==(first::FormulaTerm, second::FormulaTerm) = first.lhs == second.lhs &&
-    first.rhs == second.rhs
+==(first::FormulaTerm, second::FormulaTerm) =
+    first.lhs == second.lhs && first.rhs == second.rhs
 isequal(first::FormulaTerm, second::FormulaTerm) = isequal(first.lhs, second.lhs) &&
     isequal(first.rhs, second.rhs)
 
@@ -290,6 +290,9 @@ width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
 #    collect_matrix_terms(first.terms) == collect_matrix_terms(second.terms)
 # isequal(first::MatrixTerm, second::MatrixTerm) =
 #    isequal(collect_matrix_terms(first.terms), collect_matrix_terms(second.terms))
+==(first::MatrixTerm, second::MatrixTerm) = first.terms == second.terms
+isequal(first::MatrixTerm, second::MatrixTerm) = isequal(first.terms, second.terms)
+
 """
     collect_matrix_terms(ts::TupleTerm)
     collect_matrix_terms(t::AbstractTerm) = collect_matrix_term((t, ))

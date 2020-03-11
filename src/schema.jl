@@ -56,11 +56,9 @@ Base.haskey(schema::Schema, key) = haskey(schema.schema, key)
 function ==(first::Schema, second::Schema)
     first === second && return true
     first.schema === second.schema && return true
-    if length(first.schema) != length(second.schema)
-        return false
-    end
+    length(first.schema) != length(second.schema) && return false
     for key in keys(first)
-        !haskey(second, key) &&
+        !haskey(second, key) && return false
         get(second, key, nothing) != get(first, key, nothing) && return false
     end
     true
@@ -69,12 +67,10 @@ end
 function Base.isequal(first::Schema, second::Schema)
     first === second && return true
     first.schema === second.schema && return true
-    if length(first.schema) != length(second.schema)
-        return false
-    end
+    length(first.schema) != length(second.schema) && return false
     for key in keys(first)
-        !haskey(second, key) &&
-        isequal(get(second, key, nothing) != get(first, key, nothing)) &&
+        !haskey(second, key) && return false
+        !isequal(get(second, key, nothing), get(first, key, nothing)) &&
         return false
     end
     true
