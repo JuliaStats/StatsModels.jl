@@ -59,7 +59,7 @@ function ==(first::Schema, second::Schema)
     length(first.schema) != length(second.schema) && return false
     for key in keys(first)
         !haskey(second, key) && return false
-        get(second, key, nothing) != get(first, key, nothing) && return false
+        second[key] != first[key] && return false
     end
     true
 end
@@ -70,8 +70,7 @@ function Base.isequal(first::Schema, second::Schema)
     length(first.schema) != length(second.schema) && return false
     for key in keys(first)
         !haskey(second, key) && return false
-        !isequal(get(second, key, nothing), get(first, key, nothing)) &&
-        return false
+        !isequal(second[key], first[key]) && return false
     end
     true
 end

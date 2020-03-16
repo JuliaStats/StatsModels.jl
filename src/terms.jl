@@ -58,8 +58,10 @@ struct FormulaTerm{L,R} <: AbstractTerm
 end
 
 ==(first::FormulaTerm, second::FormulaTerm) =
-    first.lhs == second.lhs && first.rhs == second.rhs
-isequal(first::FormulaTerm, second::FormulaTerm) = isequal(first.lhs, second.lhs) &&
+    first.lhs == second.lhs &&
+    first.rhs == second.rhs
+isequal(first::FormulaTerm, second::FormulaTerm) =
+    isequal(first.lhs, second.lhs) &&
     isequal(first.rhs, second.rhs)
 
 """
@@ -135,7 +137,8 @@ FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
     FunctionTerm{Fo, Fa, names}(forig, fanon, exorig, args_parsed)
 width(::FunctionTerm) = 1
 
-==(first::FunctionTerm, second::FunctionTerm) = first.forig == second.forig &&
+==(first::FunctionTerm, second::FunctionTerm) =
+    first.forig == second.forig &&
     first.args_parsed == second.args_parsed
 isequal(first::FunctionTerm, second::FunctionTerm) =
     isequal(first.forig, second.forig)  &&
@@ -205,7 +208,8 @@ via the [`implicit_intercept`](@ref) trait).
 struct InterceptTerm{HasIntercept} <: AbstractTerm end
 width(::InterceptTerm{H}) where {H} = H ? 1 : 0
 
-==(first::InterceptTerm, second::InterceptTerm) = width(first) == width(second)
+==(first::InterceptTerm, second::InterceptTerm) =
+    width(first) == width(second)
 isequal(first::InterceptTerm, second::InterceptTerm) =
     isequal(width(first), width(second))
 
@@ -234,12 +238,16 @@ end
 width(::ContinuousTerm) = 1
 
 ==(first::ContinuousTerm, second::ContinuousTerm) = first.sym == second.sym &&
-    first.mean == second.mean && first.var == second.var &&
-    first.min == second.min && first.max == second.max
+    first.mean == second.mean &&
+    first.var == second.var &&
+    first.min == second.min &&
+    first.max == second.max
 
 isequal(first::ContinuousTerm, second::ContinuousTerm) =
-    isequal(first.sym, second.sym) && isequal(first.mean, second.mean) &&
-    isequal(first.var, second.var) && isequal(first.min, second.min) &&
+    isequal(first.sym, second.sym) &&
+    isequal(first.mean, second.mean) &&
+    isequal(first.var, second.var) &&
+    isequal(first.min, second.min) &&
     isequal(first.max, second.max)
 """
     CategoricalTerm{C,T,N} <: AbstractTerm
@@ -264,10 +272,12 @@ CategoricalTerm(sym::Symbol, contrasts::ContrastsMatrix{C,T}) where {C,T} =
     CategoricalTerm{C,T,length(contrasts.termnames)}(sym, contrasts)
 
 ==(first::CategoricalTerm, second::CategoricalTerm) =
-    first.sym == second.sym &&  width(first) == width(second) &&
+    first.sym == second.sym &&
+    width(first) == width(second) &&
     first.contrasts == second.contrasts
 isequal(first::CategoricalTerm, second::CategoricalTerm) =
-    isequal(first.sym, second.sym) &&   isequal(width(first), width(second)) &&
+    isequal(first.sym, second.sym) &&
+    isequal(width(first), width(second)) &&
     isequal(first.contrasts, second.contrasts)
 """
     MatrixTerm{Ts} <: AbstractTerm
@@ -286,12 +296,10 @@ end
 MatrixTerm(t::AbstractTerm) = MatrixTerm((t, ))
 width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
 
-# ==(first::MatrixTerm, second::MatrixTerm) =
-#    collect_matrix_terms(first.terms) == collect_matrix_terms(second.terms)
-# isequal(first::MatrixTerm, second::MatrixTerm) =
-#    isequal(collect_matrix_terms(first.terms), collect_matrix_terms(second.terms))
-==(first::MatrixTerm, second::MatrixTerm) = first.terms == second.terms
-isequal(first::MatrixTerm, second::MatrixTerm) = isequal(first.terms, second.terms)
+==(first::MatrixTerm, second::MatrixTerm) =
+    first.terms == second.terms
+isequal(first::MatrixTerm, second::MatrixTerm) =
+    isequal(first.terms, second.terms)
 
 """
     collect_matrix_terms(ts::TupleTerm)
