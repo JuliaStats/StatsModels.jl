@@ -21,7 +21,7 @@
     sch2 = schema(df, Dict(:c => EffectsCoding(base="e")))
 
     @test schema(df) == schema(df2)
-    @test apply_schema(schema(df)) == apply_schema(schema(df2))
+    @test apply_schema(f, schema(df)) == apply_schema(f, schema(df2))
     @test schema(df) != schema(df3)
     @test schema(df) != schema(df4)
     @test schema(df) != schema(df5)
@@ -29,11 +29,11 @@
     @test schema(df) != schema(df7)
     @test schema(df) != schema(df8)
     @test schema(df8) != schema(df)
-    @test apply_schema(schema(df)) != apply_schema(schema(df5))
+    @test apply_schema(f, schema(df)) != apply_schema(f, schema(df5))
     @test sch != sch2
 
     @test isequal(schema(df), schema(df2))
-    @test isequal(apply_schema(schema(df)), apply_schema(schema(df2)))
+    @test isequal(apply_schema(f, schema(df)), apply_schema(f, schema(df2)))
     @test !isequal(schema(df), schema(df3))
     @test !isequal(schema(df), schema(df4))
     @test !isequal(schema(df), schema(df5))
@@ -41,7 +41,7 @@
     @test !isequal(schema(df), schema(df7))
     @test !isequal(schema(df), schema(df8))
     @test !isequal(schema(df8), schema(df))
-    @test !isequal(apply_schema(schema(df)), apply_schema(schema(df5)))
+    @test !isequal(apply_schema(f, schema(df)), apply_schema(f, schema(df5)))
     @test !isequal(sch, sch2)
 
 end
