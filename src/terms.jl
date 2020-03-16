@@ -237,7 +237,8 @@ struct ContinuousTerm{T} <: AbstractTerm
 end
 width(::ContinuousTerm) = 1
 
-==(first::ContinuousTerm, second::ContinuousTerm) = first.sym == second.sym &&
+==(first::ContinuousTerm, second::ContinuousTerm) = 
+    first.sym == second.sym &&
     first.mean == second.mean &&
     first.var == second.var &&
     first.min == second.min &&
