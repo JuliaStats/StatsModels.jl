@@ -29,7 +29,7 @@
     @test schema(df) != schema(df7)
     @test schema(df) != schema(df8)
     @test schema(df8) != schema(df)
-    @test apply_schema(f, schema(df)) != apply_schema(f, schema(df5))
+    @test apply_schema(f, schema(df)) == apply_schema(f, schema(df5))
     @test sch != sch2
 
     @test isequal(schema(df), schema(df2))
@@ -41,7 +41,7 @@
     @test !isequal(schema(df), schema(df7))
     @test !isequal(schema(df), schema(df8))
     @test !isequal(schema(df8), schema(df))
-    @test !isequal(apply_schema(f, schema(df)), apply_schema(f, schema(df5)))
+    @test isequal(apply_schema(f, schema(df)), apply_schema(f, schema(df5)))
     @test !isequal(sch, sch2)
 
 end
