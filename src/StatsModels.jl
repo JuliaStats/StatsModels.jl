@@ -2,9 +2,10 @@ module StatsModels
 
 using Tables
 using StatsBase
+using ShiftedArrays
 using ShiftedArrays: lag, lead
-using CategoricalArrays
 using DataStructures
+using DataAPI: levels
 using Printf: @sprintf
 using Distributions: Chisq, ccdf
 
@@ -26,8 +27,10 @@ export
     EffectsCoding,
     DummyCoding,
     HelmertCoding,
+    SeqDiffCoding,
+    HypothesisCoding,
     ContrastsCoding,
-
+    
     coefnames,
     dropterm,
     setcontrasts!,
