@@ -160,7 +160,7 @@
                       y = repeat([:c, :d], inner = 2, outer = 2),
                       z = repeat([:e, :f], inner = 4))
         categorical!(d)
-        cs = Dict([Pair(name, EffectsCoding()) for name in names(d)])
+        cs = Dict([Symbol(name) => EffectsCoding() for name in names(d)])
         d.n = 1.:8
     
     
