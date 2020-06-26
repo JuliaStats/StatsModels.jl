@@ -727,4 +727,30 @@ function pretty_mat(mat::AbstractMatrix; tol::Real=10*eps(eltype(mat)))
         return fracs
     end
 end
-    
+
+"""
+    struct Grouping <: StatsModels.AbstractContrasts end
+
+A placeholder type to indicate that a categorical variable is only used for
+grouping and not for contrasts.  When creating a [`CategoricalTerm`](@ref), this
+skips constructing the contrasts matrix which makes it robust to large numbers
+of levels, while still holding onto the vector of levels and constructing the
+level-to-index mapping (`invindex` field of the [`ContrastsMatrix`](@ref).).
+
+Note that calling `modelcols` on a `CategoricalTerm{Grouping}` is an error.
+This is intended only as a placeholder for other packages to build on.
+
+# Examples
+
+```julia
+julia> schema((; grp = string.(1:100_000)))
+# out-of-memory error
+
+julia> schema((; grp = string.(1:100_000)), Dict(:grp => Grouping()))
+"""
+struct Grouping <: StatsModels.AbstractContrasts
+end
+
+# return an empty matrix
+contrasts_matrix(::Grouping, baseind, n) = zeros(0,0)
+termnames(::Grouping, levels::AbstractVector, baseind::Integer) = levels

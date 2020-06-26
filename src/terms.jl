@@ -486,6 +486,9 @@ modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
 modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
 
 modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
+# special-case categorical terms with Grouping contrasts.
+modelcols(::CategoricalTerm{Grouping}, d::NamedTuple) =
+    error("can't create model columns directly from a Grouping term")
 
 
 """
