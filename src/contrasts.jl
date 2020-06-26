@@ -159,12 +159,12 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
     # if levels are defined on contrasts, use those, validating that they line up.
     # what does that mean? either:
     #
-    # 1. levels(contrasts) == levels (best case)
+    # 1. DataAPI.levels(contrasts) == levels (best case)
     # 2. data levels missing from contrast: would generate empty/undefined rows.
     #    better to filter data frame first
     # 3. contrast levels missing from data: would have empty columns, generate a
     #    rank-deficient model matrix.
-    c_levels = something(levels(contrasts), levels)
+    c_levels = something(DataAPI.levels(contrasts), levels)
     if eltype(c_levels) != eltype(levels)
         throw(ArgumentError("mismatching levels types: got $(eltype(levels)), expected " *
                             "$(eltype(c_levels)) based on contrasts levels."))
