@@ -402,6 +402,9 @@ Base.:&(term::AbstractTerm) = term
 Base.:&(a::AbstractTerm, b::AbstractTerm) = InteractionTerm((a,b))
 Base.:&(terms::AbstractTerm...) = reduce(&, terms)
 
+Base.:&(::ConstantTerm, b::AbstractTerm) = b
+Base.:&(a::AbstractTerm, ::ConstantTerm) = a
+
 # associative rule
 Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
 Base.:&(term::AbstractTerm, it::InteractionTerm) = InteractionTerm((term, it.terms...))
