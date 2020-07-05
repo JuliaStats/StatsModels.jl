@@ -424,6 +424,9 @@ Base.:+(as::TupleTerm, b::AbstractTerm) = (as..., b)
 Base.:+(a::AbstractTerm, bs::TupleTerm) = (a, bs...)
 Base.:+(as::TupleTerm, bs::TupleTerm) = (as..., bs...)
 
+# * expansion
+Base.:*(a::TermOrTerms, b::TermOrTerms) = a + b + a&b
+Base.:*(a::TermOrTerms, b::TermOrTerms, cs...) = (a*b)*cs
 
 cleanup(terms::TupleTerm) = tuple(sort!(unique!([terms...]), by=degree)...)
 cleanup(x) = x

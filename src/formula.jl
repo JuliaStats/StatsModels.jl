@@ -173,7 +173,7 @@ end
 
 const SPECIALS = (:+, :&, :*, :~)
 
-parse!(x) = parse!(x, [Star])
+parse!(x) = parse!(x, [])
 parse!(x, rewrites) = x
 function parse!(ex::Expr, rewrites::Vector)
     @debug "parsing $ex"
