@@ -507,9 +507,7 @@ julia> modelcols(MatrixTerm(ts), d)
 """
 modelcols(ts::TupleTerm, d::NamedTuple) = modelcols.(ts, Ref(d))
 
-modelcols(t::Term, d::NamedTuple) =
-    throw(ArgumentError("can't generate modelcols for un-typed term $t. " *
-                        "Use apply_schema to create concrete terms first"))
+modelcols(t::Term, d::NamedTuple) = getproperty(d, t.sym)
 
 # TODO: @generated to unroll the getfield stuff
 modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
