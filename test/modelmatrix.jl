@@ -377,7 +377,7 @@
     @testset "#136" begin
         t = (x = rand(100), y = randn(100));
         f = @formula(y ~ x)
-        @test_throws ArgumentError modelcols(f, t)
+        @test modelcols(f, t) === (t.y, t.x)
     end
 
 end
