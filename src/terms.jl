@@ -129,6 +129,12 @@ FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
     FunctionTerm{Fo, Fa, names}(forig, fanon, exorig, args_parsed)
 width(::FunctionTerm) = 1
 
+struct FunctionTerm2{F,Args} <: AbstractTerm
+    f::F
+    args::Args
+end
+width(::FunctionTerm2) = 1
+
 """
     InteractionTerm{Ts} <: AbstractTerm
 
@@ -512,6 +518,15 @@ modelcols(t::Term, d::NamedTuple) = getproperty(d, t.sym)
 # TODO: @generated to unroll the getfield stuff
 modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
     ft.fanon.(getfield.(Ref(d), Names)...)
+
+modelcols(ft::FunctionTerm2, d::NamedTuple) =
+    Base.Broadcast.materialize(lazy_modelcols(ft, d))
+
+lazy_modelcols(ft::FunctionTerm2, d::NamedTuple) =
+    Base.Broadcast.broadcasted(ft.f, lazy_modelcols.(ft.args, Ref(d))...)
+lazy_modelcols(x, d) = modelcols(x, d)
+
+                
 
 modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
 

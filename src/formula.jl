@@ -88,6 +88,16 @@ function capture_call_ex!(ex::Expr, ex_parsed::Expr)
     return ex
 end
 
+# this doesn't QUITE work, needs to protect specials when recursing...
+function capture_call_ex2!(ex::Expr)
+    f = esc(ex.args[1])
+    args = parse!.(ex.args[2:end])
+    ex.args = [:FunctionTerm2,
+               f,
+               :[$(args...)]]
+    ex
+end
+
 function parse!(ex::Expr)
     catch_dollar(ex)
     check_call(ex)
@@ -97,10 +107,7 @@ function parse!(ex::Expr)
         ex.args[2:end] .= parse!.(ex.args[2:end])
     else
         # capture non-special calls
-        ex_parsed = deepcopy(ex)
-        ex = capture_call_ex!(ex, ex_parsed)
-        # final argument of capture_call holds parsed terms
-        ex.args[end].args .= parse!.(ex.args[end].args)
+        ex = capture_call_ex2!(ex)
     end
     return ex
     
