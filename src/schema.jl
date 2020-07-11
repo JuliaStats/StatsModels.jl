@@ -233,6 +233,63 @@ function apply_schema(t::ConstantTerm, schema::Schema, Mod::Type)
     InterceptTerm{t.n==1}()
 end
 
+# protection, borrowed from #117
+#
+# general idea is once we hit a FunctionTerm, we need to continue to
+# apply_schema because there might be some child that is un-protected.  So we
+# enter the Protected context and recursively apply_schema, and when we
+# encounter `unprotect` we restore the old context and continue to recursively
+# apply_schema
+struct Protected{Ctx} end
+Base.broadcastable(x::Protected) = Ref(x)
+# construct singletons to avoid method ambiguities using Type{<:Protected}
+protect(ctx) = Protected{ctx}()
+
+
+function apply_schema(t::FunctionTerm2, schema::Schema, Mod::Type)
+    args = apply_schema.(t.args, schema, protect(Mod))
+    FunctionTerm2(t.f, args, t.exorig)
+end
+
+apply_schema(t::FunctionTerm2, schema::Schema, Ctx::Protected) =
+    FunctionTerm2(t.f, apply_schema.(t.args, schema, Ctx), t.exorig)
+apply_schema(t, schema::Schema, Ctx::Protected) = t
+
+unprotect(t) = t
+unprotect(t::FunctionTerm2{typeof(protect)}) = only(t.args)
+
+function apply_schema(t::FunctionTerm2{typeof(unprotect)}, schema::Schema, Ctx::Protected{OldCtx}) where {OldCtx}
+    tt = only(t.args)
+    apply_schema(tt, schema, OldCtx)
+end
+
+
+# un-protecting special syntax: &, +, and *
+# 
+# if these occur as children of a non-special call, they are protected by
+# default.  so if we encounter them during apply_schema and we're NOT
+# in a Protected context, we need to call the corresponding op on the
+# # arguments of the FunctionCall
+
+# for op in (+, &, *)
+#     @eval begin
+#         apply_schema(t::FunctionTerm2{typeof($op)}, sch::Schema, Mod::Type) =
+#             apply_schema(t.f(t.args...), sch, Mod)
+#     end
+# end
+
+macro unprotect(op)
+    esc(quote
+        apply_schema(t::StatsModels.FunctionTerm2{typeof($op)}, sch::StatsModels.Schema, Mod::Type) =
+            apply_schema(t.f(t.args...), sch, Mod)
+    end)
+end
+
+@unprotect(+)
+@unprotect(&)
+@unprotect(*)
+
+
 """
     has_schema(t::T) where {T<:AbstractTerm}
 
