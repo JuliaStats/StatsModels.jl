@@ -1,4 +1,4 @@
-using StatsModels: collect_matrix_terms, MatrixTerm
+using StatsModels: collect_matrix_terms, MatrixTerm, Schema
 
 poly(x, n) = x^n
 
@@ -9,8 +9,8 @@ struct PolyTerm <: AbstractTerm
 end
 PolyTerm(t::Term, deg::ConstantTerm) = PolyTerm(t.sym, deg.n)
 
-StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, ::Type{<:PolyModel}) =
-    PolyTerm(t.args_parsed...)
+StatsModels.apply_schema(t::FunctionTerm2{typeof(poly)}, sch::Schema, Mod::Type{<:PolyModel}) =
+    apply_schema(poly(t.args...), sch, Mod)
 
 StatsModels.modelcols(p::PolyTerm, d::NamedTuple) =
     reduce(hcat, [d[p.term].^n for n in 1:p.deg])
@@ -35,7 +35,7 @@ end
         f = @formula(y ~ poly(x, 3))
 
         f_plain = apply_schema(f, sch)
-        @test f_plain.rhs.terms[1] isa FunctionTerm
+        @test f_plain.rhs.terms[1] isa FunctionTerm2
         @test f_plain == apply_schema(f, sch, Nothing)
         @test last(modelcols(f_plain, d)) == hcat(d[:x].^3)
         

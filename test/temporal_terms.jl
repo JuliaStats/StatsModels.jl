@@ -76,6 +76,12 @@ using DataStructures
             # Broken because of: https://github.com/JuliaStats/StatsModels.jl/issues/114
             @test_broken resp, pred = modelcols(f, df);
             @test_broken isequal(pred[:, 1], [missing; fill(1, 9)])
+
+            f2 = @formula(y ~ (x - unprotect(lag(x))))
+            f2 = apply_schema(f2, schema(f2, df))
+            resp, pred = modelcols(f2, df)
+            @test pred[1] === missing
+            @test all(pred[2:end] .== 1)
         end
 
         @testset "Unhappy path" begin
