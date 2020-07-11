@@ -65,54 +65,28 @@ end
 
 const SPECIALS = (:+, :&, :*, :~)
 
-
-"""
-    capture_call_ex!(ex::Expr, ex_parsed::Expr)
-
-Capture a call to a function that is not part of the formula DSL.  This replaces
-`ex` with a call to [`capture_call`](@ref).  `ex_parsed` is a copy of `ex` whose
-arguments have been parsed according to the normal formula DSL rules and which 
-will be passed as the final argument to `capture_call`.
-"""
-function capture_call_ex!(ex::Expr, ex_parsed::Expr)
-    symbols = extract_symbols(ex)
-    symbols_ex = Expr(:tuple, symbols...)
-    f_anon_ex = esc(Expr(:(->), symbols_ex, copy(ex)))
-    f_orig = ex.args[1]
-    ex.args = [:capture_call,
-               esc(f_orig),
-               f_anon_ex,
-               tuple(symbols...),
-               Meta.quot(deepcopy(ex)),
-               :[$(ex_parsed.args[2:end]...)]]
-    return ex
-end
-
-# this doesn't QUITE work, needs to protect specials when recursing...
-function capture_call_ex2!(ex::Expr)
-    f = esc(ex.args[1])
-    args = parse!.(ex.args[2:end])
-    ex.args = [:FunctionTerm2,
-               f,
-               :[$(args...)]]
-    ex
-end
-
-function parse!(ex::Expr)
+function parse!(ex::Expr, protected::Bool=false)
     catch_dollar(ex)
     check_call(ex)
 
-    if ex.args[1] ∈ SPECIALS
+    if ex.args[1] ∈ SPECIALS && !protected
         ex.args[1] = esc(ex.args[1])
-        ex.args[2:end] .= parse!.(ex.args[2:end])
+        ex.args[2:end] .= parse!.(ex.args[2:end], false)
     else
-        # capture non-special calls
-        ex = capture_call_ex2!(ex)
+        # capture non-special call, or special call inside a non-special
+        exorig = deepcopy(ex)
+        f = esc(ex.args[1])
+        args = parse!.(ex.args[2:end], true)
+        ex.args = [:FunctionTerm2,
+                   f,
+                   :[$(args...)],
+                   Meta.quot(exorig)]
+        ex
     end
     return ex
     
 end
 
-parse!(::Nothing) = :(nothing)
-parse!(s::Symbol) = :(Term($(Meta.quot(s))))
-parse!(n::Number) = :(ConstantTerm($n))
+parse!(::Nothing, protected) = :(nothing)
+parse!(s::Symbol, protected) = :(Term($(Meta.quot(s))))
+parse!(n::Number, protected) = :(ConstantTerm($n))
