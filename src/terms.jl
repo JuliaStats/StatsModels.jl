@@ -132,6 +132,7 @@ width(::FunctionTerm) = 1
 struct FunctionTerm2{F,Args} <: AbstractTerm
     f::F
     args::Args
+    exorig::Expr
 end
 width(::FunctionTerm2) = 1
 
@@ -373,6 +374,15 @@ function Base.show(io::IO, ::MIME"text/plain",
                    prefix = "") where {Fo,Fa,names}
     print(io, prefix, "(")
     join(io, names, ",")
+    print(io, ")->", t.exorig)
+end
+
+Base.show(io::IO, t::FunctionTerm2) = print(io, ":($(t.exorig))")
+function Base.show(io::IO, ::MIME"text/plain",
+                   t::FunctionTerm2;
+                   prefix = "")
+    print(io, prefix, "(")
+    join(io, termvars(t), ",")
     print(io, ")->", t.exorig)
 end
 
