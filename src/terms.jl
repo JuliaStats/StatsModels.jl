@@ -524,6 +524,7 @@ julia> modelcols(MatrixTerm(ts), d)
 modelcols(ts::TupleTerm, d::NamedTuple) = modelcols.(ts, Ref(d))
 
 modelcols(t::Term, d::NamedTuple) = getproperty(d, t.sym)
+modelcols(t::ConstantTerm, d::NamedTuple) = t.n
 
 # TODO: @generated to unroll the getfield stuff
 modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
@@ -606,6 +607,7 @@ StatsBase.coefnames(t::ContinuousTerm) = string(t.sym)
 StatsBase.coefnames(t::CategoricalTerm) = 
     ["$(t.sym): $name" for name in t.contrasts.termnames]
 StatsBase.coefnames(t::FunctionTerm) = string(t.exorig)
+StatsBase.coefnames(t::FunctionTerm2) = string(t.exorig)
 StatsBase.coefnames(ts::TupleTerm) = reduce(vcat, coefnames.(ts))
 StatsBase.coefnames(t::MatrixTerm) = mapreduce(coefnames, vcat, t.terms)
 StatsBase.coefnames(t::InteractionTerm) =

@@ -41,7 +41,7 @@ export
     InteractionTerm,
     FormulaTerm,
     InterceptTerm,
-    FunctionTerm,
+    FunctionTerm2,
     LagTerm,
     MatrixTerm,
 
@@ -56,7 +56,10 @@ export
     width,
     modelcols,
     modelmatrix,
-    response
+    response,
+    protect,
+    unprotect
+    
 
 include("traits.jl")
 include("contrasts.jl")

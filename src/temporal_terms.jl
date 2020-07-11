@@ -28,13 +28,13 @@ end
 
 terms(t::LeadLagTerm) = (t.term, )
 
-function apply_schema(t::FunctionTerm{F}, sch::Schema, ctx::Type) where F<:Union{typeof(lead), typeof(lag)}
+function apply_schema(t::FunctionTerm2{F}, sch::Schema, ctx::Type) where F<:Union{typeof(lead), typeof(lag)}
     opname = string(nameof(F.instance))
-    if length(t.args_parsed) == 1  # lag(term)
-        term_parsed = first(t.args_parsed)
+    if length(t.args) == 1  # lag(term)
+        term_parsed = first(t.args)
         nsteps = 1
-    elseif length(t.args_parsed) == 2  # lag(term, nsteps)
-        term_parsed, nsteps_parsed = t.args_parsed
+    elseif length(t.args) == 2  # lag(term, nsteps)
+        term_parsed, nsteps_parsed = t.args
         (nsteps_parsed isa ConstantTerm) ||
             throw(ArgumentError("$opname step must be a number (got $nsteps_parsed)"))
         nsteps = nsteps_parsed.n
