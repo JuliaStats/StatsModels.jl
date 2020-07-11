@@ -10,7 +10,6 @@
 
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
-terms(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
 terms(t::FunctionTerm2) = mapreduce(terms, union, t.args)
 terms(t::AbstractTerm) = [t]
 terms(t::MatrixTerm) = terms(t.terms)
@@ -431,7 +430,6 @@ termsyms(t::InterceptTerm{true}) = Set(1)
 termsyms(t::ConstantTerm) = Set((t.n,))
 termsyms(t::Union{Term, CategoricalTerm, ContinuousTerm}) = Set([t.sym])
 termsyms(t::InteractionTerm) = mapreduce(termsyms, union, t.terms)
-termsyms(t::FunctionTerm) = Set([t.exorig])
 termsyms(t::FunctionTerm2) = Set([t.exorig])
 
 symequal(t1::AbstractTerm, t2::AbstractTerm) = issetequal(termsyms(t1), termsyms(t2))
@@ -448,5 +446,4 @@ termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
 termvars(t::TupleTerm) = mapreduce(termvars, union, t, init=Symbol[])
 termvars(t::MatrixTerm) = termvars(t.terms)
 termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
-termvars(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = collect(names)
 termvars(t::FunctionTerm2) = mapreduce(termvars, union, t.args, init=Symbol[])

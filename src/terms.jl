@@ -118,17 +118,6 @@ julia> modelcols(f.rhs, (a=[3, 4], b=[4, 5]))
  2.302585092994046 
 ```
 """
-struct FunctionTerm{Forig,Fanon,Names} <: AbstractTerm
-    forig::Forig
-    fanon::Fanon
-    exorig::Expr
-    args_parsed::Vector
-end
-FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
-             exorig::Expr, args_parsed) where {Fo,Fa,N}  =
-    FunctionTerm{Fo, Fa, names}(forig, fanon, exorig, args_parsed)
-width(::FunctionTerm) = 1
-
 struct FunctionTerm2{F,Args} <: AbstractTerm
     f::F
     args::Args
@@ -348,15 +337,6 @@ function Base.show(io::IO, mime::MIME"text/plain", t::FormulaTerm; prefix="")
     show(io, mime, t.rhs, prefix="\n  ")
 end
 
-Base.show(io::IO, t::FunctionTerm) = print(io, ":($(t.exorig))")
-function Base.show(io::IO, ::MIME"text/plain",
-                   t::FunctionTerm{Fo,Fa,names};
-                   prefix = "") where {Fo,Fa,names}
-    print(io, prefix, "(")
-    join(io, names, ",")
-    print(io, ")->", t.exorig)
-end
-
 Base.show(io::IO, t::FunctionTerm2) = print(io, ":($(t.exorig))")
 function Base.show(io::IO, ::MIME"text/plain",
                    t::FunctionTerm2;
@@ -429,8 +409,8 @@ cleanup(x) = x
 
 degree(::AbstractTerm) = 1
 degree(t::InteractionTerm) = mapreduce(degree, +, t.terms)
-# dirty hack
-degree(::FunctionTerm{typeof(|)}) = Inf
+# dirty hack, move to MixedModels.jl
+degree(::FunctionTerm2{typeof(|)}) = Inf
 
 ################################################################################
 # evaluating terms with data to generate model matrix entries
@@ -505,10 +485,6 @@ modelcols(ts::TupleTerm, d::NamedTuple) = modelcols.(ts, Ref(d))
 
 modelcols(t::Term, d::NamedTuple) = getproperty(d, t.sym)
 modelcols(t::ConstantTerm, d::NamedTuple) = t.n
-
-# TODO: @generated to unroll the getfield stuff
-modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
-    ft.fanon.(getfield.(Ref(d), Names)...)
 
 modelcols(ft::FunctionTerm2, d::NamedTuple) =
     Base.Broadcast.materialize(lazy_modelcols(ft, d))
@@ -586,7 +562,6 @@ StatsBase.coefnames(::InterceptTerm{H}) where {H} = H ? "(Intercept)" : []
 StatsBase.coefnames(t::ContinuousTerm) = string(t.sym)
 StatsBase.coefnames(t::CategoricalTerm) = 
     ["$(t.sym): $name" for name in t.contrasts.termnames]
-StatsBase.coefnames(t::FunctionTerm) = string(t.exorig)
 StatsBase.coefnames(t::FunctionTerm2) = string(t.exorig)
 StatsBase.coefnames(ts::TupleTerm) = reduce(vcat, coefnames.(ts))
 StatsBase.coefnames(t::MatrixTerm) = mapreduce(coefnames, vcat, t.terms)
