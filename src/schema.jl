@@ -10,7 +10,7 @@
 
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
-terms(t::FunctionTerm2) = mapreduce(terms, union, t.args)
+terms(t::FunctionTerm) = mapreduce(terms, union, t.args)
 terms(t::AbstractTerm) = [t]
 terms(t::MatrixTerm) = terms(t.terms)
 terms(t::TupleTerm) = mapreduce(terms, union, t)
@@ -245,19 +245,19 @@ Base.broadcastable(x::Protected) = Ref(x)
 protect(ctx) = Protected{ctx}()
 
 
-function apply_schema(t::FunctionTerm2, schema::Schema, Mod::Type)
+function apply_schema(t::FunctionTerm, schema::Schema, Mod::Type)
     args = apply_schema.(t.args, schema, protect(Mod))
-    FunctionTerm2(t.f, args, t.exorig)
+    FunctionTerm(t.f, args, t.exorig)
 end
 
-apply_schema(t::FunctionTerm2, schema::Schema, Ctx::Protected) =
-    FunctionTerm2(t.f, apply_schema.(t.args, schema, Ctx), t.exorig)
+apply_schema(t::FunctionTerm, schema::Schema, Ctx::Protected) =
+    FunctionTerm(t.f, apply_schema.(t.args, schema, Ctx), t.exorig)
 apply_schema(t, schema::Schema, Ctx::Protected) = t
 
 unprotect(t) = t
-unprotect(t::FunctionTerm2{typeof(protect)}) = only(t.args)
+unprotect(t::FunctionTerm{typeof(protect)}) = only(t.args)
 
-function apply_schema(t::FunctionTerm2{typeof(unprotect)}, schema::Schema, Ctx::Protected{OldCtx}) where {OldCtx}
+function apply_schema(t::FunctionTerm{typeof(unprotect)}, schema::Schema, Ctx::Protected{OldCtx}) where {OldCtx}
     tt = only(t.args)
     apply_schema(tt, schema, OldCtx)
 end
@@ -272,14 +272,14 @@ end
 
 # for op in (+, &, *)
 #     @eval begin
-#         apply_schema(t::FunctionTerm2{typeof($op)}, sch::Schema, Mod::Type) =
+#         apply_schema(t::FunctionTerm{typeof($op)}, sch::Schema, Mod::Type) =
 #             apply_schema(t.f(t.args...), sch, Mod)
 #     end
 # end
 
 macro unprotect(op)
     esc(quote
-        apply_schema(t::StatsModels.FunctionTerm2{typeof($op)}, sch::StatsModels.Schema, Mod::Type) =
+        apply_schema(t::StatsModels.FunctionTerm{typeof($op)}, sch::StatsModels.Schema, Mod::Type) =
             apply_schema(t.f(t.args...), sch, Mod)
     end)
 end
@@ -430,7 +430,7 @@ termsyms(t::InterceptTerm{true}) = Set(1)
 termsyms(t::ConstantTerm) = Set((t.n,))
 termsyms(t::Union{Term, CategoricalTerm, ContinuousTerm}) = Set([t.sym])
 termsyms(t::InteractionTerm) = mapreduce(termsyms, union, t.terms)
-termsyms(t::FunctionTerm2) = Set([t.exorig])
+termsyms(t::FunctionTerm) = Set([t.exorig])
 
 symequal(t1::AbstractTerm, t2::AbstractTerm) = issetequal(termsyms(t1), termsyms(t2))
 
@@ -446,4 +446,4 @@ termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
 termvars(t::TupleTerm) = mapreduce(termvars, union, t, init=Symbol[])
 termvars(t::MatrixTerm) = termvars(t.terms)
 termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
-termvars(t::FunctionTerm2) = mapreduce(termvars, union, t.args, init=Symbol[])
+termvars(t::FunctionTerm) = mapreduce(termvars, union, t.args, init=Symbol[])

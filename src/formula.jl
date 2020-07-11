@@ -77,7 +77,7 @@ function parse!(ex::Expr, protected::Bool=false)
         exorig = deepcopy(ex)
         f = esc(ex.args[1])
         args = parse!.(ex.args[2:end], true)
-        ex.args = [:FunctionTerm2,
+        ex.args = [:FunctionTerm,
                    f,
                    :[$(args...)],
                    Meta.quot(exorig)]

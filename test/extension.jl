@@ -10,7 +10,7 @@ end
 PolyTerm(t::Term, deg::ConstantTerm) = PolyTerm(t.sym, deg.n)
 poly(t::AbstractTerm, deg) = PolyTerm(t, deg)
 
-StatsModels.apply_schema(t::FunctionTerm2{typeof(poly)}, sch::Schema, Mod::Type{<:PolyModel}) =
+StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch::Schema, Mod::Type{<:PolyModel}) =
     apply_schema(poly(t.args...), sch, Mod)
 
 StatsModels.modelcols(p::PolyTerm, d::NamedTuple) =
@@ -36,7 +36,7 @@ end
         f = @formula(y ~ poly(x, 3))
 
         f_plain = apply_schema(f, sch)
-        @test f_plain.rhs.terms[1] isa FunctionTerm2
+        @test f_plain.rhs.terms[1] isa FunctionTerm
         # this is true but == not defined correctly and apply_schema creates a new instance
         @test_broken f_plain == apply_schema(f, sch, Nothing)
         @test last(modelcols(f_plain, d)) == hcat(d[:x].^3)

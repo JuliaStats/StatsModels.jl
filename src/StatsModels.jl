@@ -41,7 +41,7 @@ export
     InteractionTerm,
     FormulaTerm,
     InterceptTerm,
-    FunctionTerm2,
+    FunctionTerm,
     LagTerm,
     MatrixTerm,
 
