@@ -1,11 +1,23 @@
 abstract type AbstractTerm end
-const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
-const TupleTerm = NTuple{N, TermOrTerms} where N
+
+const TermOrTerms = Union{AbstractTerm, Vector{<:AbstractTerm}} #NTuple{N, AbstractTerm} where N}
+const MultiTerm = Vector{<:TermOrTerms} #NTuple{N, TermOrTerms} where N
 
 Base.broadcastable(x::AbstractTerm) = Ref(x)
 
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
+
+Base.:(==)(a::T, b::T) where {T<:AbstractTerm} =
+    all(getfield(a, f) == getfield(b, f) for f in fieldnames(T))
+Base.isequal(a::T, b::T) where {T<:AbstractTerm} = a == b
+function Base.hash(t::T, h::UInt) where {T<:AbstractTerm}
+    h = hash(T,h)
+    for f in fieldnames(T)
+        h = hash(getfield(t, f), h)
+    end
+    h
+end
 
 """
     Term <: AbstractTerm
@@ -241,15 +253,15 @@ A matrix term is created by [`apply_schema`](@ref) from a tuple of terms using
 terms as determined by the trait function [`is_matrix_term`](@ref), which is 
 true by default for all `AbstractTerm`s.
 """
-struct MatrixTerm{Ts<:TupleTerm} <: AbstractTerm
-    terms::Ts
+struct MatrixTerm <: AbstractTerm
+    terms::Vector{AbstractTerm}
 end
-# wrap single terms in a tuple
-MatrixTerm(t::AbstractTerm) = MatrixTerm((t, ))
+# wrap single terms in a vector
+MatrixTerm(t::AbstractTerm) = MatrixTerm(AbstractTerm[t])
 width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
 
 """
-    collect_matrix_terms(ts::TupleTerm)
+    collect_matrix_terms(ts::MultiTerm)
     collect_matrix_terms(t::AbstractTerm) = collect_matrix_term((t, ))
 
 Depending on whether the component terms are matrix terms (meaning they have
@@ -270,19 +282,19 @@ random effects terms in
 [MixedModels.jl](https://github.com/dmbates/MixedModels.jl).
 
 """
-function collect_matrix_terms(ts::TupleTerm)
+function collect_matrix_terms(ts::MultiTerm)
     ismat = collect(is_matrix_term.(ts))
     if all(ismat)
         MatrixTerm(ts)
     elseif any(ismat)
         matterms = ts[ismat]
-        (MatrixTerm(ts[ismat]), ts[.!ismat]...)
+        append!(AbstractTerm[MatrixTerm(ts[ismat])], ts[.!ismat])
     else
         ts
     end
 end
 collect_matrix_terms(t::T) where {T<:AbstractTerm} =
-    is_matrix_term(T) ? MatrixTerm((t, )) : t
+    is_matrix_term(T) ? MatrixTerm([t]) : t
 collect_matrix_terms(t::MatrixTerm) = t
 
 
@@ -311,7 +323,7 @@ function Base.show(io::IO, mime::MIME"text/plain", term::AbstractTerm; prefix=""
     print(io, prefix, term)
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", terms::TupleTerm; prefix=nothing)
+function Base.show(io::IO, mime::MIME"text/plain", terms::MultiTerm; prefix=nothing)
     for t in terms
         show(io, mime, t; prefix=something(prefix, ""))
         # ensure that there are newlines in between each term after the first
@@ -319,7 +331,7 @@ function Base.show(io::IO, mime::MIME"text/plain", terms::TupleTerm; prefix=noth
         prefix = something(prefix, '\n')
     end
 end
-Base.show(io::IO, terms::TupleTerm) = join(io, terms, " + ")
+Base.show(io::IO, terms::MultiTerm) = join(io, terms, " + ")
 
 Base.show(io::IO, ::MIME"text/plain", t::Term; prefix="") =
     print(io, prefix, t.sym, "(unknown)")
@@ -375,36 +387,36 @@ Base.show(io::IO, mime::MIME"text/plain", t::MatrixTerm; prefix="") =
 Base.:~(lhs::TermOrTerms, rhs::TermOrTerms) = FormulaTerm(lhs, cleanup(rhs))
 
 Base.:&(term::AbstractTerm) = term
-Base.:&(a::AbstractTerm, b::AbstractTerm) = InteractionTerm((a,b))
+Base.:&(a::AbstractTerm, b::AbstractTerm) = InteractionTerm([a,b])
 Base.:&(terms::AbstractTerm...) = reduce(&, terms)
 
 Base.:&(::ConstantTerm, b::AbstractTerm) = b
 Base.:&(a::AbstractTerm, ::ConstantTerm) = a
 
 # associative rule
-Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
-Base.:&(term::AbstractTerm, it::InteractionTerm) = InteractionTerm((term, it.terms...))
+Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm(append!(copy(it.terms), terms))
+Base.:&(term::AbstractTerm, it::InteractionTerm) = InteractionTerm(pushfirst!(copy(it.terms), term))
 
 # distributive rule
-Base.:&(term::AbstractTerm, terms::TupleTerm) = term .& terms
-Base.:&(terms::TupleTerm, term::AbstractTerm) = terms .& term
-Base.:&(as::TupleTerm, bs::TupleTerm) = ((a & b for a in as for b in bs)..., )
+Base.:&(term::AbstractTerm, terms::MultiTerm) = term .& terms
+Base.:&(terms::MultiTerm, term::AbstractTerm) = terms .& term
+Base.:&(as::MultiTerm, bs::MultiTerm) = AbstractTerm[a & b for a in as for b in bs]
 
 # + concatenates terms
-Base.:+(terms::AbstractTerm...) = (unique(reduce(+, terms))..., )
+Base.:+(terms::AbstractTerm...) = unique!(reduce(+, terms))
 Base.:+(a::AbstractTerm) = a
-Base.:+(a::AbstractTerm, b::AbstractTerm) = (a,b)
+Base.:+(a::AbstractTerm, b::AbstractTerm) = AbstractTerm[a,b]
 
 # associative rule for +
-Base.:+(as::TupleTerm, b::AbstractTerm) = (as..., b)
-Base.:+(a::AbstractTerm, bs::TupleTerm) = (a, bs...)
-Base.:+(as::TupleTerm, bs::TupleTerm) = (as..., bs...)
+Base.:+(as::MultiTerm, b::AbstractTerm) = push!(copy(as), b)
+Base.:+(a::AbstractTerm, bs::MultiTerm) = pushfirst!(copy(bs), a)
+Base.:+(as::MultiTerm, bs::MultiTerm) = append!(copy(as), bs)
 
 # * expansion
 Base.:*(a::TermOrTerms, b::TermOrTerms) = a + b + a&b
-Base.:*(a::TermOrTerms, b::TermOrTerms, cs...) = (a*b)*cs
+Base.:*(a::TermOrTerms, b::TermOrTerms, cs...) = sort!(foldl(*, cs, init=a*b), by=degree)
 
-cleanup(terms::TupleTerm) = tuple(sort!(unique!([terms...]), by=degree)...)
+cleanup(terms::MultiTerm) = sort!(unique(terms), by=degree)
 cleanup(x) = x
 
 degree(::AbstractTerm) = 1
@@ -481,7 +493,7 @@ julia> modelcols(MatrixTerm(ts), d)
  9.0  0.65323   0.0  1.0
 ```
 """
-modelcols(ts::TupleTerm, d::NamedTuple) = modelcols.(ts, Ref(d))
+modelcols(ts::MultiTerm, d::NamedTuple) = modelcols.(tuple(ts...), Ref(d))
 
 modelcols(t::Term, d::NamedTuple) = getproperty(d, t.sym)
 modelcols(t::ConstantTerm, d::NamedTuple) = t.n
@@ -563,7 +575,7 @@ StatsBase.coefnames(t::ContinuousTerm) = string(t.sym)
 StatsBase.coefnames(t::CategoricalTerm) = 
     ["$(t.sym): $name" for name in t.contrasts.termnames]
 StatsBase.coefnames(t::FunctionTerm) = string(t.exorig)
-StatsBase.coefnames(ts::TupleTerm) = reduce(vcat, coefnames.(ts))
+StatsBase.coefnames(ts::MultiTerm) = reduce(vcat, coefnames.(ts))
 StatsBase.coefnames(t::MatrixTerm) = mapreduce(coefnames, vcat, t.terms)
 StatsBase.coefnames(t::InteractionTerm) =
     kron_insideout((args...) -> join(args, " & "), vectorize.(coefnames.(t.terms))...)

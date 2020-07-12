@@ -13,7 +13,7 @@ terms(t::InteractionTerm) = terms(t.terms)
 terms(t::FunctionTerm) = mapreduce(terms, union, t.args)
 terms(t::AbstractTerm) = [t]
 terms(t::MatrixTerm) = terms(t.terms)
-terms(t::TupleTerm) = mapreduce(terms, union, t)
+terms(t::MultiTerm) = mapreduce(terms, union, t)
 
 needs_schema(::AbstractTerm) = true
 needs_schema(::ConstantTerm) = false
@@ -119,14 +119,14 @@ schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
     schema(ts, columntable(data), hints)
 
 # handle hints:
-schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
-      hints::Dict{Symbol}=Dict{Symbol,Any}()) =
-    sch = Schema(t=>concrete_term(t, dt, hints) for t in ts)
+# schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
+#        hints::Dict{Symbol}=Dict{Symbol,Any}()) =
+#     Schema(t=>concrete_term(t, dt, hints) for t in ts)
 
-schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
-    schema(filter(needs_schema, terms(f)), data, hints)
+schema(ts::TermOrTerms, data::ColumnTable, hints::Dict{Symbol}=Dict{Symbol,Any}()) =
+    Schema(t=>concrete_term(t, data, hints) for t in terms(ts) if needs_schema(t))
 
-schema(f::TermOrTerms, data) = schema(f, data, Dict{Symbol,Any}())
+schema(f::TermOrTerms, data) = schema(f, columntable(data), Dict{Symbol,Any}())
 
 """
     concrete_term(t::Term, data[, hint])
@@ -209,7 +209,7 @@ in _most_ cases, but cause method ambiguity in some.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 apply_schema(t, schema, Mod::Type) = t
-apply_schema(terms::TupleTerm, schema, Mod::Type) = sum(apply_schema.(terms, Ref(schema), Mod))
+apply_schema(terms::Vector, schema, Mod::Type) = sum(apply_schema.(terms, Ref(schema), Mod))
 
 apply_schema(t::Term, schema::Schema, Mod::Type) = schema[t]
 apply_schema(ft::FormulaTerm, schema::Schema, Mod::Type) =
@@ -299,7 +299,7 @@ has_schema(t::ConstantTerm) = false
 has_schema(t::Term) = false
 has_schema(t::Union{ContinuousTerm,CategoricalTerm}) = true
 has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
-has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
+has_schema(t::MultiTerm) = all(has_schema(tt) for tt in t)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
 
 struct FullRank
@@ -409,8 +409,8 @@ end
 drop_term(from, to) = symequal(from, to) ? ConstantTerm(1) : from
 drop_term(from::FormulaTerm, to) = FormulaTerm(from.lhs, drop_term(from.rhs, to))
 drop_term(from::MatrixTerm, to) = MatrixTerm(drop_term(from.terms, to))
-drop_term(from::TupleTerm, to) =
-    tuple((t for t = from if !symequal(t, to))...)
+drop_term(from::MultiTerm, to) =
+    AbstractTerm[t for t = from if !symequal(t, to)]
 function drop_term(from::InteractionTerm, t)
     terms = drop_term(from.terms, t)
     length(terms) > 1 ? InteractionTerm(terms) : terms[1]
@@ -443,7 +443,7 @@ The data variables that this term refers to.
 termvars(::AbstractTerm) = Symbol[]
 termvars(t::Union{Term, CategoricalTerm, ContinuousTerm}) = [t.sym]
 termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
-termvars(t::TupleTerm) = mapreduce(termvars, union, t, init=Symbol[])
+termvars(t::MultiTerm) = mapreduce(termvars, union, t, init=Symbol[])
 termvars(t::MatrixTerm) = termvars(t.terms)
 termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
 termvars(t::FunctionTerm) = mapreduce(termvars, union, t.args, init=Symbol[])

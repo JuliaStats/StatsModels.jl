@@ -84,7 +84,7 @@ ModelFrame(f::FormulaTerm, data; model=StatisticalModel, contrasts=Dict{Symbol,A
 
 StatsBase.modelmatrix(f::FormulaTerm, data; kwargs...) = modelmatrix(f.rhs, data; kwargs...)
 
-function StatsBase.modelmatrix(t::Union{AbstractTerm, TupleTerm}, data;
+function StatsBase.modelmatrix(t::TermOrTerms, data;
                                hints=Dict{Symbol,Any}(), mod::Type{M}=StatisticalModel) where M
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
