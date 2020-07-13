@@ -729,7 +729,7 @@ function pretty_mat(mat::AbstractMatrix; tol::Real=10*eps(eltype(mat)))
 end
 
 """
-    struct Grouping <: StatsModels.AbstractContrasts end
+    Grouping <: AbstractContrasts
 
 A placeholder type to indicate that a categorical variable is only used for
 grouping and not for contrasts.  When creating a [`CategoricalTerm`](@ref), this
@@ -748,7 +748,7 @@ julia> schema((; grp = string.(1:100_000)))
 
 julia> schema((; grp = string.(1:100_000)), Dict(:grp => Grouping()))
 """
-struct Grouping <: StatsModels.AbstractContrasts
+struct Grouping <: AbstractContrasts
 end
 
 # return an empty matrix
