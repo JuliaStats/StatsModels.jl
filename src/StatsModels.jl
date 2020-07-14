@@ -29,7 +29,6 @@ export
     SeqDiffCoding,
     HypothesisCoding,
     ContrastsCoding,
-    Grouping,
     
     coefnames,
     dropterm,
