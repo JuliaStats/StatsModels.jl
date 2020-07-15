@@ -283,4 +283,53 @@
         cmat3p[1] += 1e-3
         @test needs_intercept(cmat3p) == true
     end
+
+    @testset "levels and baselevel" begin
+        using DataAPI: levels
+        using StatsModels: baselevel, FullDummyCoding, ContrastsCoding
+
+        levs = [:a, :b, :c, :d]
+        base = [:a]
+        for C in [DummyCoding, EffectsCoding, SeqDiffCoding, HelmertCoding]
+            c = C()
+            @test levels(c) == nothing
+            @test baselevel(c) == nothing
+
+            c = C(levels=levs)
+            @test levels(c) == levs
+            @test baselevel(c) == nothing
+
+            c = C(base=base)
+            @test levels(c) == nothing
+            @test baselevel(c) == base
+
+            c = C(levels=levs, base=base)
+            @test levels(c) == levs
+            @test baselevel(c) == base
+        end
+
+        c = FullDummyCoding()
+        @test baselevel(c) == nothing
+        @test levels(c) == nothing
+
+        @test_throws MethodError FullDummyCoding(levels=levs)
+        @test_throws MethodError FullDummyCoding(base=base)
+
+        c = HypothesisCoding(rand(3,4))
+        @test baselevel(c) == levels(c) == nothing
+        c = HypothesisCoding(rand(3,4), levels=levs)
+        @test baselevel(c) == nothing
+        @test levels(c) == levs
+        # no notion of base level for HypothesisCoding
+        @test_throws MethodError HypothesisCoding(rand(3,4), base=base)
+
+        c = ContrastsCoding(rand(4,3))
+        @test baselevel(c) == levels(c) == nothing
+        c = ContrastsCoding(rand(4,3), levels=levs)
+        @test baselevel(c) == nothing
+        @test levels(c) == levs
+        # no notion of base level for ContrastsCoding
+        @test_throws MethodError ContrastsCoding(rand(4,3), base=base)
+        
+    end
 end
