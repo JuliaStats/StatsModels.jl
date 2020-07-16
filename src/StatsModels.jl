@@ -5,6 +5,7 @@ using StatsBase
 using ShiftedArrays
 using ShiftedArrays: lag, lead
 using DataStructures
+using DataAPI
 using DataAPI: levels
 using Printf: @sprintf
 using Distributions: Chisq, ccdf

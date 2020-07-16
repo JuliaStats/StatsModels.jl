@@ -172,6 +172,11 @@ concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol}) =
     concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
 concrete_term(t::Term, d) = concrete_term(t, d, nothing)
 
+# if the "hint" is already an AbstractTerm, use that
+# need this specified to avoid ambiguity
+concrete_term(t::Term, d::ColumnTable, hint::AbstractTerm) = hint
+concrete_term(t::Term, x, hint::AbstractTerm) = hint
+
 # second possible fix for #97
 concrete_term(t, d, hint) = t
 

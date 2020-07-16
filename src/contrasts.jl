@@ -159,12 +159,12 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
     # if levels are defined on contrasts, use those, validating that they line up.
     # what does that mean? either:
     #
-    # 1. contrasts.levels == levels (best case)
+    # 1. DataAPI.levels(contrasts) == levels (best case)
     # 2. data levels missing from contrast: would generate empty/undefined rows.
     #    better to filter data frame first
     # 3. contrast levels missing from data: would have empty columns, generate a
     #    rank-deficient model matrix.
-    c_levels = something(contrasts.levels, levels)
+    c_levels = something(DataAPI.levels(contrasts), levels)
     if eltype(c_levels) != eltype(levels)
         throw(ArgumentError("mismatching levels types: got $(eltype(levels)), expected " *
                             "$(eltype(c_levels)) based on contrasts levels."))
@@ -242,11 +242,13 @@ for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCodin
         ## constructor with optional keyword arguments, defaulting to nothing
         $contrastType(; base=nothing, levels::Union{AbstractVector,Nothing}=nothing) = $contrastType(base, levels)
         baselevel(c::$contrastType) = c.base
+        DataAPI.levels(c::$contrastType) = c.levels
     end
 end
 
-# fallback method for other types that might not have base field
+# fallback method for other types that might not have base or level fields
 baselevel(c::AbstractContrasts) = nothing
+DataAPI.levels(c::AbstractContrasts) = nothing
 
 """
     FullDummyCoding()
@@ -586,6 +588,8 @@ end
 termnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
     something(C.labels, levels[1:length(levels) .!= baseind])
 
+DataAPI.levels(c::HypothesisCoding) = c.levels
+
 """
     StatsModels.ContrastsCoding(mat::AbstractMatrix[, levels]])
     StatsModels.ContrastsCoding(mat::AbstractMatrix[; levels=nothing])
@@ -627,6 +631,8 @@ function contrasts_matrix(C::ContrastsCoding, baseind, n)
     check_contrasts_size(C.mat, n)
     C.mat
 end
+
+DataAPI.levels(c::ContrastsCoding) = c.levels
 
 ## hypothesis matrix
 """
@@ -721,4 +727,3 @@ function pretty_mat(mat::AbstractMatrix; tol::Real=10*eps(eltype(mat)))
         return fracs
     end
 end
-    
