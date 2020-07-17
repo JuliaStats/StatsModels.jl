@@ -404,6 +404,9 @@ Base.:+(terms::AbstractTerm...) = (unique(terms)..., )
 Base.:+(as::TupleTerm, b::AbstractTerm) = (as..., b)
 Base.:+(a::AbstractTerm, bs::TupleTerm) = (a, bs...)
 
+Base.:+(a::MatrixTerm, b::AbstractTerm) =
+    is_matrix_term(b) ? MatrixTerm(a.terms + b) : (a, b)
+
 ################################################################################
 # evaluating terms with data to generate model matrix entries
 
