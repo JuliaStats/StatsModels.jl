@@ -1,7 +1,6 @@
 abstract type AbstractTerm end
 
 const TermOrTerms = Union{AbstractTerm, Vector{<:AbstractTerm}} #NTuple{N, AbstractTerm} where N}
-const MultiTerm = Vector{<:TermOrTerms} #NTuple{N, TermOrTerms} where N
 
 Base.broadcastable(x::AbstractTerm) = Ref(x)
 
@@ -36,6 +35,21 @@ end
 width(::Term) =
     throw(ArgumentError("Un-typed Terms have undefined width.  " *
                         "Did you forget to call apply_schema?"))
+
+struct MultiTerm <: AbstractTerm
+    terms::OrderedSet{AbstractTerm}
+end
+MultiTerm(terms::AbstractVector) = MultiTerm(OrderedSet{AbstractTerm}(terms))
+MultiTerm(term::AbstractTerm) = (t = MultiTerm(); push!(t.terms, term); t)
+MultiTerm() = MultiTerm(OrderedSet{AbstractTerm}())
+width(t::MultiTerm) = sum(width(tt) for tt in t.terms)
+
+Base.iterate(t::MultiTerm) = iterate(t.terms)
+Base.iterate(t::MultiTerm, state) = iterate(t.terms, state)
+Base.length(t::MultiTerm) = length(t.terms)
+Base.lastindex(t::MultiTerm) = length(t)
+Base.getindex(t::MultiTerm, i) = getindex(t.terms, i)
+Base.eltype(::Type{MultiTerm}) = AbstractTerm
 
 """
     ConstantTerm{T<:Number} <: AbstractTerm
@@ -254,11 +268,19 @@ terms as determined by the trait function [`is_matrix_term`](@ref), which is
 true by default for all `AbstractTerm`s.
 """
 struct MatrixTerm <: AbstractTerm
-    terms::Vector{AbstractTerm}
+    terms::MultiTerm
 end
 # wrap single terms in a vector
-MatrixTerm(t::AbstractTerm) = MatrixTerm(AbstractTerm[t])
-width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
+MatrixTerm(t::AbstractTerm) = MatrixTerm(MultiTerm(t))
+width(t::MatrixTerm) = width(t.terms)
+
+Base.iterate(t::MatrixTerm) = iterate(t.terms)
+Base.iterate(t::MatrixTerm, state) = iterate(t.terms, state)
+Base.length(t::MatrixTerm) = length(t.terms)
+Base.lastindex(t::MatrixTerm) = length(t)
+Base.getindex(t::MatrixTerm, i) = getindex(t.terms, i)
+Base.eltype(::Type{MatrixTerm}) = AbstractTerm
+
 
 """
     collect_matrix_terms(ts::MultiTerm)
@@ -282,19 +304,28 @@ random effects terms in
 [MixedModels.jl](https://github.com/dmbates/MixedModels.jl).
 
 """
-function collect_matrix_terms(ts::MultiTerm)
+function collect_matrix_terms(t::MultiTerm)
+    ts = t.terms
     ismat = collect(is_matrix_term.(ts))
     if all(ismat)
-        MatrixTerm(ts)
+        MatrixTerm(t)
     elseif any(ismat)
-        matterms = ts[ismat]
-        append!(AbstractTerm[MatrixTerm(ts[ismat])], ts[.!ismat])
+        matterms = MultiTerm()
+        allterms = AbstractTerm[matterms]
+        for (term,q) in zip(ts, ismat)
+            if q
+                push!(matterms.terms, term)
+            else
+                push!(allterms, term)
+            end
+        end
+        allterms
     else
-        ts
+        t
     end
 end
 collect_matrix_terms(t::T) where {T<:AbstractTerm} =
-    is_matrix_term(T) ? MatrixTerm([t]) : t
+    is_matrix_term(T) ? MatrixTerm(t) : t
 collect_matrix_terms(t::MatrixTerm) = t
 
 
@@ -323,15 +354,15 @@ function Base.show(io::IO, mime::MIME"text/plain", term::AbstractTerm; prefix=""
     print(io, prefix, term)
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", terms::MultiTerm; prefix=nothing)
-    for t in terms
+function Base.show(io::IO, mime::MIME"text/plain", mt::MultiTerm; prefix=nothing)
+    for t in mt.terms
         show(io, mime, t; prefix=something(prefix, ""))
         # ensure that there are newlines in between each term after the first
         # if no prefix is specified
         prefix = something(prefix, '\n')
     end
 end
-Base.show(io::IO, terms::MultiTerm) = join(io, terms, " + ")
+Base.show(io::IO, mt::MultiTerm) = join(io, mt.terms, " + ")
 
 Base.show(io::IO, ::MIME"text/plain", t::Term; prefix="") =
     print(io, prefix, t.sym, "(unknown)")
@@ -398,25 +429,25 @@ Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm(append!(c
 Base.:&(term::AbstractTerm, it::InteractionTerm) = InteractionTerm(pushfirst!(copy(it.terms), term))
 
 # distributive rule
-Base.:&(term::AbstractTerm, terms::MultiTerm) = term .& terms
-Base.:&(terms::MultiTerm, term::AbstractTerm) = terms .& term
-Base.:&(as::MultiTerm, bs::MultiTerm) = AbstractTerm[a & b for a in as for b in bs]
+Base.:&(term::AbstractTerm, terms::MultiTerm) = MultiTerm(term .& terms.terms)
+Base.:&(terms::MultiTerm, term::AbstractTerm) = MultiTerm(terms.terms .& term)
+Base.:&(as::MultiTerm, bs::MultiTerm) = MultiTerm([a & b for a in as.terms for b in bs.terms])
 
 # + concatenates terms
-Base.:+(terms::AbstractTerm...) = unique!(reduce(+, terms))
 Base.:+(a::AbstractTerm) = a
-Base.:+(a::AbstractTerm, b::AbstractTerm) = AbstractTerm[a,b]
+Base.:+(a::AbstractTerm, b::AbstractTerm) = (t = MultiTerm(); push!(t.terms, a); push!(t.terms, b); t)
 
 # associative rule for +
-Base.:+(as::MultiTerm, b::AbstractTerm) = push!(copy(as), b)
-Base.:+(a::AbstractTerm, bs::MultiTerm) = pushfirst!(copy(bs), a)
-Base.:+(as::MultiTerm, bs::MultiTerm) = append!(copy(as), bs)
+Base.:+(as::MultiTerm, b::AbstractTerm) = MultiTerm(push!(copy(as.terms), b))
+Base.:+(a::AbstractTerm, bs::MultiTerm) = (t = MultiTerm([a]); union!(t.terms, bs.terms); t)
+Base.:+(as::MultiTerm, bs::MultiTerm) = MultiTerm(union!(copy(as.terms), bs.terms))
+
 
 # * expansion
-Base.:*(a::TermOrTerms, b::TermOrTerms) = a + b + a&b
-Base.:*(a::TermOrTerms, b::TermOrTerms, cs...) = sort!(foldl(*, cs, init=a*b), by=degree)
+Base.:*(a::AbstractTerm, b::AbstractTerm) = a + b + a&b
+# Base.:*(a::TermOrTerms, b::TermOrTerms, cs...) = sort!(foldl(*, cs, init=a*b), by=degree)
 
-cleanup(terms::MultiTerm) = sort!(unique(terms), by=degree)
+cleanup(terms::MultiTerm) = MultiTerm(sort!(collect(terms.terms), by=degree))
 cleanup(x) = x
 
 degree(::AbstractTerm) = 1
@@ -493,7 +524,7 @@ julia> modelcols(MatrixTerm(ts), d)
  9.0  0.65323   0.0  1.0
 ```
 """
-modelcols(ts::MultiTerm, d::NamedTuple) = modelcols.(tuple(ts...), Ref(d))
+modelcols(ts::MultiTerm, d::NamedTuple) = modelcols.(tuple(ts.terms...), Ref(d))
 
 modelcols(t::Term, d::NamedTuple) = getproperty(d, t.sym)
 modelcols(t::ConstantTerm, d::NamedTuple) = t.n
@@ -552,12 +583,12 @@ modelcols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1),
 modelcols(t::FormulaTerm, d::NamedTuple) = (modelcols(t.lhs,d), modelcols(t.rhs, d))
 
 function modelcols(t::MatrixTerm, d::ColumnTable)
-    mat = reduce(hcat, [modelcols(tt, d) for tt in t.terms])
+    mat = reduce(hcat, [modelcols(tt, d) for tt in t.terms.terms])
     reshape(mat, size(mat, 1), :)
 end
 
 modelcols(t::MatrixTerm, d::NamedTuple) =
-    reduce(vcat, [modelcols(tt, d) for tt in t.terms])
+    reduce(vcat, [modelcols(tt, d) for tt in t.terms.terms])
 
 vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x
@@ -575,8 +606,8 @@ StatsBase.coefnames(t::ContinuousTerm) = string(t.sym)
 StatsBase.coefnames(t::CategoricalTerm) = 
     ["$(t.sym): $name" for name in t.contrasts.termnames]
 StatsBase.coefnames(t::FunctionTerm) = string(t.exorig)
-StatsBase.coefnames(ts::MultiTerm) = reduce(vcat, coefnames.(ts))
-StatsBase.coefnames(t::MatrixTerm) = mapreduce(coefnames, vcat, t.terms)
+StatsBase.coefnames(ts::MultiTerm) = reduce(vcat, coefnames.(ts.terms))
+StatsBase.coefnames(t::MatrixTerm) = coefnames(t.terms)
 StatsBase.coefnames(t::InteractionTerm) =
     kron_insideout((args...) -> join(args, " & "), vectorize.(coefnames.(t.terms))...)
 

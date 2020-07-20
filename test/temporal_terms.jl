@@ -112,7 +112,7 @@ using DataStructures
                 f = @formula(y ~ lag(x))
                 sch = schema(f, df)
                 ff = apply_schema(f, sch)
-                t1 = ff.rhs.terms[1]
+                t1 = ff.rhs[1]
                 t2 = apply_schema(LeadLagTerm{Term, typeof(lag)}(term(:x), 1), sch)
                 t3 = apply_schema(lag(term(:x)), sch)
 
@@ -125,7 +125,7 @@ using DataStructures
                 f = @formula(y ~ lag(x, 3))
                 sch = schema(f, df)
                 ff = apply_schema(f, sch)
-                t1 = ff.rhs.terms[1]
+                t1 = ff.rhs[1]
                 t2 = apply_schema(LeadLagTerm{Term, typeof(lag)}(term(:x), 3), sch)
                 t3 = apply_schema(lag(term(:x), 3), sch)
 
@@ -162,7 +162,7 @@ using DataStructures
                 f = @formula(y ~ lead(x))
                 sch = schema(f, df)
                 ff = apply_schema(f, sch)
-                t1 = ff.rhs.terms[1]
+                t1 = ff.rhs[1]
                 t2 = apply_schema(LeadLagTerm{Term, typeof(lead)}(term(:x), 1), sch)
                 t3 = apply_schema(lead(term(:x)), sch)
 
@@ -175,7 +175,7 @@ using DataStructures
                 f = @formula(y ~ lead(x, 3))
                 sch = schema(f, df)
                 ff = apply_schema(f, sch)
-                t1 = ff.rhs.terms[1]
+                t1 = ff.rhs[1]
                 t2 = apply_schema(LeadLagTerm{Term, typeof(lead)}(term(:x), 3), sch)
                 t3 = apply_schema(lead(term(:x), 3), sch)
 

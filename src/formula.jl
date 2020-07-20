@@ -58,8 +58,8 @@ The rules that are applied are
 * Single-argument `&` calls are stripped, so `&(x)` becomes the main effect `x`.
 """
 macro formula(ex)
-    is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
-    length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
+    # is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
+    # length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
     parse!(ex)
 end
 

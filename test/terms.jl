@@ -1,3 +1,5 @@
+using StatsModels: MultiTerm
+
 function mimestring(mime::Type{<:MIME}, x)
     buf=IOBuffer()
     show(buf, mime(), x)
@@ -53,7 +55,7 @@ StatsModels.apply_schema(mt::MultiTerm2, sch::StatsModels.Schema, Mod::Type) =
     @testset "term operators" begin
         a = term(:a)
         b = term(:b)
-        @test a + b == AbstractTerm[a, b]
+        @test a + b == MultiTerm([a, b])
         @test (a ~ b) == FormulaTerm(a, b)
         @test string(a~b) == "$a ~ $b"
         @test mimestring(a~b) ==
@@ -73,22 +75,22 @@ StatsModels.apply_schema(mt::MultiTerm2, sch::StatsModels.Schema, Mod::Type) =
         @test string(a & b) == "$a & $b"
         @test mimestring(a & b) == "a(unknown) & b(unknown)"
         c = term(:c)
-        @test (a+b)+c == AbstractTerm[a,b,c]
-        @test a+(b+c) == AbstractTerm[a,b,c]
+        @test (a+b)+c == MultiTerm([a,b,c])
+        @test a+(b+c) == MultiTerm([a,b,c])
     end
 
     @testset "expand nested tuples of terms during apply_schema" begin
         sch = schema((a=rand(10), b=rand(10), c=rand(10)))
 
         # nested tuples of terms are expanded by apply_schema
-        terms1 = [term(:a), [term(:b), term(:c)]]
+        terms1 = MultiTerm([term(:a), term(:b) + term(:c)])
         terms2 = apply_schema(terms1, sch, Nothing)
-        @test terms2 isa Vector{AbstractTerm}
-        @test length(terms2) == 3
-        @test terms2 == apply_schema(term.([:a, :b, :c]), sch, Nothing)
+        @test terms2 isa MultiTerm
+        @test length(terms2.terms) == 3
+        @test terms2 == apply_schema(sum(term.([:a, :b, :c])), sch, Nothing)
 
         # a term that generates multiple terms after apply_schema
-        mterms = [terms1[1], MultiTerm2(terms1[2])]
+        mterms = terms1.terms[1] + MultiTerm2(terms1.terms[2])
         terms3 = apply_schema(mterms, sch, Nothing)
 
         @test terms2 == terms3

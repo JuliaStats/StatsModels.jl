@@ -9,11 +9,11 @@
 # schemas in place
 
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
-terms(t::InteractionTerm) = terms(t.terms)
+terms(t::InteractionTerm) = mapreduce(terms, union, t.terms)
 terms(t::FunctionTerm) = mapreduce(terms, union, t.args)
 terms(t::AbstractTerm) = [t]
 terms(t::MatrixTerm) = terms(t.terms)
-terms(t::MultiTerm) = mapreduce(terms, union, t)
+terms(t::MultiTerm) = mapreduce(terms, union, t.terms)
 
 needs_schema(::AbstractTerm) = true
 needs_schema(::ConstantTerm) = false
@@ -122,9 +122,11 @@ schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
 # schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
 #        hints::Dict{Symbol}=Dict{Symbol,Any}()) =
 #     Schema(t=>concrete_term(t, dt, hints) for t in ts)
+schema(t::AbstractTerm, data::ColumnTable, hints::Dict{Symbol}=Dict{Symbol,Any}()) =
+    Schema(tt=>concrete_term(tt, data, hints) for tt in terms(t) if needs_schema(tt))
 
-schema(ts::TermOrTerms, data::ColumnTable, hints::Dict{Symbol}=Dict{Symbol,Any}()) =
-    Schema(t=>concrete_term(t, data, hints) for t in terms(ts) if needs_schema(t))
+schema(ts::AbstractVector{<:AbstractTerm}, data::ColumnTable, hints::Dict{Symbol}=Dict{Symbol,Any}()) =
+    Schema(t=>concrete_term(t, data, hints) for t in ts if needs_schema(t))
 
 schema(f::TermOrTerms, data) = schema(f, columntable(data), Dict{Symbol,Any}())
 
@@ -209,20 +211,21 @@ in _most_ cases, but cause method ambiguity in some.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 apply_schema(t, schema, Mod::Type) = t
-apply_schema(terms::Vector, schema, Mod::Type) = sum(apply_schema.(terms, Ref(schema), Mod))
+apply_schema(t::MultiTerm, schema::Schema, Mod::Type) =
+    sum(apply_schema(tt, schema, Mod) for tt in t.terms)
 
 apply_schema(t::Term, schema::Schema, Mod::Type) = schema[t]
 apply_schema(ft::FormulaTerm, schema::Schema, Mod::Type) =
     FormulaTerm(apply_schema(ft.lhs, schema, Mod),
                 collect_matrix_terms(apply_schema(ft.rhs, schema, Mod)))
 apply_schema(it::InteractionTerm, schema::Schema, Mod::Type) =
-    InteractionTerm(apply_schema(it.terms, schema, Mod))
+    InteractionTerm(apply_schema.(it.terms, Ref(schema), Mod))
 
 # for re-setting schema (in setcontrasts!)
 apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema::Schema, Mod::Type) =
     get(schema, term(t.sym), t)
 apply_schema(t::MatrixTerm, sch::Schema, Mod::Type) =
-    MatrixTerm(apply_schema.(t.terms, Ref(sch), Mod))
+    MatrixTerm(apply_schema(t.terms, sch, Mod))
 
 # TODO: special case this for <:RegressionModel ?
 function apply_schema(t::ConstantTerm, schema::Schema, Mod::Type)
@@ -299,7 +302,7 @@ has_schema(t::ConstantTerm) = false
 has_schema(t::Term) = false
 has_schema(t::Union{ContinuousTerm,CategoricalTerm}) = true
 has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
-has_schema(t::MultiTerm) = all(has_schema(tt) for tt in t)
+has_schema(t::MultiTerm) = all(has_schema(tt) for tt in t.terms)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
 
 struct FullRank
@@ -410,9 +413,9 @@ drop_term(from, to) = symequal(from, to) ? ConstantTerm(1) : from
 drop_term(from::FormulaTerm, to) = FormulaTerm(from.lhs, drop_term(from.rhs, to))
 drop_term(from::MatrixTerm, to) = MatrixTerm(drop_term(from.terms, to))
 drop_term(from::MultiTerm, to) =
-    AbstractTerm[t for t = from if !symequal(t, to)]
-function drop_term(from::InteractionTerm, t)
-    terms = drop_term(from.terms, t)
+    MultiTerm([t for t in from.terms if !symequal(t, to)])
+function drop_term(from::InteractionTerm, to)
+    terms = [t for t in from.terms if !symequal(t, to)]
     length(terms) > 1 ? InteractionTerm(terms) : terms[1]
 end
 
@@ -443,7 +446,7 @@ The data variables that this term refers to.
 termvars(::AbstractTerm) = Symbol[]
 termvars(t::Union{Term, CategoricalTerm, ContinuousTerm}) = [t.sym]
 termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
-termvars(t::MultiTerm) = mapreduce(termvars, union, t, init=Symbol[])
+termvars(t::MultiTerm) = mapreduce(termvars, union, t.terms, init=Symbol[])
 termvars(t::MatrixTerm) = termvars(t.terms)
 termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
 termvars(t::FunctionTerm) = mapreduce(termvars, union, t.args, init=Symbol[])
