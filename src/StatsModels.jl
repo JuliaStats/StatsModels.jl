@@ -12,6 +12,9 @@ using LinearAlgebra
 
 using Tables: ColumnTable
 
+# for only() support pre-1.4
+using Compat
+
 export
     #re-export from StatsBase:
     StatisticalModel,
@@ -59,40 +62,6 @@ export
     response,
     protect,
     unprotect
-    
-# copied from Compat: only
-# https://github.com/JuliaLang/julia/pull/33129
-if VERSION < v"1.4.0-DEV.142"
-    export only
-
-
-    Base.@propagate_inbounds function only(x)
-        i = iterate(x)
-        @boundscheck if i === nothing
-            throw(ArgumentError("Collection is empty, must contain exactly 1 element"))
-        end
-        (ret, state) = i
-        @boundscheck if iterate(x, state) !== nothing
-            throw(ArgumentError("Collection has multiple elements, must contain exactly 1 element"))
-        end
-        return ret
-    end
-
-
-    # Collections of known size
-    only(x::Ref) = x[]
-    only(x::Number) = x
-    only(x::Char) = x
-    only(x::Tuple{Any}) = x[1]
-    only(x::Tuple) = throw(
-        ArgumentError("Tuple contains $(length(x)) elements, must contain exactly 1 element")
-    )
-    only(a::AbstractArray{<:Any, 0}) = @inbounds return a[]
-    only(x::NamedTuple{<:Any, <:Tuple{Any}}) = first(x)
-    only(x::NamedTuple) = throw(
-        ArgumentError("NamedTuple contains $(length(x)) elements, must contain exactly 1 element")
-    )
-end
 
 include("traits.jl")
 include("contrasts.jl")
