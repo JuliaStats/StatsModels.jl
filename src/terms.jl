@@ -376,14 +376,14 @@ Base.:~(lhs::TermOrTerms, rhs::TermOrTerms) = FormulaTerm(lhs, cleanup(rhs))
 
 Base.:&(term::AbstractTerm) = term
 Base.:&(a::AbstractTerm, b::AbstractTerm) = InteractionTerm((a,b))
-Base.:&(terms::AbstractTerm...) = reduce(&, terms)
 
 Base.:&(::ConstantTerm, b::AbstractTerm) = b
 Base.:&(a::AbstractTerm, ::ConstantTerm) = a
 
 # associative rule
-Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
+Base.:&(it::InteractionTerm, term::AbstractTerm) = InteractionTerm((it.terms..., term))
 Base.:&(term::AbstractTerm, it::InteractionTerm) = InteractionTerm((term, it.terms...))
+Base.:&(a::InteractionTerm, b::InteractionTerm) = InteractionTerm((a.terms..., b.terms...))
 
 # distributive rule
 Base.:&(term::AbstractTerm, terms::TupleTerm) = term .& terms
@@ -402,7 +402,6 @@ Base.:+(as::TupleTerm, bs::TupleTerm) = (as..., bs...)
 
 # * expansion
 Base.:*(a::TermOrTerms, b::TermOrTerms) = a + b + a&b
-Base.:*(a::TermOrTerms, b::TermOrTerms, cs...) = (a*b)*cs
 
 cleanup(terms::TupleTerm) = tuple(sort!(unique!([terms...]), by=degree)...)
 cleanup(x) = x
