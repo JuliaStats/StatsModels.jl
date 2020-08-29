@@ -596,4 +596,5 @@ Tuple{ConstantTerm{Int64},Term,Term}
 """
 term(n::Number) = ConstantTerm(n)
 term(s::Symbol) = Term(s)
+term(s::AbstractString) = term(Symbol(s))
 term(t::AbstractTerm) = t
