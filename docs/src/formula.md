@@ -299,7 +299,8 @@ Predictors:
     long as the packages have [implemented support for them](@ref extend-runtime).
 
 The [`term`](@ref) function constructs a term of the appropriate type from
-symbols, strings and numbers, which makes it easy to work with collections of mixed type:
+symbols or strings (`Term`) and numbers (`ConstantTerm`), which makes it easy to 
+work with collections of mixed type:
 
 ```jldoctest 1
 julia> ts = term.((1, :a, "b"))
