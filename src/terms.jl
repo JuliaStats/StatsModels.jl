@@ -579,7 +579,7 @@ hasresponse(t::FormulaTerm) =
 """
     term(x)
 
-Wrap argument in an appropriate `AbstractTerm` type: `Symbol`s become `Term`s,
+Wrap argument in an appropriate `AbstractTerm` type: `Symbol`s and `AbstractString`s become `Term`s,
 and `Number`s become `ConstantTerm`s.  Any `AbstractTerm`s are unchanged. `AbstractString`s
 are converted to symbols before wrapping.
 
