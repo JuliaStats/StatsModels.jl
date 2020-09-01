@@ -18,6 +18,8 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
 
     @testset "concrete_term" begin
         t = term(:aaa)
+        ts = term("aaa")
+        @test t == ts
         @test string(t) == "aaa"
         @test mimestring(t) == "aaa(unknown)"
 
