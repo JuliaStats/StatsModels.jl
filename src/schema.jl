@@ -232,13 +232,25 @@ function apply_schema(t::ConstantTerm, schema::Schema, Mod::Type)
     InterceptTerm{t.n==1}()
 end
 
-# protection, borrowed from #117
-#
 # general idea is once we hit a FunctionTerm, we need to continue to
 # apply_schema because there might be some child that is un-protected.  So we
 # enter the Protected context and recursively apply_schema, and when we
 # encounter `unprotect` we restore the old context and continue to recursively
 # apply_schema
+"""
+    struct Protected{Ctx}
+
+Represent a context in which the normal special syntax and `apply_schema`
+transformations should not apply.  This is automatically applied to the
+arguments of a `FunctionTerm`, meaning that by default calls to `+`, `&`, or `~`
+inside a `FunctionTerm` will be interpreted as calls to the normal Julia
+functions, rather than term union, interaction, or formula separation.
+
+The only special behavior with `apply_schema` inside a `Protected` context is
+when a call to `unprotect` is encountered.  At that point, everything below the
+call to `unprotect` is treated as special formula syntax.
+
+"""
 struct Protected{Ctx} end
 Base.broadcastable(x::Protected) = Ref(x)
 # construct singletons to avoid method ambiguities using Type{<:Protected}
@@ -253,6 +265,18 @@ end
 apply_schema(t::FunctionTerm, schema::Schema, Ctx::Protected) =
     FunctionTerm(t.f, apply_schema.(t.args, schema, Ctx), t.exorig)
 apply_schema(t, schema::Schema, Ctx::Protected) = t
+
+"""
+    protect(term)
+
+Create a `Protected` context for interpreting `term` (and descendents) during
+`apply_schema`.
+"""
+function apply_schema(t::FunctionTerm{typeof(protect)}, schema::Schema, Ctx::Type)
+    tt = only(t.args)
+    apply_schema(tt, schema, protect(Ctx))
+end
+
 
 unprotect(t) = t
 unprotect(t::FunctionTerm{typeof(protect)}) = only(t.args)
