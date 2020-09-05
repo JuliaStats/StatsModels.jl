@@ -51,6 +51,16 @@ implicit_intercept(::Type{YesImplicit}) = true
     end
 
     @testset "implicit_intercept" begin
+        @testset "default" begin
+            ff, ff0, ff1 = apply_schema.((f, f0, f1), Ref(sch), Any)
+            @test !hasintercept(ff)
+            @test !hasintercept(ff0)
+            @test hasintercept(ff1)
+            @test !omitsintercept(ff)
+            @test omitsintercept(ff0)
+            @test !omitsintercept(ff1)
+        end
+
         @testset "StatisticalModel default" begin
             ff, ff0, ff1 = apply_schema.((f, f0, f1), Ref(sch), DefaultImplicit)
             @test hasintercept(ff)
