@@ -362,7 +362,7 @@
         f = @formula(r ~ 1 + w*x*y*z)
 
         mm1 = modelmatrix(f, d)
-        mm2 = modelmatrix(apply_schema(f, schema(d)), 2)
+        mm2 = modelmatrix(apply_schema(f, schema(d)), d)
         @test mm1 == mm2
 
         r1 = response(f, d)
