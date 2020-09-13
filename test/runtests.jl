@@ -17,7 +17,8 @@ my_tests = ["ambiguity.jl",
             "modelframe.jl",
             "statsmodel.jl",
             "contrasts.jl",
-            "extension.jl"]
+            "extension.jl",
+            "protect.jl"]
 
 @testset "StatsModels" begin
     for tf in my_tests

@@ -277,6 +277,12 @@ function apply_schema(t::FunctionTerm{typeof(protect)}, schema::Schema, Ctx::Typ
     apply_schema(tt, schema, protect(Ctx))
 end
 
+# protect in Protected context is a no-op
+function apply_schema(t::FunctionTerm{typeof(protect)}, schema::Schema, Ctx::Protected)
+    tt = only(t.args)
+    apply_schema(tt, schema, Ctx)
+end
+
 
 unprotect(t) = t
 unprotect(t::FunctionTerm{typeof(protect)}) = only(t.args)
