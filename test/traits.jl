@@ -36,7 +36,7 @@ implicit_intercept(::Type{YesImplicit}) = true
 
         @test drop_intercept(DroppyMod()) == drop_intercept(DroppyMod)
         # drop_intercept blocks implicit_intercept == true
-        @test implicit_intercept(DroppyMod) == true
+        @test implicit_intercept(DroppyMod)
 
         @testset "categorical promotion" begin 
             # drop_intercept == true means that model should always ACT like

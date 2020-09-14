@@ -351,8 +351,6 @@
     end
 
     @testset "modelmatrix and response set schema if needed" begin
-        using StatsModels: has_schema
-        
         d = DataFrame(r = rand(8),
                       w = rand(8),
                       x = repeat([:a, :b], outer = 4),
