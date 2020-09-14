@@ -34,5 +34,34 @@
         @test f3.rhs.terms[end] === hint
 
     end
+
+    @testset "has_schema" begin
+        using StatsModels: has_schema
+
+        d = (y = rand(10), a = rand(10), b = repeat([:a, :b], 5))
+        
+        f = @formula(y ~ a*b)
+        @test !has_schema(f)
+        @test !has_schema(f.rhs)
+        @test !has_schema(StatsModels.collect_matrix_terms(f.rhs))
+
+        ff = apply_schema(f, schema(d))
+        @test has_schema(ff)
+        @test has_schema(ff.rhs)
+        @test has_schema(StatsModels.collect_matrix_terms(ff.rhs))
+
+        sch = schema(d)
+        a, b = term.((:a, :b))
+        @test !has_schema(a)
+        @test has_schema(sch[a])
+        @test !has_schema(b)
+        @test has_schema(sch[b])
+
+        @test !has_schema(a & b)
+        @test !has_schema(a & sch[b])
+        @test !has_schema(sch[a] & a)
+        @test has_schema(sch[a] & sch[b])
+
+    end
     
 end

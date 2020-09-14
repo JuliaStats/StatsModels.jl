@@ -246,6 +246,7 @@ has_schema(t::Term) = false
 has_schema(t::Union{ContinuousTerm,CategoricalTerm}) = true
 has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
 has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
+has_schema(t::MatrixTerm) = has_schema(t.terms)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
 
 struct FullRank
@@ -263,7 +264,7 @@ function apply_schema(t::FormulaTerm, schema::Schema, Mod::Type{<:StatisticalMod
     schema = FullRank(schema)
 
     # Models with the drop_intercept trait do not support intercept terms,
-    # usually because they include one implicitly.
+    # usually because one is always necessarily included during fitting
     if drop_intercept(Mod)
         if hasintercept(t)
             throw(ArgumentError("Model type $Mod doesn't support intercept " *
