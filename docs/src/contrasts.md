@@ -51,6 +51,7 @@ EffectsCoding
 HelmertCoding
 SeqDiffCoding
 HypothesisCoding
+hypothesis_matrix
 ```
 
 ### Special internal contrasts
