@@ -15,7 +15,8 @@ makedocs(
         "Contrast coding categorical variables" => "contrasts.md",
         "Temporal variables and Time Series Terms" => "temporal_terms.md",
         "API documentation" => "api.md"
-    ]
+    ],
+    modules = [StatsModels]
 )
 
 deploydocs(
