@@ -137,7 +137,7 @@ function.  By default, it will create a schema for every column in the data:
 julia> using DataFrames    # for pretty printing---any Table will do
 
 julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"], 3))
-9×4 DataFrames.DataFrame
+9×4 DataFrame
 │ Row │ y          │ a     │ b         │ c      │
 │     │ Float64    │ Int64 │ Float64   │ String │
 ├─────┼────────────┼───────┼───────────┼────────┤
@@ -455,7 +455,7 @@ Now, we can use `poly` in a formula:
 
 ```jldoctest 1
 julia> data = DataFrame(y = rand(4), a = rand(4), b = [1:4;])
-4×3 DataFrames.DataFrame
+4×3 DataFrame
 │ Row │ y          │ a        │ b     │
 │     │ Float64    │ Float64  │ Int64 │
 ├─────┼────────────┼──────────┼───────┤

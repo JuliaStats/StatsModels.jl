@@ -54,7 +54,7 @@ Predictors:
   b(unknown) & c(unknown)
 
 julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["d","e","f"], 3))
-9×4 DataFrames.DataFrame
+9×4 DataFrame
 │ Row │ y          │ a     │ b         │ c      │
 │     │ Float64    │ Int64 │ Float64   │ String │
 ├─────┼────────────┼───────┼───────────┼────────┤

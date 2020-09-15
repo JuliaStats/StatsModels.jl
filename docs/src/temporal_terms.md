@@ -21,7 +21,7 @@ Below is a simple example:
 julia> using StatsModels, DataFrames
 
 julia> df = DataFrame(y=1:5, x=2:2:10)
-5×2 DataFrames.DataFrame
+5×2 DataFrame
 │ Row │ y     │ x     │
 │     │ Int64 │ Int64 │
 ├─────┼───────┼───────┤
