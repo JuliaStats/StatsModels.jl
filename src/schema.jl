@@ -240,22 +240,55 @@ end
 """
     struct Protected{Ctx}
 
-Represent a context in which the normal special syntax and `apply_schema`
-transformations should not apply.  This is automatically applied to the
-arguments of a `FunctionTerm`, meaning that by default calls to `+`, `&`, or `~`
-inside a `FunctionTerm` will be interpreted as calls to the normal Julia
-functions, rather than term union, interaction, or formula separation.
+Represent a context in which the normal special syntax and
+[`apply_schema`](@ref) transformations should not apply.  This is automatically
+applied to the arguments of a [`FunctionTerm`](@ref), meaning that by default
+calls to `+`, `&`, or `~` inside a [`FunctionTerm`](@ref) will be interpreted as
+calls to the normal Julia functions, rather than term union, interaction, or
+formula separation.
 
-The only special behavior with `apply_schema` inside a `Protected` context is
-when a call to `unprotect` is encountered.  At that point, everything below the
-call to `unprotect` is treated as special formula syntax.
+The only special behavior with [`apply_schema`](@ref) inside a `Protected`
+context is when a call to [`unprotect`](@ref) is encountered.  At that point,
+everything below the call to `unprotect` is treated as special formula syntax.
 
+A `Protected` context is created inside a [`FunctionTerm`](@ref) automatically,
+but can be manually created with a call to [`protect`](@ref).
+```
 """
 struct Protected{Ctx} end
 Base.broadcastable(x::Protected) = Ref(x)
-# construct singletons to avoid method ambiguities using Type{<:Protected}
-protect(ctx) = Protected{ctx}()
+"""
+    protect(term::T)
 
+Create a [`Protected`](@ref) context for interpreting `term` (and descendents) during
+`apply_schema`.
+
+Outside a [`@formula`](@ref), acts as a constructor for the singleton `Protected{T}`.
+
+# Example
+
+```jldoctest; setup = :(using Random; Random.seed!(1))
+julia> d = (y=rand(4), a=[1:4;], b=rand(4))
+
+julia> f = @formula(y ~ 1 + protect(a+b));
+
+julia> modelmatrix(f.rhs, d)
+4×2 Array{Float64,2}:
+ 1.0  1.48861
+ 1.0  2.21097
+ 1.0  3.95192
+ 1.0  4.9999
+
+julia> d.a .+ d.b
+4-element Array{Float64,1}:
+ 1.4886128300795012
+ 2.210968202158536
+ 3.951916339835734
+ 4.999904658898614
+```
+"""
+protect(ctx) = Protected{ctx}()
+# construct singletons to avoid method ambiguities using Type{<:Protected}
 
 function apply_schema(t::FunctionTerm, schema::Schema, Mod::Type)
     args = apply_schema.(t.args, schema, protect(Mod))
@@ -266,12 +299,6 @@ apply_schema(t::FunctionTerm, schema::Schema, Ctx::Protected) =
     FunctionTerm(t.f, apply_schema.(t.args, schema, Ctx), t.exorig)
 apply_schema(t, schema::Schema, Ctx::Protected) = t
 
-"""
-    protect(term)
-
-Create a `Protected` context for interpreting `term` (and descendents) during
-`apply_schema`.
-"""
 function apply_schema(t::FunctionTerm{typeof(protect)}, schema::Schema, Ctx::Type)
     tt = only(t.args)
     apply_schema(tt, schema, protect(Ctx))
@@ -283,9 +310,42 @@ function apply_schema(t::FunctionTerm{typeof(protect)}, schema::Schema, Ctx::Pro
     apply_schema(tt, schema, Ctx)
 end
 
+"""
+    unprotect(term)
+    unprotect(::Protected{T})
 
+Inside a [`@formula`], removes [`Protected`](@ref) status for the argument
+term(s).  This allows the usual special [`@formula`](@ref) interpretation of
+calls to `+`, `&`, `*`, and `~` to be restored inside an otherwise
+[`Protected`](@ref) context.
+
+When called outside a `@formula`, unwraps `Protected{T}` to `T`.
+
+# Example
+
+```jldoctest; setup = :(using Random; Random.seed!(1))
+julia> d = (y=rand(4), a=[1.:4;], b=rand(4));
+
+julia> f = @formula(y ~ 1 - unprotect(a&b));
+
+julia> modelmatrix(f, d)
+4×1 Array{Float64,2}:
+  0.5113871699204988
+  0.5780635956829281
+ -1.855749019507202
+ -2.9996186355944543
+
+julia> 1 .- d.a .* d.b
+4×1 Array{Float64,2}:
+  0.5113871699204988
+  0.5780635956829281
+ -1.855749019507202
+ -2.9996186355944543
+```
+"""
 unprotect(t) = t
 unprotect(t::FunctionTerm{typeof(protect)}) = only(t.args)
+unprotect(::Protected{Ctx}) where Ctx = Ctx
 
 function apply_schema(t::FunctionTerm{typeof(unprotect)}, schema::Schema, Ctx::Protected{OldCtx}) where {OldCtx}
     tt = only(t.args)
@@ -331,6 +391,8 @@ has_schema(t::Union{ContinuousTerm,CategoricalTerm}) = true
 has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
 has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
+# FunctionTerms may always be transformed by apply_schema
+has_schema(t::FunctionTerm) = false
 
 struct FullRank
     schema::Schema
