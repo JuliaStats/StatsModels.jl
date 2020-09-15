@@ -488,6 +488,8 @@ julia> sdiff_hypothesis = [-1  1  0  0
 Contrasts are derived the hypothesis matrix by taking the pseudoinverse:
 
 ```jldoctest hyp
+julia> using LinearAlgebra
+
 julia> sdiff_contrasts = pinv(sdiff_hypothesis)
 4×3 Array{Float64,2}:
  -0.75  -0.5  -0.25
@@ -660,6 +662,11 @@ non-zero mean).  If `tolerance != 0` (the default), the hypotheses are rounded
 to `Int`s if possible and `Rational`s if not, using the given tolerance.  If
 `tolerance == 0`, then the hypothesis matrix is returned as-is.
 
+The orientation of the hypothesis matrix is _opposite_ that of the contrast
+matrix: each row of the contrasts matrix is a data level and each column is a
+predictor, whereas each row of the hypothesis matrix is the interpretation of a
+predictor with weights for each level given in the columns.
+
 Note that this assumes a *balanced design* where there are the same number of
 observations in every cell.  This is only important for non-orthgonal contrasts
 (including contrasts that are not orthogonal with the intercept).
@@ -676,31 +683,30 @@ julia> cmat = StatsModels.contrasts_matrix(DummyCoding(), 1, 4)
 
 julia> StatsModels.hypothesis_matrix(cmat)
 4×4 Array{Int64,2}:
- 1  -1  -1  -1
- 0   1   0   0
- 0   0   1   0
- 0   0   0   1
+  1  0  0  0
+ -1  1  0  0
+ -1  0  1  0
+ -1  0  0  1
 
 julia> StatsModels.hypothesis_matrix(cmat, intercept=false) # wrong without intercept!!
-4×3 Array{Int64,2}:
- 0  0  0
- 1  0  0
- 0  1  0
- 0  0  1
+3×4 Array{Int64,2}:
+ 0  1  0  0
+ 0  0  1  0
+ 0  0  0  1
 
 julia> StatsModels.hypothesis_matrix(cmat, tolerance=0) # ugly
-4×4 Adjoint{Float64,Array{Float64,2}}:
-  1.0          -1.0          -1.0          -1.0        
- -2.23753e-16   1.0           4.94472e-17   1.04958e-16
-  6.91749e-18  -2.42066e-16   1.0          -1.31044e-16
- -1.31485e-16   9.93754e-17   9.93754e-17   1.0        
+4×4 Array{Float64,2}:
+  1.0  -2.22045e-16   0.0          -1.38778e-16
+ -1.0   1.0          -1.66533e-16   1.11022e-16
+ -1.0   1.11022e-16   1.0           5.55112e-17
+ -1.0   1.11022e-16  -1.11022e-16   1.0        
 
 julia> StatsModels.hypothesis_matrix(StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b", "c", "d"]))
 4×4 Array{Int64,2}:
- 1  -1  -1  -1
- 0   1   0   0
- 0   0   1   0
- 0   0   0   1
+  1  0  0  0
+ -1  1  0  0
+ -1  0  1  0
+ -1  0  0  1
 
 ```
 """

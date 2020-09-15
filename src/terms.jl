@@ -99,7 +99,7 @@ Predictors:
   (a,b)->log(1 + a + b)
 
 julia> typeof(f.rhs)
-FunctionTerm{typeof(log),var"##1#2",(:a, :b)}
+FunctionTerm{typeof(log),var"#1#2",(:a, :b)}
 
 julia> f.rhs.forig(1 + 3 + 4)
 2.0794415416798357
@@ -155,14 +155,14 @@ a(continuous) & b(continuous) & c(DummyCoding:3→2)
 
 julia> modelcols(t, d)
 9×2 Array{Float64,2}:
- 0.0      0.0    
- 1.09793  0.0    
- 0.0      2.6946 
- 0.0      0.0    
- 4.67649  0.0    
+ 0.0      0.0
+ 1.09793  0.0
+ 0.0      2.6946
+ 0.0      0.0
+ 4.67649  0.0
  0.0      4.47245
- 0.0      0.0    
- 0.64805  0.0    
+ 0.0      0.0
+ 0.64805  0.0
  0.0      6.97926
 
 julia> modelcols(t.terms, d)
