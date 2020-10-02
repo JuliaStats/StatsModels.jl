@@ -116,7 +116,7 @@ function lrtest(mods::StatisticalModel...; atol::Real=0.0)
                             "in models with more degrees of freedom"))
     end
 
-    pval = (NaN, ccdf.(Chisq.(abs.(Δdf)), abs.(Δdev))...)
+    pval = (NaN, chisqccdf.(abs.(Δdf), abs.(Δdev))...)
     return LRTestResult(Int(nobs(mods[1])), dev, df, pval)
 end
 
