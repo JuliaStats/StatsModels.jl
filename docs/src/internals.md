@@ -92,7 +92,7 @@ FormulaTerm{Term,Term}
 
 The reason that the actual construction of higher-order terms is done after the
 macro is expanded is that it makes it much easier to create a formula
-programatically:
+programmatically:
 
 ```jldoctest 1
 julia> f = Term(:y) ~ sum(term.([1, :a, :b, :c]))
@@ -137,7 +137,7 @@ function.  By default, it will create a schema for every column in the data:
 julia> using DataFrames    # for pretty printing---any Table will do
 
 julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"], 3))
-9×4 DataFrame
+9×4 DataFrames.DataFrame
 │ Row │ y          │ a     │ b         │ c      │
 │     │ Float64    │ Int64 │ Float64   │ String │
 ├─────┼────────────┼───────┼───────────┼────────┤
@@ -343,7 +343,7 @@ julia> pred
 julia> using Tables
 
 julia> modelcols(f, first(Tables.rowtable(df)))
-(0.23603334566204692, [1.0, 1.0, 0.986666, 0.0, 0.0, 0.0, 0.0])
+(0.23603334566204692, [1.0, 1.0, 0.9866663668987996, 0.0, 0.0, 0.0, 0.0])
 
 ```
 
@@ -384,6 +384,8 @@ Extensions have three components:
 These correspond to the stages summarized above (syntax time, schema time, and
 data time)
 
+### An example of custom syntax: `poly`
+
 As an example, we'll add syntax for specifying a [polynomial
 regression](https://en.wikipedia.org/wiki/Polynomial_regression) model, which
 fits a regression using polynomial basis functions of a continuous predictor.
@@ -401,23 +403,33 @@ poly(x, n) = x^n
 const POLY_CONTEXT = Any
 
 # struct for behavior
-struct PolyTerm <: AbstractTerm
-    term::ContinuousTerm
-    deg::Int
+struct PolyTerm{T,D} <: AbstractTerm
+    term::T
+    deg::D
 end
 
 Base.show(io::IO, p::PolyTerm) = print(io, "poly($(p.term), $(p.deg))")
 
+# for `poly` use at run-time (outside @formula), return a schema-less PolyTerm
+poly(t::Symbol, d::Int) = PolyTerm(term(t), term(d))
+
+# for `poly` use inside @formula: create a schemaless PolyTerm and apply_schema
 function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
                                   sch::StatsModels.Schema,
                                   Mod::Type{<:POLY_CONTEXT})
-    term = apply_schema(t.args_parsed[1], sch, Mod)
+    apply_schema(PolyTerm(t.args_parsed...), sch, Mod)
+end
+
+# apply_schema to internal Terms and check for proper types
+function StatsModels.apply_schema(t::PolyTerm,
+                                  sch::StatsModels.Schema,
+                                  Mod::Type{<:POLY_CONTEXT})
+    term = apply_schema(t.term, sch, Mod)
     isa(term, ContinuousTerm) ||
         throw(ArgumentError("PolyTerm only works with continuous terms (got $term)"))
-    deg = t.args_parsed[2]
-    isa(deg, ConstantTerm) ||
-        throw(ArgumentError("PolyTerm degree must be a number (got $deg)"))
-    PolyTerm(term, deg.n)
+    isa(t.deg, ConstantTerm) ||
+        throw(ArgumentError("PolyTerm degree must be a number (got $t.deg)"))
+    PolyTerm(term, t.deg.n)
 end
 
 function StatsModels.modelcols(p::PolyTerm, d::NamedTuple)
@@ -425,6 +437,11 @@ function StatsModels.modelcols(p::PolyTerm, d::NamedTuple)
     reduce(hcat, [col.^n for n in 1:p.deg])
 end
 
+# the basic terms contained within a PolyTerm (for schema extraction)
+StatsModels.terms(p::PolyTerm) = terms(p.term)
+# names variables from the data that a PolyTerm relies on
+StatsModels.termvars(p::PolyTerm) = StatsModels.termvars(p.term)
+# number of columns in the matrix this term produces
 StatsModels.width(p::PolyTerm) = p.deg
 
 StatsBase.coefnames(p::PolyTerm) = coefnames(p.term) .* "^" .* string.(1:p.deg)
@@ -438,7 +455,7 @@ Now, we can use `poly` in a formula:
 
 ```jldoctest 1
 julia> data = DataFrame(y = rand(4), a = rand(4), b = [1:4;])
-4×3 DataFrame
+4×3 DataFrames.DataFrame
 │ Row │ y          │ a        │ b     │
 │     │ Float64    │ Float64  │ Int64 │
 ├─────┼────────────┼──────────┼───────┤
@@ -485,20 +502,161 @@ julia> coefnames(f.rhs)
 
 ```
 
-It's also possible to _block_ interpretation of the `poly` syntax as special in
-certain contexts by adding additional (more specific) methods.  For instance, we
-could block `PolyTerm`s being generated for `GLM.LinearModel`:
+And in a linear regression, with simulated data where there is an effect of `a^1`
+and of `b^2` (but not `a^2` or `b^1`):
 
 ```jldoctest 1
 julia> using GLM
 
+julia> sim_dat = DataFrame(a=rand(100).-0.5, b=randn(100).-0.5);
+
+julia> sim_dat.y = randn(100) .+ 1 .+ 2*sim_dat.a .+ 3*sim_dat.b.^2;
+
+julia> fit(LinearModel, @formula(y ~ 1 + poly(a,2) + poly(b,2)), sim_dat)
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+
+y ~ 1 + poly(a, 2) + poly(b, 2)
+
+Coefficients:
+────────────────────────────────────────────────────────────────────────────
+              Estimate  Std. Error   t value  Pr(>|t|)  Lower 95%  Upper 95%
+────────────────────────────────────────────────────────────────────────────
+(Intercept)   0.693521   0.159469    4.34893    <1e-4    0.376934    1.01011
+a^1           2.1042     0.383115    5.49235    <1e-6    1.34362     2.86478
+a^2           2.34395    1.39244     1.68334    0.0956  -0.420386    5.10829
+b^1          -0.180113   0.148698   -1.21127    0.2288  -0.475317    0.11509
+b^2           2.89786    0.0794572  36.4707     <1e-56   2.74012     3.05561
+────────────────────────────────────────────────────────────────────────────
+```
+
+### [Making special syntax "runtime friendly"] (@id extend-runtime)
+
+When used from the `@formula` macro, special syntax relies on dispatching on the
+`FunctionTerm{MyFunction}` type.  But when creating a formula at runtime
+without the `@formula` macro, `FunctionTerm`s aren't available, and so care must
+be taken to make sure you provide a runtime replacement.  The example for `poly`
+above shows how to do this, but we spell it out here in more detail.
+
+The first step is to make sure you can create a schema-less instance of the
+`AbstractTerm` that implements your special syntax behavior.  For the
+`poly` example, that means we need to be able to create a
+`PolyTerm(term(column_name), term(poly_degree))`.  In order to do this, the
+types of the `term` and `deg` fields aren't specified but are parameters of the
+`PolyTerm` type.
+
+The second step is to provide a runtime method for the special syntax function
+(`poly`), which accepts arguments in form that's convenient at runtime.  For
+this example, we've defined `poly(s::Symbol, i::Int) = PolyTerm(term(s),
+term(i))`:
+
+```jldoctest 1
+julia> pt = poly(:a, 3)
+poly(a, 3)
+
+julia> typeof(pt) # contains schema-less `Term`
+PolyTerm{Term,ConstantTerm{Int64}}
+```
+
+!!! note
+    
+    The functions like `poly` should be exported by the package that provides
+    the special syntax for two reasons.  First, it makes run-time term 
+    construction more convenient.  Second, because of how the `@formula` macro
+    generates code, the function that represents special syntax must be
+    available in the namespace where `@formula` is _called_.  This is because
+    calls to arbitrary functions `f` are lowered to `FunctionTerm{typeof(f)}`.
+
+Now we can programmatically construct `PolyTerm`s at run-time:
+
+```jldoctest 1
+julia> my_col = :a; my_degree = 3;
+
+julia> poly(my_col, my_degree)
+poly(a, 3)
+
+julia> poly.([:a, :b], my_degree)
+2-element Array{PolyTerm{Term,ConstantTerm{Int64}},1}:
+ poly(a, 3)
+ poly(b, 3)
+```
+
+These run-time `PolyTerm`s are "schema-less" though, and to be able to construct
+a model matrix from them we need to have a way to apply a schema.  Thus, the
+third and final step is to provide an `apply_schema` method that upgrades a
+schema-less instance to one with a schema (i.e., one that can be used with
+`modelcols`).  For example, we've specified `apply_schema(pt::PolyTerm, ...)`
+which calls `apply_schema` on the wrapped `pt.term`, returning a new `PolyTerm`
+with the instantiated result:
+
+```jldoctest 1
+julia> pt = apply_schema(PolyTerm(term(:b), term(2)),
+                         schema(data),
+                         StatisticalModel)
+poly(b, 2)
+
+julia> typeof(pt) # now holds a `ContinuousTerm`
+PolyTerm{ContinuousTerm{Float64},Int64}
+
+julia> modelcols(pt, data)
+4×2 Array{Int64,2}:
+ 1   1
+ 2   4
+ 3   9
+ 4  16
+```
+
+Now with these methods in place, we can run exactly the same polynomial
+regression as above (which used `@formula(y ~ 1 + poly(a, 2) + poly(b, 2)`), but
+with the predictor names and the polynomial degree stored in variables:
+
+```jldoctest 1
+julia> poly_vars = (:a, :b); poly_deg = 2;
+
+julia> poly_formula = term(:y) ~ term(1) + poly.(poly_vars, poly_deg)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  poly(a, 2)
+  poly(b, 2)
+
+julia> fit(LinearModel, poly_formula, sim_dat)
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+
+y ~ 1 + poly(a, 2) + poly(b, 2)
+
+Coefficients:
+────────────────────────────────────────────────────────────────────────────
+              Estimate  Std. Error   t value  Pr(>|t|)  Lower 95%  Upper 95%
+────────────────────────────────────────────────────────────────────────────
+(Intercept)   0.693521   0.159469    4.34893    <1e-4    0.376934    1.01011
+a^1           2.1042     0.383115    5.49235    <1e-6    1.34362     2.86478
+a^2           2.34395    1.39244     1.68334    0.0956  -0.420386    5.10829
+b^1          -0.180113   0.148698   -1.21127    0.2288  -0.475317    0.11509
+b^2           2.89786    0.0794572  36.4707     <1e-56   2.74012     3.05561
+────────────────────────────────────────────────────────────────────────────
+```
+
+### Defining the context where special syntax applies
+
+The third argument to `apply_schema` determines the contexts in which the
+special `poly` syntax applies.
+
+For instance, it's possible to _block_ interpretation of the `poly` syntax as
+special in certain contexts by adding additional (more specific) methods.  If
+for some reason we wanted to block `PolyTerm`s being generated for
+`GLM.LinearModel`, then we just need to add the appropriate method:
+
+```jldoctest 1
 julia> StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
                                 sch::StatsModels.Schema,
                                 Mod::Type{GLM.LinearModel}) = t
 ```
 
-Now the `poly` is interpreted by default as the "vanilla" function defined
-first, which just raises its first argument to the designated power:
+Now in the context of a `LinearModel`, the `poly` is interpreted as a call to
+the "vanilla" function defined first, which just raises its first argument to
+the designated power:
 
 ```jldoctest 1
 julia> f = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
@@ -568,34 +726,34 @@ a formula with a call to `poly`:
 ```jldoctest 1
 julia> sim_dat = DataFrame(b=randn(100));
 
-julia> sim_dat[:y] = randn(100) .+ 1 .+ 2*sim_dat[:b] .+ 3*sim_dat[:b].^2;
+julia> sim_dat.y = randn(100) .+ 1 .+ 2*sim_dat.b .+ 3*sim_dat.b.^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
-StatsModels.TableRegressionModel{LinearModel{LmResp{Array{Float64,1}},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
 
 y ~ 1 + :(poly(b, 2))
 
 Coefficients:
-────────────────────────────────────────────────────
-             Estimate  Std.Error   t value  Pr(>|t|)
-────────────────────────────────────────────────────
-(Intercept)  0.911363   0.310486   2.93528    0.0042
-poly(b, 2)   2.94442    0.191024  15.4139     <1e-27
-────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────────────────
+             Estimate  Std. Error   t value  Pr(>|t|)  Lower 95%  Upper 95%
+───────────────────────────────────────────────────────────────────────────
+(Intercept)  0.911363    0.310486   2.93528    0.0042   0.295214    1.52751
+poly(b, 2)   2.94442     0.191024  15.4139     <1e-27   2.56534     3.3235
+───────────────────────────────────────────────────────────────────────────
 
 julia> fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
-StatsModels.TableRegressionModel{GeneralizedLinearModel{GlmResp{Array{Float64,1},Normal{Float64},IdentityLink},DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{GeneralizedLinearModel{GLM.GlmResp{Array{Float64,1},Normal{Float64},IdentityLink},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
 
 y ~ 1 + poly(b, 2)
 
 Coefficients:
-───────────────────────────────────────────────────
-             Estimate  Std.Error  z value  Pr(>|z|)
-───────────────────────────────────────────────────
-(Intercept)  0.829374  0.131582    6.3031    <1e-9
-b^1          2.13096   0.100552   21.1926    <1e-98
-b^2          3.1132    0.0813107  38.2877    <1e-99
-───────────────────────────────────────────────────
+──────────────────────────────────────────────────────────────────────────
+             Estimate  Std. Error  z value  Pr(>|z|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)  0.829374   0.131582    6.3031    <1e-9    0.571478    1.08727
+b^1          2.13096    0.100552   21.1926    <1e-98   1.93388     2.32804
+b^2          3.1132     0.0813107  38.2877    <1e-99   2.95384     3.27257
+──────────────────────────────────────────────────────────────────────────
 
 ```
 

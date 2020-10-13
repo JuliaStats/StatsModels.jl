@@ -160,7 +160,7 @@
                       y = repeat([:c, :d], inner = 2, outer = 2),
                       z = repeat([:e, :f], inner = 4))
         categorical!(d)
-        cs = Dict([Pair(name, EffectsCoding()) for name in names(d)])
+        cs = Dict([Symbol(name) => EffectsCoding() for name in names(d)])
         d.n = 1.:8
     
     
@@ -348,6 +348,24 @@
         f = apply_schema(@formula(r ~ 1 + w*x*y*z), schema(d))
         modelmatrix(f, d)
         @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)
+    end
+
+    @testset "modelmatrix and response set schema if needed" begin
+        d = DataFrame(r = rand(8),
+                      w = rand(8),
+                      x = repeat([:a, :b], outer = 4),
+                      y = repeat([:c, :d], inner = 2, outer = 2),
+                      z = repeat([:e, :f], inner = 4))
+    
+        f = @formula(r ~ 1 + w*x*y*z)
+
+        mm1 = modelmatrix(f, d)
+        mm2 = modelmatrix(apply_schema(f, schema(d)), d)
+        @test mm1 == mm2
+
+        r1 = response(f, d)
+        r2 = response(apply_schema(f, schema(d)), d)
+        @test r1 == r2
     end
 
     @testset "setcontrasts!" begin

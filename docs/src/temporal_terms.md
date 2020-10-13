@@ -17,11 +17,11 @@ and following a regular time interval, which may require inserting additional
 rows containing `missing`s  to fill in gaps in irregular data.
 
 Below is a simple example:
-```jldoctest
+```jldoctest leadlag
 julia> using StatsModels, DataFrames
 
 julia> df = DataFrame(y=1:5, x=2:2:10)
-5×2 DataFrame
+5×2 DataFrames.DataFrame
 │ Row │ y     │ x     │
 │     │ Int64 │ Int64 │
 ├─────┼───────┼───────┤
@@ -50,10 +50,48 @@ Predictors:
   lead(x, 2)
 
 julia> modelmatrix(f, df)
-5×3 reshape(::Array{Union{Missing, Float64},2}, 5, 3) with eltype Union{Missing, Float64}:
-  2.0   missing   6.0
-  4.0   missing   8.0
-  6.0  2.0       10.0
-  8.0  4.0         missing
- 10.0  6.0         missing
+5×3 reshape(::Array{Union{Missing, Int64},2}, 5, 3) with eltype Union{Missing, Int64}:
+  2   missing   6
+  4   missing   8
+  6  2         10
+  8  4           missing
+ 10  6           missing
+```
+
+### Programmatic construction of lead and lag terms
+
+StatsModels.jl provides methods for `lead` and `lag` that allow `LeadLagTerm`s
+to be constructed programmatically (at run time).  See the section on
+[Constructing a formula programmatically](@ref) for more information.  For a
+short example, you can produce the same formula as above without the `@formula`
+macro like this:
+
+```jldoctest leadlag
+julia> y, x = term(:y), term(:x);
+
+julia> f2 = y ~ x + lag(x, 2) + lead(x, 2)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  x(unknown)
+  lag(x, 2)
+  lead(x, 2)
+
+julia> f2 = apply_schema(f2, schema(f2, df))
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  x(continuous)
+  lag(x, 2)
+  lead(x, 2)
+
+julia> modelmatrix(f2, df)
+5×3 reshape(::Array{Union{Missing, Int64},2}, 5, 3) with eltype Union{Missing, Int64}:
+  2   missing   6       
+  4   missing   8       
+  6  2         10       
+  8  4           missing
+ 10  6           missing
 ```

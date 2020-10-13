@@ -8,7 +8,8 @@ using StatsBase
 
 using StatsModels: ContrastsMatrix
 
-my_tests = ["formula.jl",
+my_tests = ["ambiguity.jl",
+            "formula.jl",
             "terms.jl",
             "temporal_terms.jl",
             "schema.jl",
@@ -16,7 +17,8 @@ my_tests = ["formula.jl",
             "modelframe.jl",
             "statsmodel.jl",
             "contrasts.jl",
-            "extension.jl"]
+            "extension.jl",
+            "traits.jl"]
 
 @testset "StatsModels" begin
     for tf in my_tests

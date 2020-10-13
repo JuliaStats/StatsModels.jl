@@ -1,5 +1,8 @@
 using Documenter, StatsModels
 
+using Pkg
+Pkg.precompile()
+
 makedocs(
     sitename = "StatsModels.jl",
     pages = [
@@ -13,5 +16,6 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/JuliaStats/StatsModels.jl.git"
+    repo = "github.com/JuliaStats/StatsModels.jl.git",
+    push_preview = true,
 )

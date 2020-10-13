@@ -1,6 +1,6 @@
 abstract type AbstractTerm end
-const TupleTerm = NTuple{N, AbstractTerm} where N
 const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
+const TupleTerm = NTuple{N, TermOrTerms} where N
 
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
@@ -99,7 +99,7 @@ Predictors:
   (a,b)->log(1 + a + b)
 
 julia> typeof(f.rhs)
-FunctionTerm{typeof(log),getfield(Main, Symbol("##9#10")),(:a, :b)}
+FunctionTerm{typeof(log),var"##1#2",(:a, :b)}
 
 julia> f.rhs.forig(1 + 3 + 4)
 2.0794415416798357
@@ -166,7 +166,7 @@ julia> modelcols(t, d)
  0.0      6.97926
 
 julia> modelcols(t.terms, d)
-([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], [0.88658, 0.548967, 0.898199, 0.504313, 0.935298, 0.745408, 0.489872, 0.0810062, 0.775473], [0.0 0.0; 1.0 0.0; … ; 1.0 0.0; 0.0 1.0])
+([1, 2, 3, 4, 5, 6, 7, 8, 9], [0.8865801492659497, 0.5489667874821704, 0.8981985570141182, 0.5043129521484462, 0.9352977047074365, 0.7454079139997376, 0.4898716849925324, 0.08100620947201143, 0.7754728346104993], [0.0 0.0; 1.0 0.0; … ; 1.0 0.0; 0.0 1.0])
 ```
 """
 struct InteractionTerm{Ts} <: AbstractTerm
@@ -446,7 +446,7 @@ b(continuous)
 c(DummyCoding:3→2)
 
 julia> cols = modelcols(ts, d)
-([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], [0.718418, 0.488167, 0.708161, 0.774301, 0.584296, 0.324937, 0.989408, 0.333175, 0.65323], [0.0 0.0; 1.0 0.0; … ; 1.0 0.0; 0.0 1.0])
+([1, 2, 3, 4, 5, 6, 7, 8, 9], [0.7184176729016183, 0.4881665815778522, 0.7081609847641785, 0.7743011281211944, 0.584295963367869, 0.32493666547553657, 0.9894077965577408, 0.3331747574477202, 0.6532298571732302], [0.0 0.0; 1.0 0.0; … ; 1.0 0.0; 0.0 1.0])
 
 julia> reduce(hcat, cols)
 9×4 Array{Float64,2}:
@@ -566,26 +566,34 @@ StatsBase.coefnames(t::InteractionTerm) =
 ################################################################################
 # old Terms features:
 
-hasintercept(t::AbstractTerm) = InterceptTerm{true}() ∈ terms(t) || ConstantTerm(1) ∈ terms(t)
-omitsintercept(t::AbstractTerm) =
+hasintercept(f::FormulaTerm) = hasintercept(f.rhs)
+hasintercept(t::TermOrTerms) =
+    InterceptTerm{true}() ∈ terms(t) ||
+    ConstantTerm(1) ∈ terms(t)
+omitsintercept(f::FormulaTerm) = omitsintercept(f.rhs)
+omitsintercept(t::TermOrTerms) =
     InterceptTerm{false}() ∈ terms(t) ||
     ConstantTerm(0) ∈ terms(t) ||
     ConstantTerm(-1) ∈ terms(t)
 
 hasresponse(t) = false
-hasresponse(t::FormulaTerm{LHS}) where {LHS} = LHS !== nothing
+hasresponse(t::FormulaTerm) =
+    t.lhs !== nothing && 
+    t.lhs !== ConstantTerm(0) &&
+    t.lhs !== InterceptTerm{false}()
 
 # convenience converters
 """
     term(x)
 
-Wrap argument in an appropriate `AbstractTerm` type: `Symbol`s become `Term`s,
-and `Number`s become `ConstantTerm`s.  Any `AbstractTerm`s are unchanged.
+Wrap argument in an appropriate `AbstractTerm` type: `Symbol`s and `AbstractString`s become `Term`s,
+and `Number`s become `ConstantTerm`s.  Any `AbstractTerm`s are unchanged. `AbstractString`s
+are converted to symbols before wrapping.
 
 # Example
 
 ```jldoctest
-julia> ts = term.((1, :a, :b))
+julia> ts = term.((1, :a, "b"))
 1
 a(unknown)
 b(unknown)
@@ -596,4 +604,5 @@ Tuple{ConstantTerm{Int64},Term,Term}
 """
 term(n::Number) = ConstantTerm(n)
 term(s::Symbol) = Term(s)
+term(s::AbstractString) = term(Symbol(s))
 term(t::AbstractTerm) = t

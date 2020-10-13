@@ -2,9 +2,13 @@ module StatsModels
 
 using Tables
 using StatsBase
+using ShiftedArrays
 using ShiftedArrays: lag, lead
-using CategoricalArrays
 using DataStructures
+using DataAPI
+using DataAPI: levels
+using Printf: @sprintf
+using StatsFuns: chisqccdf
 
 using SparseArrays
 using LinearAlgebra
@@ -24,8 +28,10 @@ export
     EffectsCoding,
     DummyCoding,
     HelmertCoding,
+    SeqDiffCoding,
+    HypothesisCoding,
     ContrastsCoding,
-
+    
     coefnames,
     dropterm,
     setcontrasts!,
@@ -53,15 +59,18 @@ export
     width,
     modelcols,
     modelmatrix,
-    response
+    response,
+
+    lrtest
 
 include("traits.jl")
 include("contrasts.jl")
 include("terms.jl")
-include("temporal_terms.jl")
 include("schema.jl")
+include("temporal_terms.jl")
 include("formula.jl")
 include("modelframe.jl")
 include("statsmodel.jl")
+include("lrtest.jl")
 
 end # module StatsModels

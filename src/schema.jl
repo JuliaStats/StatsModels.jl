@@ -172,6 +172,11 @@ concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol}) =
     concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
 concrete_term(t::Term, d) = concrete_term(t, d, nothing)
 
+# if the "hint" is already an AbstractTerm, use that
+# need this specified to avoid ambiguity
+concrete_term(t::Term, d::ColumnTable, hint::AbstractTerm) = hint
+concrete_term(t::Term, x, hint::AbstractTerm) = hint
+
 # second possible fix for #97
 concrete_term(t, d, hint) = t
 
@@ -209,8 +214,7 @@ in _most_ cases, but cause method ambiguity in some.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 apply_schema(t, schema, Mod::Type) = t
-apply_schema(terms::TupleTerm, schema, Mod::Type) =
-    apply_schema.(terms, Ref(schema), Mod)
+apply_schema(terms::TupleTerm, schema, Mod::Type) = sum(apply_schema.(terms, Ref(schema), Mod))
 
 apply_schema(t::Term, schema::Schema, Mod::Type) = schema[t]
 apply_schema(ft::FormulaTerm, schema::Schema, Mod::Type) =
@@ -244,6 +248,7 @@ has_schema(t::Term) = false
 has_schema(t::Union{ContinuousTerm,CategoricalTerm}) = true
 has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
 has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
+has_schema(t::MatrixTerm) = has_schema(t.terms)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
 
 struct FullRank
@@ -261,7 +266,7 @@ function apply_schema(t::FormulaTerm, schema::Schema, Mod::Type{<:StatisticalMod
     schema = FullRank(schema)
 
     # Models with the drop_intercept trait do not support intercept terms,
-    # usually because they include one implicitly.
+    # usually because one is always necessarily included during fitting
     if drop_intercept(Mod)
         if hasintercept(t)
             throw(ArgumentError("Model type $Mod doesn't support intercept " *
