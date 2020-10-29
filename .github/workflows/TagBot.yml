@@ -1,6 +1,6 @@
 name: TagBot
 on:
-  issue_comment:  # THIS BIT IS NEW
+  issue_comment:
     types:
       - created
 jobs:
