@@ -12,7 +12,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        julia-version: '1' # expands to latest 1.x series release...
+        julia-version:
+          - '1' # expands to latest 1.x series release...
         julia-arch: [x86]
         os: [ubuntu-latest]
     steps:
