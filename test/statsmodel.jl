@@ -276,13 +276,25 @@ end
                      lrtest(m0, m1))
     @test isnan(lr2.pval[1])
     @test lr2.pval[2] ≈ 1.2147224767092312e-5
-    @test sprint(show, lr2) == """
-        Likelihood-ratio test: 2 models fitted on 4 observations
-        ──────────────────────────────────────────────
-             DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
-        ──────────────────────────────────────────────
-        [1]    0         30.0000                      
-        [2]    1     1   10.8600   -19.1400      <1e-4
-        ──────────────────────────────────────────────"""
 
+    # in 1.6, p value printing has changed (JuliaStats/StatsBase.jl#606)
+    if VERSION > v"1.6.0-DEV"
+        @test sprint(show, lr2) == """
+            Likelihood-ratio test: 2 models fitted on 4 observations
+            ──────────────────────────────────────────────
+                 DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
+            ──────────────────────────────────────────────
+            [1]    0         30.0000                      
+            [2]    1     1   10.8600   -19.1400     <1e-04
+            ──────────────────────────────────────────────"""
+    else
+        @test sprint(show, lr2) == """
+            Likelihood-ratio test: 2 models fitted on 4 observations
+            ──────────────────────────────────────────────
+                 DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
+            ──────────────────────────────────────────────
+            [1]    0         30.0000                      
+            [2]    1     1   10.8600   -19.1400      <1e-4
+            ──────────────────────────────────────────────"""
+    end
 end
