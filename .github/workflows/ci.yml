@@ -23,6 +23,10 @@ jobs:
           - ubuntu-latest
         arch:
           - x64
+        include:
+          - os: ubuntu-latest
+            arch: 'x86'
+            version: '1'
     steps:
       - run: git config --global core.autocrlf false
       - uses: actions/checkout@v2
