@@ -75,8 +75,15 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test string(a & b) == "$a & $b"
         @test mimestring(a & b) == "a(unknown) & b(unknown)"
         c = term(:c)
-        @test (a+b)+c == (a,b,c)
-        @test a+(b+c) == (a,b,c)
+        ab = a+b
+        bc = b+c
+        abc = a+b+c
+        @test ab+c == abc
+        @test ab+a == ab
+        @test a+bc == abc
+        @test b+ab == ab
+        @test ab+ab == ab
+        @test ab+bc == abc
     end
 
     @testset "expand nested tuples of terms during apply_schema" begin
