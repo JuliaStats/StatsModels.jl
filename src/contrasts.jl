@@ -696,10 +696,10 @@ julia> StatsModels.hypothesis_matrix(cmat, intercept=false) # wrong without inte
 
 julia> StatsModels.hypothesis_matrix(cmat, tolerance=0) # ugly
 4×4 Array{Float64,2}:
-  1.0  -2.22045e-16   0.0          -1.38778e-16
- -1.0   1.0          -1.66533e-16   1.11022e-16
- -1.0   1.11022e-16   1.0           5.55112e-17
- -1.0   1.11022e-16  -1.11022e-16   1.0        
+  1.0  -2.23753e-16   6.91749e-18  -1.31485e-16
+ -1.0   1.0          -2.42066e-16   9.93754e-17
+ -1.0   4.94472e-17   1.0           9.93754e-17
+ -1.0   1.04958e-16  -1.31044e-16   1.0        
 
 julia> StatsModels.hypothesis_matrix(StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b", "c", "d"]))
 4×4 Array{Int64,2}:

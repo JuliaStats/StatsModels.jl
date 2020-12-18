@@ -80,13 +80,13 @@ julia> ts = [Term(:x), Term(:y)];
 
 julia> schema(ts, d)
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> schema(ts, d, Dict(:x => HelmertCoding()))
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> schema(term(:y), d, Dict(:y => CategoricalTerm))
 StatsModels.Schema with 1 entry:
@@ -99,8 +99,8 @@ same in a container, but when printed alone are different:
 ```jldoctest 1
 julia> sch = schema(ts, d)
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> term(:x)
 x(unknown)
