@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Modeling tabular data · StatsModels.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">StatsModels.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Introduction</a></li><li class="is-active"><a class="tocitem" href>Modeling tabular data</a><ul class="internal"><li><a class="tocitem" href="#The-@formula-language"><span>The <code>@formula</code> language</span></a></li><li><a class="tocitem" href="#Julia-functions-in-a-@formula"><span>Julia functions in a <code>@formula</code></span></a></li><li><a class="tocitem" href="#Constructing-a-formula-programmatically"><span>Constructing a formula programmatically</span></a></li><li><a class="tocitem" href="#Fitting-a-model-from-a-formula"><span>Fitting a model from a formula</span></a></li></ul></li><li><a class="tocitem" href="../internals/">Internals and extending the <code>@formula</code></a></li><li><a class="tocitem" href="../contrasts/">Contrast coding categorical variables</a></li><li><a class="tocitem" href="../temporal_terms/">Temporal variables and Time Series Terms</a></li><li><a class="tocitem" href="../api/">API documentation</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Modeling tabular data</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Modeling tabular data</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaStats/StatsModels.jl/blob/master/docs/src/formula.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Modeling-tabular-data"><a class="docs-heading-anchor" href="#Modeling-tabular-data">Modeling tabular data</a><a id="Modeling-tabular-data-1"></a><a class="docs-heading-anchor-permalink" href="#Modeling-tabular-data" title="Permalink"></a></h1><p>Most statistical models require that data be represented as a <code>Matrix</code>-like collection of a single numeric type.  Much of the data we want to model, however, is <strong>tabular data</strong>, where data is represented as a collection of fields with possibly heterogeneous types.  One of the primary goals of <code>StatsModels</code> is to make it simpler to transform tabular data into matrix format suitable for statistical modeling.</p><p>At the moment, &quot;tabular data&quot; means a <a href="https://github.com/JuliaData/Tables.jl">Tables.jl</a> table, which will be materialized as a <code>Tables.ColumnTable</code> (a <code>NamedTuple</code> of column vectors).  Work on first-class support for streaming/row-oriented tables is ongoing.</p><h2 id="The-@formula-language"><a class="docs-heading-anchor" href="#The-@formula-language">The <code>@formula</code> language</a><a id="The-@formula-language-1"></a><a class="docs-heading-anchor-permalink" href="#The-@formula-language" title="Permalink"></a></h2><p>StatsModels implements the <a href="../api/#StatsModels.@formula"><code>@formula</code></a> domain-specific language for describing table-to-matrix transformations.  This language is designed to be familiar to users of other statistical software, while also taking advantage of Julia&#39;s unique strengths to be fast and flexible.</p><p>A basic formula is composed of individual <em>terms</em>—symbols which refer to data columns, or literal numbers <code>0</code> or <code>1</code>—combined by <code>+</code>, <code>&amp;</code>, <code>*</code>, and (at the top level) <code>~</code>.</p><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>The <code>@formula</code> macro <strong>must</strong> be called with parentheses to ensure that the formula is parsed properly.</p></div></div><p>Here is an example of the <code>@formula</code> in action:</p><pre><code class="language-julia-repl">julia&gt; using StatsModels, DataFrames
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Modeling tabular data · StatsModels.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">StatsModels.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Introduction</a></li><li class="is-active"><a class="tocitem" href>Modeling tabular data</a><ul class="internal"><li><a class="tocitem" href="#The-@formula-language"><span>The <code>@formula</code> language</span></a></li><li><a class="tocitem" href="#Julia-functions-in-a-@formula"><span>Julia functions in a <code>@formula</code></span></a></li><li><a class="tocitem" href="#Constructing-a-formula-programmatically"><span>Constructing a formula programmatically</span></a></li><li><a class="tocitem" href="#Fitting-a-model-from-a-formula"><span>Fitting a model from a formula</span></a></li></ul></li><li><a class="tocitem" href="../internals/">Internals and extending the <code>@formula</code></a></li><li><a class="tocitem" href="../contrasts/">Contrast coding categorical variables</a></li><li><a class="tocitem" href="../temporal_terms/">Temporal variables and Time Series Terms</a></li><li><a class="tocitem" href="../api/">API documentation</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Modeling tabular data</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Modeling tabular data</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaStats/StatsModels.jl/blob/master/docs/src/formula.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Modeling-tabular-data"><a class="docs-heading-anchor" href="#Modeling-tabular-data">Modeling tabular data</a><a id="Modeling-tabular-data-1"></a><a class="docs-heading-anchor-permalink" href="#Modeling-tabular-data" title="Permalink"></a></h1><p>Most statistical models require that data be represented as a <code>Matrix</code>-like collection of a single numeric type.  Much of the data we want to model, however, is <strong>tabular data</strong>, where data is represented as a collection of fields with possibly heterogeneous types.  One of the primary goals of <code>StatsModels</code> is to make it simpler to transform tabular data into matrix format suitable for statistical modeling.</p><p>At the moment, &quot;tabular data&quot; means a <a href="https://github.com/JuliaData/Tables.jl">Tables.jl</a> table, which will be materialized as a <code>Tables.ColumnTable</code> (a <code>NamedTuple</code> of column vectors).  Work on first-class support for streaming/row-oriented tables is ongoing.</p><h2 id="The-@formula-language"><a class="docs-heading-anchor" href="#The-@formula-language">The <code>@formula</code> language</a><a id="The-@formula-language-1"></a><a class="docs-heading-anchor-permalink" href="#The-@formula-language" title="Permalink"></a></h2><p>StatsModels implements the <a href="../api/#StatsModels.@formula"><code>@formula</code></a> domain-specific language for describing table-to-matrix transformations.  This language is designed to be familiar to users of other statistical software, while also taking advantage of Julia&#39;s unique strengths to be fast and flexible.</p><p>A basic formula is composed of individual <em>terms</em>—symbols which refer to data columns, or literal numbers <code>0</code> or <code>1</code>—combined by <code>+</code>, <code>&amp;</code>, <code>*</code>, and (at the top level) <code>~</code>.</p><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>The <code>@formula</code> macro <strong>must</strong> be called with parentheses to ensure that the formula is parsed properly.</p></div></div><p>Here is an example of the <code>@formula</code> in action:</p><pre><code class="language-julia-repl">julia&gt; using StatsModels, DataFrames
+
+julia&gt; using StableRNGs; rng = StableRNG(1);
 
 julia&gt; f = @formula(y ~ 1 + a + b + c + b&amp;c)
 FormulaTerm
@@ -12,20 +14,20 @@ Predictors:
   c(unknown)
   b(unknown) &amp; c(unknown)
 
-julia&gt; df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat([&quot;d&quot;,&quot;e&quot;,&quot;f&quot;], 3))
+julia&gt; df = DataFrame(y = rand(rng, 9), a = 1:9, b = rand(rng, 9), c = repeat([&quot;d&quot;,&quot;e&quot;,&quot;f&quot;], 3))
 9×4 DataFrame
-│ Row │ y          │ a     │ b         │ c      │
-│     │ Float64    │ Int64 │ Float64   │ String │
-├─────┼────────────┼───────┼───────────┼────────┤
-│ 1   │ 0.236033   │ 1     │ 0.986666  │ d      │
-│ 2   │ 0.346517   │ 2     │ 0.555751  │ e      │
-│ 3   │ 0.312707   │ 3     │ 0.437108  │ f      │
-│ 4   │ 0.00790928 │ 4     │ 0.424718  │ d      │
-│ 5   │ 0.488613   │ 5     │ 0.773223  │ e      │
-│ 6   │ 0.210968   │ 6     │ 0.28119   │ f      │
-│ 7   │ 0.951916   │ 7     │ 0.209472  │ d      │
-│ 8   │ 0.999905   │ 8     │ 0.251379  │ e      │
-│ 9   │ 0.251662   │ 9     │ 0.0203749 │ f      │
+ Row │ y          a      b         c
+     │ Float64    Int64  Float64   String
+─────┼────────────────────────────────────
+   1 │ 0.585195       1  0.236782  d
+   2 │ 0.0773379      2  0.943741  e
+   3 │ 0.716628       3  0.445671  f
+   4 │ 0.320357       4  0.763679  d
+   5 │ 0.653093       5  0.145071  e
+   6 │ 0.236639       6  0.021124  f
+   7 │ 0.709684       7  0.152545  d
+   8 │ 0.557787       8  0.617492  e
+   9 │ 0.05079        9  0.481531  f
 
 julia&gt; f = apply_schema(f, schema(f, df))
 FormulaTerm
@@ -42,15 +44,15 @@ julia&gt; resp, pred = modelcols(f, df);
 
 julia&gt; pred
 9×7 Array{Float64,2}:
- 1.0  1.0  0.986666   0.0  0.0  0.0       0.0
- 1.0  2.0  0.555751   1.0  0.0  0.555751  0.0
- 1.0  3.0  0.437108   0.0  1.0  0.0       0.437108
- 1.0  4.0  0.424718   0.0  0.0  0.0       0.0
- 1.0  5.0  0.773223   1.0  0.0  0.773223  0.0
- 1.0  6.0  0.28119    0.0  1.0  0.0       0.28119
- 1.0  7.0  0.209472   0.0  0.0  0.0       0.0
- 1.0  8.0  0.251379   1.0  0.0  0.251379  0.0
- 1.0  9.0  0.0203749  0.0  1.0  0.0       0.0203749
+ 1.0  1.0  0.236782  0.0  0.0  0.0       0.0
+ 1.0  2.0  0.943741  1.0  0.0  0.943741  0.0
+ 1.0  3.0  0.445671  0.0  1.0  0.0       0.445671
+ 1.0  4.0  0.763679  0.0  0.0  0.0       0.0
+ 1.0  5.0  0.145071  1.0  0.0  0.145071  0.0
+ 1.0  6.0  0.021124  0.0  1.0  0.0       0.021124
+ 1.0  7.0  0.152545  0.0  0.0  0.0       0.0
+ 1.0  8.0  0.617492  1.0  0.0  0.617492  0.0
+ 1.0  9.0  0.481531  0.0  1.0  0.0       0.481531
 
 julia&gt; coefnames(f)
 (&quot;y&quot;, [&quot;(Intercept)&quot;, &quot;a&quot;, &quot;b&quot;, &quot;c: e&quot;, &quot;c: f&quot;, &quot;b &amp; c: e&quot;, &quot;b &amp; c: f&quot;])
@@ -103,11 +105,11 @@ StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.De
 
 Coefficients:
 ──────────────────────────────────────────────────────────────────────────
-                 Coef.  Std. Error      t  Pr(&gt;|t|)   Lower 95%  Upper 95%
+                  Coef.  Std. Error      t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)  -4.16168     2.98788   -1.39    0.2131  -11.4727      3.14939
-a             0.357482    0.342126   1.04    0.3363   -0.479669    1.19463
-b             2.32528     3.13735    0.74    0.4866   -5.35154    10.0021
+(Intercept)   0.0698025    0.928295   0.08    0.9425  -2.20165    2.34126
+a            -0.105669     0.128107  -0.82    0.4410  -0.419136   0.207797
+b            -1.63199      1.12678   -1.45    0.1977  -4.38911    1.12513
 ──────────────────────────────────────────────────────────────────────────
 
 julia&gt; df.log_y = log.(df.y);
@@ -119,23 +121,23 @@ log_y ~ 1 + a + b
 
 Coefficients:
 ──────────────────────────────────────────────────────────────────────────
-                 Coef.  Std. Error      t  Pr(&gt;|t|)   Lower 95%  Upper 95%
+                  Coef.  Std. Error      t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)  -4.16168     2.98788   -1.39    0.2131  -11.4727      3.14939
-a             0.357482    0.342126   1.04    0.3363   -0.479669    1.19463
-b             2.32528     3.13735    0.74    0.4866   -5.35154    10.0021
+(Intercept)   0.0698025    0.928295   0.08    0.9425  -2.20165    2.34126
+a            -0.105669     0.128107  -0.82    0.4410  -0.419136   0.207797
+b            -1.63199      1.12678   -1.45    0.1977  -4.38911    1.12513
 ──────────────────────────────────────────────────────────────────────────
 </code></pre><p>The no-op function <code>identity</code> can be used to block the normal formula-specific interpretation of <code>+</code>, <code>*</code>, and <code>&amp;</code>:</p><pre><code class="language-julia-repl">julia&gt; modelmatrix(@formula(y ~ 1 + b + identity(1+b)), df)
 9×3 Array{Float64,2}:
- 1.0  0.986666   1.98667
- 1.0  0.555751   1.55575
- 1.0  0.437108   1.43711
- 1.0  0.424718   1.42472
- 1.0  0.773223   1.77322
- 1.0  0.28119    1.28119
- 1.0  0.209472   1.20947
- 1.0  0.251379   1.25138
- 1.0  0.0203749  1.02037</code></pre><h2 id="Constructing-a-formula-programmatically"><a class="docs-heading-anchor" href="#Constructing-a-formula-programmatically">Constructing a formula programmatically</a><a id="Constructing-a-formula-programmatically-1"></a><a class="docs-heading-anchor-permalink" href="#Constructing-a-formula-programmatically" title="Permalink"></a></h2><p>A formula can be constructed at runtime by creating <code>Term</code>s and combining them with the formula operators <code>+</code>, <code>&amp;</code>, and <code>~</code>:</p><pre><code class="language-julia-repl">julia&gt; Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) &amp; Term(:b)
+ 1.0  0.236782  1.23678
+ 1.0  0.943741  1.94374
+ 1.0  0.445671  1.44567
+ 1.0  0.763679  1.76368
+ 1.0  0.145071  1.14507
+ 1.0  0.021124  1.02112
+ 1.0  0.152545  1.15255
+ 1.0  0.617492  1.61749
+ 1.0  0.481531  1.48153</code></pre><h2 id="Constructing-a-formula-programmatically"><a class="docs-heading-anchor" href="#Constructing-a-formula-programmatically">Constructing a formula programmatically</a><a id="Constructing-a-formula-programmatically-1"></a><a class="docs-heading-anchor-permalink" href="#Constructing-a-formula-programmatically" title="Permalink"></a></h2><p>A formula can be constructed at runtime by creating <code>Term</code>s and combining them with the formula operators <code>+</code>, <code>&amp;</code>, and <code>~</code>:</p><pre><code class="language-julia-repl">julia&gt; Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) &amp; Term(:b)
 FormulaTerm
 Response:
   y(unknown)
@@ -168,13 +170,15 @@ julia&gt; f1 == f2 == @formula(y ~ 1 + a + b)
 true
 </code></pre><h2 id="Fitting-a-model-from-a-formula"><a class="docs-heading-anchor" href="#Fitting-a-model-from-a-formula">Fitting a model from a formula</a><a id="Fitting-a-model-from-a-formula-1"></a><a class="docs-heading-anchor-permalink" href="#Fitting-a-model-from-a-formula" title="Permalink"></a></h2><p>The main use of <code>@formula</code> is to streamline specifying and fitting statistical models based on tabular data.  From the user&#39;s perspective, this is done by <code>fit</code> methods that take a <code>FormulaTerm</code> and a table instead of numeric matrices.</p><p>As an example, we&#39;ll simulate some data from a linear regression model with an interaction term, a continuous predictor, a categorical predictor, and the interaction of the two, and then fit a <code>GLM.LinearModel</code> to recover the simulated coefficients.</p><pre><code class="language-julia-repl">julia&gt; using GLM, DataFrames, StatsModels
 
-julia&gt; data = DataFrame(a = rand(100), b = repeat([&quot;d&quot;, &quot;e&quot;, &quot;f&quot;, &quot;g&quot;], 25));
+julia&gt; using StableRNGs; rng = StableRNG(1);
+
+julia&gt; data = DataFrame(a = rand(rng, 100), b = repeat([&quot;d&quot;, &quot;e&quot;, &quot;f&quot;, &quot;g&quot;], 25));
 
 julia&gt; X = StatsModels.modelmatrix(@formula(y ~ 1 + a*b).rhs, data);
 
 julia&gt; β_true = 1:8;
 
-julia&gt; ϵ = randn(100)*0.1;
+julia&gt; ϵ = randn(rng, 100)*0.1;
 
 julia&gt; data.y = X*β_true .+ ϵ;
 
@@ -187,13 +191,13 @@ Coefficients:
 ───────────────────────────────────────────────────────────────────────
                Coef.  Std. Error      t  Pr(&gt;|t|)  Lower 95%  Upper 95%
 ───────────────────────────────────────────────────────────────────────
-(Intercept)  1.01518   0.0378035  26.85    &lt;1e-44   0.940101    1.09026
-a            1.98369   0.0766599  25.88    &lt;1e-43   1.83144     2.13595
-b: e         3.03157   0.0606258  50.00    &lt;1e-67   2.91116     3.15198
-b: f         3.98553   0.0563457  70.73    &lt;1e-81   3.87362     4.09744
-b: g         5.00412   0.0577589  86.64    &lt;1e-89   4.88941     5.11884
-a &amp; b: e     5.91659   0.105766   55.94    &lt;1e-72   5.70653     6.12665
-a &amp; b: f     6.98546   0.110637   63.14    &lt;1e-76   6.76573     7.2052
-a &amp; b: g     7.95902   0.109459   72.71    &lt;1e-82   7.74163     8.17642
+(Intercept)  1.01518   0.0400546  25.34    &lt;1e-42   0.935626    1.09473
+a            1.97476   0.0701427  28.15    &lt;1e-46   1.83545     2.11407
+b: e         3.01269   0.0571186  52.74    &lt;1e-69   2.89925     3.12614
+b: f         4.01918   0.065827   61.06    &lt;1e-75   3.88844     4.14992
+b: g         4.99176   0.0593715  84.08    &lt;1e-88   4.87385     5.10968
+a &amp; b: e     5.98288   0.0954641  62.67    &lt;1e-76   5.79328     6.17248
+a &amp; b: f     6.98622   0.107871   64.76    &lt;1e-77   6.77197     7.20046
+a &amp; b: g     7.92541   0.109873   72.13    &lt;1e-82   7.70719     8.14362
 ───────────────────────────────────────────────────────────────────────
-</code></pre><p>Internally, this is accomplished in three steps:</p><ol><li>The expression passed to <code>@formula</code> is lowered to term constructors combined by <code>~</code>, <code>+</code>, and <code>&amp;</code>, which evaluate to create terms for the whole formula and any interaction terms.</li><li>A schema is extracted from the data, which determines whether each variable is continuous or categorical and extracts the summary statistics of each variable (mean/variance/min/max or unique levels respectively).  This schema is then <em>applied</em> to the formula with <code>apply_schema(term, schema, ::Type{Model})</code>, which returns a new formula with each placeholder <code>Term</code> replaced with a concrete <code>ContinuousTerm</code> or <code>CategoricalTerm</code> as appropriate.  This is also the stage where any custom syntax is applied (see <a href="../internals/#Internals-and-extending-the-formula-DSL">the section on extending the <code>@formula</code> language</a> for more details).</li><li>Numeric arrays are generated for the response and predictors from the full table using <code>modelcols(term, data)</code>.</li></ol><p>The <code>ModelFrame</code> and <code>ModelMatrix</code> types can still be used to do this transformation, but this is only to preserve some backwards compatibility. Package authors who would like to include support for fitting models from a <code>@formula</code> are <strong>strongly</strong> encouraged to directly use <code>schema</code>, <code>apply_schema</code>, and <code>modelcols</code> to handle the table-to-matrix transformations they need.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Introduction</a><a class="docs-footer-nextpage" href="../internals/">Internals and extending the <code>@formula</code> »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 15 September 2020 17:19">Tuesday 15 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><p>Internally, this is accomplished in three steps:</p><ol><li>The expression passed to <code>@formula</code> is lowered to term constructors combined by <code>~</code>, <code>+</code>, and <code>&amp;</code>, which evaluate to create terms for the whole formula and any interaction terms.</li><li>A schema is extracted from the data, which determines whether each variable is continuous or categorical and extracts the summary statistics of each variable (mean/variance/min/max or unique levels respectively).  This schema is then <em>applied</em> to the formula with <code>apply_schema(term, schema, ::Type{Model})</code>, which returns a new formula with each placeholder <code>Term</code> replaced with a concrete <code>ContinuousTerm</code> or <code>CategoricalTerm</code> as appropriate.  This is also the stage where any custom syntax is applied (see <a href="../internals/#Internals-and-extending-the-formula-DSL">the section on extending the <code>@formula</code> language</a> for more details).</li><li>Numeric arrays are generated for the response and predictors from the full table using <code>modelcols(term, data)</code>.</li></ol><p>The <code>ModelFrame</code> and <code>ModelMatrix</code> types can still be used to do this transformation, but this is only to preserve some backwards compatibility. Package authors who would like to include support for fitting models from a <code>@formula</code> are <strong>strongly</strong> encouraged to directly use <code>schema</code>, <code>apply_schema</code>, and <code>modelcols</code> to handle the table-to-matrix transformations they need.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Introduction</a><a class="docs-footer-nextpage" href="../internals/">Internals and extending the <code>@formula</code> »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 18 December 2020 22:27">Friday 18 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
