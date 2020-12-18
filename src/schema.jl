@@ -72,7 +72,9 @@ mapping `Term`s to their concrete instantiations (`ContinuousTerm` or
 # Example
 
 ```jldoctest 1
-julia> d = (x=sample([:a, :b, :c], 10), y=rand(10));
+julia> using StableRNGs; rng = StableRNG(1);
+
+julia> d = (x=sample(rng, [:a, :b, :c], 10), y=rand(rng, 10));
 
 julia> ts = [Term(:x), Term(:y)];
 

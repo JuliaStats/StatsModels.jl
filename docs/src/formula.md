@@ -2,8 +2,6 @@
 CurrentModule = StatsModels
 DocTestSetup = quote
     using StatsModels
-    using Random
-    Random.seed!(1)
 end
 ```
 
@@ -42,6 +40,8 @@ Here is an example of the `@formula` in action:
 ```jldoctest 1
 julia> using StatsModels, DataFrames
 
+julia> using StableRNGs; rng = StableRNG(1);
+
 julia> f = @formula(y ~ 1 + a + b + c + b&c)
 FormulaTerm
 Response:
@@ -53,7 +53,7 @@ Predictors:
   c(unknown)
   b(unknown) & c(unknown)
 
-julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["d","e","f"], 3))
+julia> df = DataFrame(y = rand(rng, 9), a = 1:9, b = rand(rng, 9), c = repeat(["d","e","f"], 3))
 9×4 DataFrame
 │ Row │ y          │ a     │ b         │ c      │
 │     │ Float64    │ Int64 │ Float64   │ String │
@@ -350,13 +350,15 @@ simulated coefficients.
 ```jldoctest
 julia> using GLM, DataFrames, StatsModels
 
-julia> data = DataFrame(a = rand(100), b = repeat(["d", "e", "f", "g"], 25));
+julia> using StableRNGs; rng = StableRNG(1);
+
+julia> data = DataFrame(a = rand(rng, 100), b = repeat(["d", "e", "f", "g"], 25));
 
 julia> X = StatsModels.modelmatrix(@formula(y ~ 1 + a*b).rhs, data);
 
 julia> β_true = 1:8;
 
-julia> ϵ = randn(100)*0.1;
+julia> ϵ = randn(rng, 100)*0.1;
 
 julia> data.y = X*β_true .+ ϵ;
 

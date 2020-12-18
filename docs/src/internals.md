@@ -134,7 +134,7 @@ function.  By default, it will create a schema for every column in the data:
 ```jldoctest 1
 julia> using DataFrames    # for pretty printing---any Table will do
 
-julia> using Random; rng = MersenneTwister(1);
+julia> using StableRNGs; rng = StableRNG(1);
 
 julia> df = DataFrame(y = rand(rng, 9), a = 1:9, b = rand(rng, 9), c = repeat(["a","b","c"], 3))
 9×4 DataFrame
