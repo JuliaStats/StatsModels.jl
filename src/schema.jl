@@ -162,7 +162,7 @@ a(EffectsCoding:3→2)
 julia> concrete_term(term(:a), [1, 2, 3], Dict(:a=>EffectsCoding()))
 a(EffectsCoding:3→2)
 
-julia> concrete_term(term(:a), (a = [1, 2, 3], b = rand(3)))
+julia> concrete_term(term(:a), (a = [1, 2, 3], b = [0.0, 0.5, 1.0]))
 a(continuous)
 ```
 """
