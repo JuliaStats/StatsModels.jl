@@ -1,8 +1,6 @@
 ```@meta
 DocTestSetup = quote
     using StatsModels
-    using Random
-    Random.seed!(1)
 end
 DocTestFilters = [r"([a-z]*) => \1"]
 ```
@@ -136,7 +134,9 @@ function.  By default, it will create a schema for every column in the data:
 ```jldoctest 1
 julia> using DataFrames    # for pretty printing---any Table will do
 
-julia> df = DataFrame(y = rand(9), a = 1:9, b = rand(9), c = repeat(["a","b","c"], 3))
+julia> using Random; rng = MersenneTwister(1);
+
+julia> df = DataFrame(y = rand(rng, 9), a = 1:9, b = rand(rng, 9), c = repeat(["a","b","c"], 3))
 9×4 DataFrame
 │ Row │ y          │ a     │ b         │ c      │
 │     │ Float64    │ Int64 │ Float64   │ String │
@@ -454,7 +454,7 @@ StatsBase.coefnames(p::PolyTerm) = coefnames(p.term) .* "^" .* string.(1:p.deg)
 Now, we can use `poly` in a formula:
 
 ```jldoctest 1
-julia> data = DataFrame(y = rand(4), a = rand(4), b = [1:4;])
+julia> data = DataFrame(y = rand(rng, 4), a = rand(rng, 4), b = [1:4;])
 4×3 DataFrame
 │ Row │ y          │ a        │ b     │
 │     │ Float64    │ Float64  │ Int64 │
@@ -508,9 +508,9 @@ and of `b^2` (but not `a^2` or `b^1`):
 ```jldoctest 1
 julia> using GLM
 
-julia> sim_dat = DataFrame(a=rand(100).-0.5, b=randn(100).-0.5);
+julia> sim_dat = DataFrame(a=rand(rng, 100).-0.5, b=randn(rng, 100).-0.5);
 
-julia> sim_dat.y = randn(100) .+ 1 .+ 2*sim_dat.a .+ 3*sim_dat.b.^2;
+julia> sim_dat.y = randn(rng, 100) .+ 1 .+ 2*sim_dat.a .+ 3*sim_dat.b.^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(a,2) + poly(b,2)), sim_dat)
 StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
@@ -724,9 +724,9 @@ The definitions of these methods control how models of each type are _fit_ from
 a formula with a call to `poly`:
 
 ```jldoctest 1
-julia> sim_dat = DataFrame(b=randn(100));
+julia> sim_dat = DataFrame(b=randn(rng, 100));
 
-julia> sim_dat.y = randn(100) .+ 1 .+ 2*sim_dat.b .+ 3*sim_dat.b.^2;
+julia> sim_dat.y = randn(rng, 100) .+ 1 .+ 2*sim_dat.b .+ 3*sim_dat.b.^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
 StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
