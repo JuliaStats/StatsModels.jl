@@ -8,7 +8,7 @@ using DataStructures
 using DataAPI
 using DataAPI: levels
 using Printf: @sprintf
-using Distributions: Chisq, ccdf
+using StatsFuns: chisqccdf
 
 using SparseArrays
 using LinearAlgebra

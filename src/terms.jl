@@ -402,9 +402,10 @@ Base.:&(terms::AbstractTerm...) = InteractionTerm(terms)
 Base.:&(term::AbstractTerm) = term
 Base.:&(it::InteractionTerm, terms::AbstractTerm...) = InteractionTerm((it.terms..., terms...))
 
-Base.:+(terms::AbstractTerm...) = (unique(terms)..., )
-Base.:+(as::TupleTerm, b::AbstractTerm) = (as..., b)
-Base.:+(a::AbstractTerm, bs::TupleTerm) = (a, bs...)
+Base.:+(a::AbstractTerm, b::AbstractTerm) = a==b ? a : (a, b)
+Base.:+(as::TupleTerm, b::AbstractTerm) = b in as ? as : (as..., b)
+Base.:+(a::AbstractTerm, bs::TupleTerm) = a in bs ? bs : (a, bs...)
+Base.:+(as::TupleTerm, bs::TupleTerm) = (union(as, bs)..., )
 
 ################################################################################
 # evaluating terms with data to generate model matrix entries
