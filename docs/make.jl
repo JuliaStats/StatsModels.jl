@@ -1,6 +1,6 @@
 using Documenter, StatsModels
 
-DocMeta.setdocmeta!(StatsModels, :DocTestSetup, :(using StatsModels, Random, StatsBase; Random.seed!(2001)); recursive=true)
+DocMeta.setdocmeta!(StatsModels, :DocTestSetup, :(using StatsModels, StatsBase); recursive=true)
 
 
 using Pkg
