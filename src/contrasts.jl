@@ -673,7 +673,7 @@ observations in every cell.  This is only important for non-orthgonal contrasts
 
 # Examples
 
-```jldoctest
+```jldoctest hypmat
 julia> cmat = StatsModels.contrasts_matrix(DummyCoding(), 1, 4)
 4×3 Array{Float64,2}:
  0.0  0.0  0.0
@@ -687,20 +687,38 @@ julia> StatsModels.hypothesis_matrix(cmat)
  -1  1  0  0
  -1  0  1  0
  -1  0  0  1
+```
 
-julia> StatsModels.hypothesis_matrix(cmat, intercept=false) # wrong without intercept!!
+For non-centered contrasts like `DummyCoding`, without including the intercept 
+the hypothesis matrix is incorrect.  So while `intercept=true` is the default for 
+non-centered contrasts, you can see the (wrong) hypothesis matrix when ignoring 
+it by forcing `intercept=false`:
+
+```jldoctest hypmat
+julia> StatsModels.hypothesis_matrix(cmat, intercept=false)
 3×4 Array{Int64,2}:
  0  1  0  0
  0  0  1  0
  0  0  0  1
+```
 
+The default behavior is to coerce to the nearest integer or rational value, with
+a tolerance of the `tolerance` kwarg (defaults to `1e-5`).  The raw
+pseudo-inverse matrix can be obtained as `Float64` by setting `tolerance=0`:
+
+```julia-repl
 julia> StatsModels.hypothesis_matrix(cmat, tolerance=0) # ugly
 4×4 Array{Float64,2}:
   1.0  -2.23753e-16   6.91749e-18  -1.31485e-16
  -1.0   1.0          -2.42066e-16   9.93754e-17
  -1.0   4.94472e-17   1.0           9.93754e-17
  -1.0   1.04958e-16  -1.31044e-16   1.0        
+```
 
+Finally, the hypothesis matrix for a constructed `ContrastsMatrix` (as stored by
+`CategoricalTerm`s) can also be extracted:
+
+```jldoctest hypmat
 julia> StatsModels.hypothesis_matrix(StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b", "c", "d"]))
 4×4 Array{Int64,2}:
   1  0  0  0
