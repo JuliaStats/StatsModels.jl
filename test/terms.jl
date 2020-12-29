@@ -89,8 +89,10 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
     @testset "uniqueness of FunctionTerms" begin
         f1 = @formula(y ~ lag(x,1) + lag(x,1))
         f2 = @formula(y ~ lag(x,1))
+        f3 = @formula(y ~ lag(x,1) + lag(x,2))
 
         @test f1.rhs == f2.rhs
+        @test f1.rhs != f3.rhs
 
         ## addition of two identical function terms
         @test f2.rhs + f2.rhs == f2.rhs
