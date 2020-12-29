@@ -127,6 +127,8 @@ FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
     FunctionTerm{Fo, Fa, names}(forig, fanon, exorig, args_parsed)
 width(::FunctionTerm) = 1
 
+Base.:(==)(a::FunctionTerm, b::FunctionTerm) = a.forig == b.forig && a.exorig == b.exorig
+
 """
     InteractionTerm{Ts} <: AbstractTerm
 
