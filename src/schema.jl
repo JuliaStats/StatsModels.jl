@@ -72,19 +72,21 @@ mapping `Term`s to their concrete instantiations (`ContinuousTerm` or
 # Example
 
 ```jldoctest 1
-julia> d = (x=sample([:a, :b, :c], 10), y=rand(10));
+julia> using StableRNGs; rng = StableRNG(1);
+
+julia> d = (x=sample(rng, [:a, :b, :c], 10), y=rand(rng, 10));
 
 julia> ts = [Term(:x), Term(:y)];
 
 julia> schema(ts, d)
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> schema(ts, d, Dict(:x => HelmertCoding()))
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> schema(term(:y), d, Dict(:y => CategoricalTerm))
 StatsModels.Schema with 1 entry:
@@ -97,8 +99,8 @@ same in a container, but when printed alone are different:
 ```jldoctest 1
 julia> sch = schema(ts, d)
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> term(:x)
 x(unknown)
@@ -160,7 +162,7 @@ a(EffectsCoding:3→2)
 julia> concrete_term(term(:a), [1, 2, 3], Dict(:a=>EffectsCoding()))
 a(EffectsCoding:3→2)
 
-julia> concrete_term(term(:a), (a = [1, 2, 3], b = rand(3)))
+julia> concrete_term(term(:a), (a = [1, 2, 3], b = [0.0, 0.5, 1.0]))
 a(continuous)
 ```
 """
