@@ -509,7 +509,8 @@ reshape_last_to_i(i, a::AbstractMatrix) = reshape(a, size(a,1), ones(Int, i-1)..
 function kron_insideout(op::Function, args...)
     args = (reshape_last_to_i(i,a) for (i,a) in enumerate(args))
     out = broadcast(op, args...)
-    length(out) == 1 ? out : vec(out)
+    # flatten higher-dimensional output to vector
+    length(size(out)) > 1 ? vec(out) : out
 end
 
 function row_kron_insideout(op::Function, args...)
