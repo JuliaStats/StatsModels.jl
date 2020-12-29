@@ -86,6 +86,16 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test ab+bc == abc
     end
 
+    @testset "uniqueness of FunctionTerms" begin
+        f1 = @formula(y ~ lag(x,1) + lag(x,1))
+        f2 = @formula(y ~ lag(x,1))
+
+        @test f1.rhs == f2.rhs
+
+        ## addition of two identical function terms
+        @test f2.rhs + f2.rhs == f2.rhs
+    end
+
     @testset "expand nested tuples of terms during apply_schema" begin
         sch = schema((a=rand(10), b=rand(10), c=rand(10)))
 
