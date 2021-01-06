@@ -398,4 +398,10 @@
         @test_throws ArgumentError modelcols(f, t)
     end
 
+    @testset "#185 - interactions of scalar terms for row tables" begin
+        t = (a = rand(10), b = rand(10), c = rand(10))
+        f = apply_schema(@formula(0 ~ a&b&c), schema(t))
+        @test vec(modelcols(f.rhs, t)) == modelcols.(Ref(f.rhs), Tables.rowtable(t))
+    end
+    
 end

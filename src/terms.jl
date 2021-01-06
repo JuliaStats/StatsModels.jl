@@ -510,7 +510,9 @@ reshape_last_to_i(i, a::AbstractMatrix) = reshape(a, size(a,1), ones(Int, i-1)..
 # table, some will be vectors, possibly some matrices
 function kron_insideout(op::Function, args...)
     args = (reshape_last_to_i(i,a) for (i,a) in enumerate(args))
-    vec(broadcast(op, args...))
+    out = broadcast(op, args...)
+    # flatten array output to vector
+    out isa AbstractArray ? vec(out) : out
 end
 
 function row_kron_insideout(op::Function, args...)
