@@ -36,7 +36,7 @@
                                 1  0  0
                                 1  0  0
                                 1  1  0]
-    @test coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
+    @test coefnames(mf) == [:Intercept; Symbol("x: b"); Symbol("x: c")]
 
     mmm = ModelMatrix(mf).m
     setcontrasts!(mf, x = DummyCoding())
@@ -49,7 +49,7 @@
                                 1 -1 -1
                                 1 -1 -1
                                 1  1  0]
-    @test coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
+    @test coefnames(mf) == [:Intercept; Symbol("x: b"); Symbol("x: c")]
 
     # change base level of contrast
     setcontrasts!(mf, x = EffectsCoding(base = :b))
@@ -59,7 +59,7 @@
                                 1  1  0
                                 1  1  0
                                 1 -1 -1]
-    @test coefnames(mf) == ["(Intercept)"; "x: a"; "x: c"]
+    @test coefnames(mf) == [:Intercept; Symbol("x: a"); Symbol("x: c")]
 
     # change levels of contrast
     setcontrasts!(mf, x = EffectsCoding(levels = [:c, :b, :a]))
@@ -69,7 +69,7 @@
                                 1  0  1
                                 1  0  1
                                 1  1  0]
-    @test coefnames(mf) == ["(Intercept)"; "x: b"; "x: a"]
+    @test coefnames(mf) == [:Intercept; Symbol("x: b"); Symbol("x: a")]
 
 
     # change levels and base level of contrast
@@ -80,10 +80,10 @@
                                 1 -1 -1
                                 1 -1 -1
                                 1  0  1]
-    @test coefnames(mf) == ["(Intercept)"; "x: c"; "x: b"]
-    
+    @test coefnames(mf) == [:Intercept; Symbol("x: c"); Symbol("x: b")]
+
     # respect order of levels
-    
+
     data = DataFrame(x = levels!(categorical(['A', 'B', 'C', 'C', 'D']), ['C', 'B', 'A', 'D']))
     f = apply_schema(@formula(x ~ 1), schema(data))
     @test modelcols(f.lhs, data) == [0 1 0; 1 0 0; 0 0 0; 0 0 0; 0 0 1]
@@ -96,7 +96,7 @@
                                 1 -1 -1
                                 1 -1 -1
                                 1  1 -1]
-    @test coefnames(mf) == ["(Intercept)"; "x: b"; "x: c"]
+    @test coefnames(mf) == [:Intercept; Symbol("x: b"); Symbol("x: c")]
 
     # Mismatching types of data and contrasts levels throws an error:
     @test_throws ArgumentError setcontrasts!(mf, x = EffectsCoding(levels = ["a", "b", "c"]))
@@ -112,7 +112,7 @@
                                         1 -1
                                         1 -1
                                         1  1]
-    @test coefnames(mf_missing) == ["(Intercept)"; "x: b"]
+    @test coefnames(mf_missing) == [:Intercept; Symbol("x: b")]
 
     # Sequential difference coding
     setcontrasts!(mf, x = SeqDiffCoding())

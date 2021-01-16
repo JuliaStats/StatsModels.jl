@@ -21,7 +21,7 @@
     x4 = [17.:20;]
     f = @formula(y ~ 1 + x1 + x2)
     mf = ModelFrame(f, d)
-    @test coefnames(mf) == ["(Intercept)","x1","x2"]
+    @test coefnames(mf) == [:Intercept, :x1, :x2]
     @test response(mf) == [1:4;]
     mm = ModelMatrix(mf)
     smm = ModelMatrix{sparsetype}(mf)
@@ -45,7 +45,7 @@
     @test mm.m[:,2] == [0, 1., 0, 0]
     @test mm.m[:,3] == [0, 0, 1., 0]
     @test mm.m[:,4] == [0, 0, 0, 1.]
-    @test coefnames(mf)[2:end] == ["x1p: 6", "x1p: 7", "x1p: 8"]
+    @test coefnames(mf)[2:end] == [Symbol("x1p: 6"), Symbol("x1p: 7"), Symbol("x1p: 8")]
     @test mm.m == ModelMatrix{sparsetype}(mf).m
 
     #test_group("Creating a model matrix using full formulas: y => x1 + x2, etc")
@@ -176,15 +176,15 @@
                        1 0
                        0 1]
         @test mm.m == ModelMatrix{sparsetype}(mf).m
-        @test coefnames(mf) == ["x: a", "x: b"]
+        @test coefnames(mf) == [Symbol("x: a"), Symbol("x: b")]
 
         ## promotion blocked when we block default model=StatisticalModel
         mf = ModelFrame(@formula(n ~ 0 + x), d, model=Nothing, contrasts=cs)
         mm = ModelMatrix(mf)
         @test all(mm.m .== ifelse.(d.x .== :a, -1, 1))
-        @test coefnames(mf) == ["x: b"]
-        
-    
+        @test coefnames(mf) == [Symbol("x: b")]
+
+
         ## No first-order term for interaction
         mf = ModelFrame(@formula(n ~ 1 + x + x&y), d, contrasts=cs)
         mm = ModelMatrix(mf)
@@ -197,8 +197,8 @@
                                  -1  1  0
                                  1  0  1]
         @test mm.m == ModelMatrix{sparsetype}(mf).m
-        @test coefnames(mf) == ["(Intercept)", "x: b", "x: a & y: d", "x: b & y: d"]
-    
+        @test coefnames(mf) == [:Intercept, Symbol("x: b"), Symbol("x: a & y: d"), Symbol("x: b & y: d")]
+
         ## When both terms of interaction are non-redundant:
         mf = ModelFrame(@formula(n ~ 0 + x&y), d, contrasts=cs)
         mm = ModelMatrix(mf)
@@ -211,8 +211,8 @@
                        0 0 1 0
                        0 0 0 1]
         @test mm.m == ModelMatrix{sparsetype}(mf).m
-        @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
-                                "x: a & y: d", "x: b & y: d"]
+        @test coefnames(mf) == [Symbol("x: a & y: c"), Symbol("x: b & y: c"),
+                                Symbol("x: a & y: d"), Symbol("x: b & y: d")]
 
         # only a three-way interaction: every term is promoted.
         mf = ModelFrame(@formula(n ~ 0 + x&y&z), d, contrasts=cs)
@@ -235,9 +235,9 @@
                        0 0 1 0  1  0
                        0 0 0 1  0  1]
         @test mm.m == ModelMatrix{sparsetype}(mf).m
-        @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
-                                "x: a & y: d", "x: b & y: d",
-                                "x: a & z: f", "x: b & z: f"]
+        @test coefnames(mf) == [Symbol("x: a & y: c"), Symbol("x: b & y: c"),
+                                Symbol("x: a & y: d"), Symbol("x: b & y: d"),
+                                Symbol("x: a & z: f"), Symbol("x: b & z: f")]
     
         # ...and adding a three-way interaction, only the shared term (x) is promoted.
         # this is because dropping x gives y&z which isn't present, but dropping y or z
@@ -253,10 +253,10 @@
                        0 0 1 0  1  0  1  0
                        0 0 0 1  0  1  0  1]
         @test mm.m == ModelMatrix{sparsetype}(mf).m
-        @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
-                                "x: a & y: d", "x: b & y: d",
-                                "x: a & z: f", "x: b & z: f",
-                                "x: a & y: d & z: f", "x: b & y: d & z: f"]
+        @test coefnames(mf) == [Symbol("x: a & y: c"), Symbol("x: b & y: c"),
+                                Symbol("x: a & y: d"), Symbol("x: b & y: d"),
+                                Symbol("x: a & z: f"), Symbol("x: b & z: f"),
+                                Symbol("x: a & y: d & z: f"), Symbol("x: b & y: d & z: f")]
     
         # two two-way interactions, with common lower-order term. the common term x is
         # promoted in both (along with lower-order term), because in every case, when
@@ -272,11 +272,11 @@
                        1 0  1  0  1  0
                        0 1  0  1  0  1]
         @test mm.m == ModelMatrix{sparsetype}(mf).m
-        @test coefnames(mf) == ["x: a", "x: b",
-                                "x: a & y: d", "x: b & y: d",
-                                "x: a & z: f", "x: b & z: f"]
-    
-    
+        @test coefnames(mf) == [Symbol("x: a"), Symbol("x: b"),
+                                Symbol("x: a & y: d"), Symbol("x: b & y: d"),
+                                Symbol("x: a & z: f"), Symbol("x: b & z: f")]
+
+
         ## FAILS: When both terms are non-redundant and intercept is PRESENT
         ## (not fully redundant). Ideally, would drop last column. Might make sense
         ## to warn about this, and suggest recoding x and y into a single variable.
@@ -285,8 +285,8 @@
                                            1 0 1 0
                                            1 0 0 1
                                            1 0 0 0]
-        @test_broken coefnames(mf) == ["x: a & y: c", "x: b & y: c",
-                                       "x: a & y: d", "x: b & y: d"]
+        @test_broken coefnames(mf) == [Symbol("x: a & y: c"), Symbol("x: b & y: c"),
+                                       Symbol("x: a & y: d"), Symbol("x: b & y: d")]
     
         ## note that R also does not detect this automatically. it's left to glm et al.
         ## to detect numerically when the model matrix is rank deficient, which is hard
@@ -304,18 +304,18 @@
     @testset "arbitrary functions in formulae" begin
         d = deepcopy(d_orig)
         mf = ModelFrame(@formula(y ~ log(x1)), d, model=Nothing)
-        @test coefnames(mf) == ["log(x1)"]
+        @test coefnames(mf) == [Symbol("log(x1)")]
         mm = ModelMatrix(mf)
         @test all(mm.m .== log.(x1))
 
         # | is not special in base formula:
         d = DataFrame(x = [1,2,3], y = [4,5,6])
         mf = ModelFrame(@formula(y ~ 1 + (1 | x)), d)
-        @test coefnames(mf) == ["(Intercept)", "1 | x"]
+        @test coefnames(mf) == [:Intercept, Symbol("1 | x")]
 
         mf = ModelFrame(@formula(y ~ 0 + (1 | x)), d)
         @test all(ModelMatrix(mf).m .== float.(1 .| d.x))
-        @test coefnames(mf) == ["1 | x"]
+        @test coefnames(mf) == [Symbol("1 | x")]
     end
 
 
