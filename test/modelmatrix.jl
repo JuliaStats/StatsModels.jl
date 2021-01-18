@@ -350,6 +350,24 @@
         @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)
     end
 
+    @testset "modelmatrix and response set schema if needed" begin
+        d = DataFrame(r = rand(8),
+                      w = rand(8),
+                      x = repeat([:a, :b], outer = 4),
+                      y = repeat([:c, :d], inner = 2, outer = 2),
+                      z = repeat([:e, :f], inner = 4))
+    
+        f = @formula(r ~ 1 + w*x*y*z)
+
+        mm1 = modelmatrix(f, d)
+        mm2 = modelmatrix(apply_schema(f, schema(d)), d)
+        @test mm1 == mm2
+
+        r1 = response(f, d)
+        r2 = response(apply_schema(f, schema(d)), d)
+        @test r1 == r2
+    end
+
     @testset "setcontrasts!" begin
         @testset "#95" begin
             tbl = (Y = randn(8),
@@ -380,4 +398,10 @@
         @test modelcols(f, t) === (t.y, t.x)
     end
 
+    @testset "#185 - interactions of scalar terms for row tables" begin
+        t = (a = rand(10), b = rand(10), c = rand(10))
+        f = apply_schema(@formula(0 ~ a&b&c), schema(t))
+        @test vec(modelcols(f.rhs, t)) == modelcols.(Ref(f.rhs), Tables.rowtable(t))
+    end
+    
 end

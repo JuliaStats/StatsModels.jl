@@ -74,19 +74,21 @@ mapping `Term`s to their concrete instantiations (`ContinuousTerm` or
 # Example
 
 ```jldoctest 1
-julia> d = (x=sample([:a, :b, :c], 10), y=rand(10));
+julia> using StableRNGs; rng = StableRNG(1);
+
+julia> d = (x=sample(rng, [:a, :b, :c], 10), y=rand(rng, 10));
 
 julia> ts = [Term(:x), Term(:y)];
 
 julia> schema(ts, d)
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> schema(ts, d, Dict(:x => HelmertCoding()))
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> schema(term(:y), d, Dict(:y => CategoricalTerm))
 StatsModels.Schema with 1 entry:
@@ -99,8 +101,8 @@ same in a container, but when printed alone are different:
 ```jldoctest 1
 julia> sch = schema(ts, d)
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> term(:x)
 x(unknown)
@@ -162,7 +164,7 @@ a(EffectsCoding:3→2)
 julia> concrete_term(term(:a), [1, 2, 3], Dict(:a=>EffectsCoding()))
 a(EffectsCoding:3→2)
 
-julia> concrete_term(term(:a), (a = [1, 2, 3], b = rand(3)))
+julia> concrete_term(term(:a), (a = [1, 2, 3], b = [0.0, 0.5, 1.0]))
 a(continuous)
 ```
 """
@@ -173,6 +175,11 @@ concrete_term(t::Term, dt::ColumnTable, hint) =
 concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol}) =
     concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
 concrete_term(t::Term, d) = concrete_term(t, d, nothing)
+
+# if the "hint" is already an AbstractTerm, use that
+# need this specified to avoid ambiguity
+concrete_term(t::Term, d::ColumnTable, hint::AbstractTerm) = hint
+concrete_term(t::Term, x, hint::AbstractTerm) = hint
 
 # second possible fix for #97
 concrete_term(t, d, hint) = t
@@ -390,6 +397,7 @@ has_schema(t::Term) = false
 has_schema(t::Union{ContinuousTerm,CategoricalTerm}) = true
 has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
 has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
+has_schema(t::MatrixTerm) = has_schema(t.terms)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
 # FunctionTerms may always be transformed by apply_schema
 has_schema(t::FunctionTerm) = false
@@ -409,7 +417,7 @@ function apply_schema(t::FormulaTerm, schema::Schema, Mod::Type{<:StatisticalMod
     schema = FullRank(schema)
 
     # Models with the drop_intercept trait do not support intercept terms,
-    # usually because they include one implicitly.
+    # usually because one is always necessarily included during fitting
     if drop_intercept(Mod)
         if hasintercept(t)
             throw(ArgumentError("Model type $Mod doesn't support intercept " *

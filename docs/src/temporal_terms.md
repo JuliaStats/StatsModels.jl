@@ -21,15 +21,15 @@ Below is a simple example:
 julia> using StatsModels, DataFrames
 
 julia> df = DataFrame(y=1:5, x=2:2:10)
-5×2 DataFrames.DataFrame
-│ Row │ y     │ x     │
-│     │ Int64 │ Int64 │
-├─────┼───────┼───────┤
-│ 1   │ 1     │ 2     │
-│ 2   │ 2     │ 4     │
-│ 3   │ 3     │ 6     │
-│ 4   │ 4     │ 8     │
-│ 5   │ 5     │ 10    │
+5×2 DataFrame
+ Row │ y      x
+     │ Int64  Int64
+─────┼──────────────
+   1 │     1      2
+   2 │     2      4
+   3 │     3      6
+   4 │     4      8
+   5 │     5     10
 
 julia> f = @formula(y ~ x + lag(x, 2) + lead(x, 2))
 FormulaTerm

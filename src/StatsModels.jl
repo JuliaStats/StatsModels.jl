@@ -5,7 +5,10 @@ using StatsBase
 using ShiftedArrays
 using ShiftedArrays: lag, lead
 using DataStructures
+using DataAPI
 using DataAPI: levels
+using Printf: @sprintf
+using StatsFuns: chisqccdf
 
 using SparseArrays
 using LinearAlgebra
@@ -61,7 +64,9 @@ export
     modelmatrix,
     response,
     protect,
-    unprotect
+    unprotect,
+
+    lrtest
 
 include("traits.jl")
 include("contrasts.jl")
@@ -71,5 +76,6 @@ include("temporal_terms.jl")
 include("formula.jl")
 include("modelframe.jl")
 include("statsmodel.jl")
+include("lrtest.jl")
 
 end # module StatsModels

@@ -159,12 +159,12 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
     # if levels are defined on contrasts, use those, validating that they line up.
     # what does that mean? either:
     #
-    # 1. contrasts.levels == levels (best case)
+    # 1. DataAPI.levels(contrasts) == levels (best case)
     # 2. data levels missing from contrast: would generate empty/undefined rows.
     #    better to filter data frame first
     # 3. contrast levels missing from data: would have empty columns, generate a
     #    rank-deficient model matrix.
-    c_levels = something(contrasts.levels, levels)
+    c_levels = something(DataAPI.levels(contrasts), levels)
     if eltype(c_levels) != eltype(levels)
         throw(ArgumentError("mismatching levels types: got $(eltype(levels)), expected " *
                             "$(eltype(c_levels)) based on contrasts levels."))
@@ -242,11 +242,13 @@ for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCodin
         ## constructor with optional keyword arguments, defaulting to nothing
         $contrastType(; base=nothing, levels::Union{AbstractVector,Nothing}=nothing) = $contrastType(base, levels)
         baselevel(c::$contrastType) = c.base
+        DataAPI.levels(c::$contrastType) = c.levels
     end
 end
 
-# fallback method for other types that might not have base field
+# fallback method for other types that might not have base or level fields
 baselevel(c::AbstractContrasts) = nothing
+DataAPI.levels(c::AbstractContrasts) = nothing
 
 """
     FullDummyCoding()
@@ -486,6 +488,8 @@ julia> sdiff_hypothesis = [-1  1  0  0
 Contrasts are derived the hypothesis matrix by taking the pseudoinverse:
 
 ```jldoctest hyp
+julia> using LinearAlgebra
+
 julia> sdiff_contrasts = pinv(sdiff_hypothesis)
 4×3 Array{Float64,2}:
  -0.75  -0.5  -0.25
@@ -586,6 +590,8 @@ end
 termnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
     something(C.labels, levels[1:length(levels) .!= baseind])
 
+DataAPI.levels(c::HypothesisCoding) = c.levels
+
 """
     StatsModels.ContrastsCoding(mat::AbstractMatrix[, levels]])
     StatsModels.ContrastsCoding(mat::AbstractMatrix[; levels=nothing])
@@ -628,6 +634,8 @@ function contrasts_matrix(C::ContrastsCoding, baseind, n)
     C.mat
 end
 
+DataAPI.levels(c::ContrastsCoding) = c.levels
+
 ## hypothesis matrix
 """
     needs_intercept(mat::AbstractMatrix)
@@ -654,13 +662,18 @@ non-zero mean).  If `tolerance != 0` (the default), the hypotheses are rounded
 to `Int`s if possible and `Rational`s if not, using the given tolerance.  If
 `tolerance == 0`, then the hypothesis matrix is returned as-is.
 
+The orientation of the hypothesis matrix is _opposite_ that of the contrast
+matrix: each row of the contrasts matrix is a data level and each column is a
+predictor, whereas each row of the hypothesis matrix is the interpretation of a
+predictor with weights for each level given in the columns.
+
 Note that this assumes a *balanced design* where there are the same number of
 observations in every cell.  This is only important for non-orthgonal contrasts
 (including contrasts that are not orthogonal with the intercept).
 
 # Examples
 
-```jldoctest
+```jldoctest hypmat
 julia> cmat = StatsModels.contrasts_matrix(DummyCoding(), 1, 4)
 4×3 Array{Float64,2}:
  0.0  0.0  0.0
@@ -670,31 +683,48 @@ julia> cmat = StatsModels.contrasts_matrix(DummyCoding(), 1, 4)
 
 julia> StatsModels.hypothesis_matrix(cmat)
 4×4 Array{Int64,2}:
- 1  -1  -1  -1
- 0   1   0   0
- 0   0   1   0
- 0   0   0   1
+  1  0  0  0
+ -1  1  0  0
+ -1  0  1  0
+ -1  0  0  1
+```
 
-julia> StatsModels.hypothesis_matrix(cmat, intercept=false) # wrong without intercept!!
-4×3 Array{Int64,2}:
- 0  0  0
- 1  0  0
- 0  1  0
- 0  0  1
+For non-centered contrasts like `DummyCoding`, without including the intercept 
+the hypothesis matrix is incorrect.  So while `intercept=true` is the default for 
+non-centered contrasts, you can see the (wrong) hypothesis matrix when ignoring 
+it by forcing `intercept=false`:
 
+```jldoctest hypmat
+julia> StatsModels.hypothesis_matrix(cmat, intercept=false)
+3×4 Array{Int64,2}:
+ 0  1  0  0
+ 0  0  1  0
+ 0  0  0  1
+```
+
+The default behavior is to coerce to the nearest integer or rational value, with
+a tolerance of the `tolerance` kwarg (defaults to `1e-5`).  The raw
+pseudo-inverse matrix can be obtained as `Float64` by setting `tolerance=0`:
+
+```julia-repl
 julia> StatsModels.hypothesis_matrix(cmat, tolerance=0) # ugly
-4×4 Adjoint{Float64,Array{Float64,2}}:
-  1.0          -1.0          -1.0          -1.0        
- -2.23753e-16   1.0           4.94472e-17   1.04958e-16
-  6.91749e-18  -2.42066e-16   1.0          -1.31044e-16
- -1.31485e-16   9.93754e-17   9.93754e-17   1.0        
+4×4 Array{Float64,2}:
+  1.0  -2.23753e-16   6.91749e-18  -1.31485e-16
+ -1.0   1.0          -2.42066e-16   9.93754e-17
+ -1.0   4.94472e-17   1.0           9.93754e-17
+ -1.0   1.04958e-16  -1.31044e-16   1.0        
+```
 
+Finally, the hypothesis matrix for a constructed `ContrastsMatrix` (as stored by
+`CategoricalTerm`s) can also be extracted:
+
+```jldoctest hypmat
 julia> StatsModels.hypothesis_matrix(StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b", "c", "d"]))
 4×4 Array{Int64,2}:
- 1  -1  -1  -1
- 0   1   0   0
- 0   0   1   0
- 0   0   0   1
+  1  0  0  0
+ -1  1  0  0
+ -1  0  1  0
+ -1  0  0  1
 
 ```
 """
@@ -721,4 +751,3 @@ function pretty_mat(mat::AbstractMatrix; tol::Real=10*eps(eltype(mat)))
         return fracs
     end
 end
-    

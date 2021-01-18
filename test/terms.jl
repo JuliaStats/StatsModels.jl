@@ -18,6 +18,8 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
 
     @testset "concrete_term" begin
         t = term(:aaa)
+        ts = term("aaa")
+        @test t == ts
         @test string(t) == "aaa"
         @test mimestring(t) == "aaa(unknown)"
 
@@ -73,8 +75,27 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test string(a & b) == "$a & $b"
         @test mimestring(a & b) == "a(unknown) & b(unknown)"
         c = term(:c)
-        @test (a+b)+c == (a,b,c)
-        @test a+(b+c) == (a,b,c)
+        ab = a+b
+        bc = b+c
+        abc = a+b+c
+        @test ab+c == abc
+        @test ab+a == ab
+        @test a+bc == abc
+        @test b+ab == ab
+        @test ab+ab == ab
+        @test ab+bc == abc
+    end
+
+    @testset "uniqueness of FunctionTerms" begin
+        f1 = @formula(y ~ lag(x,1) + lag(x,1))
+        f2 = @formula(y ~ lag(x,1))
+        f3 = @formula(y ~ lag(x,1) + lag(x,2))
+
+        @test f1.rhs == f2.rhs
+        @test f1.rhs != f3.rhs
+
+        ## addition of two identical function terms
+        @test f2.rhs + f2.rhs == f2.rhs
     end
 
     @testset "expand nested tuples of terms during apply_schema" begin

@@ -1,6 +1,6 @@
 # StatsModels
 
-[![Build Status](https://travis-ci.org/JuliaStats/StatsModels.jl.svg?branch=master)](https://travis-ci.org/JuliaStats/StatsModels.jl)
+[![Build Status](https://github.com/JuliaStats/StatsModels.jl/workflows/CI/badge.svg)](https://github.com/JuliaStats/StatsModels.jl/actions?query=workflow%3ACI+branch%3Amaster)
 [![codecov](https://codecov.io/gh/JuliaStats/StatsModels.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaStats/StatsModels.jl)
 
 Basic functionality for specifying, fitting, and evaluating statistical models
