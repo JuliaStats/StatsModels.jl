@@ -84,8 +84,9 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test b+ab == ab
         @test ab+ab == ab
         @test ab+bc == abc
-        @test sum([a,b,c]) == abc
-        @test sum([a]) == a
+        @test sum((a,b,c)) == abc
+        @test sum((a,)) == a
+        @test +a == a
     end
 
     @testset "uniqueness of FunctionTerms" begin
