@@ -1,6 +1,6 @@
 name = "StatsModels"
 uuid = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
-version = "0.6.18"
+version = "0.6.19"
 
 [deps]
 DataAPI = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
