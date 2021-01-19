@@ -51,7 +51,7 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test mimestring(t2full) == "aaa(StatsModels.FullDummyCoding:2→2)"
         @test string(t2full) == "aaa"
     end
-    
+
     @testset "term operators" begin
         a = term(:a)
         b = term(:b)
@@ -84,6 +84,9 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test b+ab == ab
         @test ab+ab == ab
         @test ab+bc == abc
+        @test sum((a,b,c)) == abc
+        @test sum((a,)) == a
+        @test +a == a
     end
 
     @testset "uniqueness of FunctionTerms" begin
@@ -169,5 +172,5 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         end
 
     end
-    
+
 end
