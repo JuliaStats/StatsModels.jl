@@ -9,6 +9,12 @@
         @test f == apply_schema(f, schema(f, df))
     end
 
+    @testset "lonely term" begin
+        d = (a = [1,1],)
+        apply_schema((ConstantTerm(1),), schema(d))
+        apply_schema((Term(:a),), schema(d))
+    end
+
     @testset "hints" begin
         f = @formula(y ~ 1 + a)
         d = (y = rand(10), a = repeat([1,2], outer=2))
@@ -20,7 +26,7 @@
         @test sch1[term(:a)] isa CategoricalTerm{DummyCoding}
         f1 = apply_schema(f, sch1)
         @test f1.rhs.terms[end] == sch1[term(:a)]
-        
+
         sch2 = schema(f, d, Dict(:a => DummyCoding()))
         @test sch2[term(:a)] isa CategoricalTerm{DummyCoding}
         f2 = apply_schema(f, sch2)
@@ -39,7 +45,7 @@
         using StatsModels: has_schema
 
         d = (y = rand(10), a = rand(10), b = repeat([:a, :b], 5))
-        
+
         f = @formula(y ~ a*b)
         @test !has_schema(f)
         @test !has_schema(f.rhs)
@@ -63,5 +69,5 @@
         @test has_schema(sch[a] & sch[b])
 
     end
-    
+
 end
