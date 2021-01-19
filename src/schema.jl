@@ -60,7 +60,7 @@ Base.haskey(schema::Schema, key) = haskey(schema.schema, key)
 Compute all the invariants necessary to fit a model with `terms`.  A schema is a dict that
 maps `Term`s to their concrete instantiations (either `CategoricalTerm`s or
 `ContinuousTerm`s.  "Hints" may optionally be supplied in the form of a `Dict` mapping term
-names (as `Symbol`s) to term or contrast types.  If a hint is not provided for a variable, 
+names (as `Symbol`s) to term or contrast types.  If a hint is not provided for a variable,
 the appropriate term type will be guessed based on the data type from the data column: any
 numeric data is assumed to be continuous, and any non-numeric data is assumed to be
 categorical.
@@ -93,7 +93,7 @@ StatsModels.Schema with 1 entry:
   y => y
 ```
 
-Note that concrete `ContinuousTerm` and `CategoricalTerm` and un-typed `Term`s print the 
+Note that concrete `ContinuousTerm` and `CategoricalTerm` and un-typed `Term`s print the
 same in a container, but when printed alone are different:
 
 ```jldoctest 1
@@ -203,9 +203,9 @@ end
 Return a new term that is the result of applying `schema` to term `t` with
 destination model (type) `Mod`.  If `Mod` is omitted, `Nothing` will be used.
 
-When `t` is a `ContinuousTerm` or `CategoricalTerm` already, the term will be returned 
-unchanged _unless_ a matching term is found in the schema.  This allows 
-selective re-setting of a schema to change the contrast coding or levels of a 
+When `t` is a `ContinuousTerm` or `CategoricalTerm` already, the term will be returned
+unchanged _unless_ a matching term is found in the schema.  This allows
+selective re-setting of a schema to change the contrast coding or levels of a
 categorical term, or to change a continuous term to categorical or vice versa.
 
 When defining behavior for custom term types, it's best to dispatch on
@@ -214,7 +214,7 @@ in _most_ cases, but cause method ambiguity in some.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 apply_schema(t, schema, Mod::Type) = t
-apply_schema(terms::TupleTerm, schema, Mod::Type) = sum(apply_schema.(terms, Ref(schema), Mod))
+apply_schema(terms::TupleTerm, schema, Mod::Type) = reduce(+, apply_schema.(terms, Ref(schema), Mod))
 
 apply_schema(t::Term, schema::Schema, Mod::Type) = schema[t]
 apply_schema(ft::FormulaTerm, schema::Schema, Mod::Type) =
@@ -284,7 +284,7 @@ function apply_schema(t::FormulaTerm, schema::Schema, Mod::Type{<:StatisticalMod
 end
 
 # strategy is: apply schema, then "repair" if necessary (promote to full rank
-# contrasts).  
+# contrasts).
 #
 # to know whether to repair, need to know context a term appears in.  main
 # effects occur in "own" context.
