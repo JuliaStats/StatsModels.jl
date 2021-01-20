@@ -114,7 +114,8 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         end
 
         @testset "Tuples and singletons" begin
-            @test sum((a,b,c)) == abc
+            a, b, c = term(:a), term(:b), term(:c)
+            @test sum((a,b,c)) == a+b+c
             @test sum((a,)) == a
             @test +a == a
 
