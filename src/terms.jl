@@ -384,6 +384,11 @@ Base.:&(a::AbstractTerm, b::AbstractTerm) = InteractionTerm((a,b))
 Base.:&(::ConstantTerm, b::AbstractTerm) = b
 Base.:&(a::AbstractTerm, ::ConstantTerm) = a
 
+# Avoid method ambiguities
+Base.:&(::ConstantTerm, b::InteractionTerm) = b
+Base.:&(a::InteractionTerm, ::ConstantTerm) = a
+Base.:&(a::ConstantTerm, ::ConstantTerm) = a
+
 # associative rule
 Base.:&(it::InteractionTerm, term::AbstractTerm) = InteractionTerm((it.terms..., term))
 Base.:&(term::AbstractTerm, it::InteractionTerm) = InteractionTerm((term, it.terms...))
