@@ -390,9 +390,12 @@ Base.:&(a::InteractionTerm, ::ConstantTerm) = a
 Base.:&(a::ConstantTerm, ::ConstantTerm) = a
 
 # associative rule
-Base.:&(it::InteractionTerm, term::AbstractTerm) = InteractionTerm((it.terms..., term))
-Base.:&(term::AbstractTerm, it::InteractionTerm) = InteractionTerm((term, it.terms...))
-Base.:&(a::InteractionTerm, b::InteractionTerm) = InteractionTerm((a.terms..., b.terms...))
+Base.:&(it::InteractionTerm, term::AbstractTerm) =
+    term in it.terms ? it : InteractionTerm((it.terms..., term))
+Base.:&(term::AbstractTerm, it::InteractionTerm) =
+    term in it.terms ? it : InteractionTerm((term, it.terms...))
+Base.:&(a::InteractionTerm, b::InteractionTerm) =
+    InteractionTerm((union(a.terms, b.terms)..., ))
 
 # distributive rule
 Base.:&(term::AbstractTerm, terms::TupleTerm) = term .& terms
@@ -402,7 +405,6 @@ Base.:&(as::TupleTerm, bs::TupleTerm) = ((a & b for a in as for b in bs)..., )
 # + concatenates terms
 Base.:+(a::AbstractTerm) = a
 Base.:+(a::AbstractTerm, b::AbstractTerm) = a==b ? a : (a, b)
-
 
 # associative rule for +
 Base.:+(as::TupleTerm, b::AbstractTerm) = b in as ? as : (as..., b)
