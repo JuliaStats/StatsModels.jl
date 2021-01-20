@@ -366,24 +366,24 @@ end
 # default.  so if we encounter them during apply_schema and we're NOT
 # in a Protected context, we need to call the corresponding op on the
 # # arguments of the FunctionCall
-
-# for op in (+, &, *)
-#     @eval begin
-#         apply_schema(t::FunctionTerm{typeof($op)}, sch::Schema, Mod::Type) =
-#             apply_schema(t.f(t.args...), sch, Mod)
-#     end
-# end
-
-macro unprotect(op)
-    esc(quote
-        apply_schema(t::StatsModels.FunctionTerm{typeof($op)}, sch::StatsModels.Schema, Mod::Type) =
+for op in (+, &, *)
+    @eval begin
+        apply_schema(t::FunctionTerm{typeof($op)}, sch::Schema, Mod::Type) =
             apply_schema(t.f(t.args...), sch, Mod)
-    end)
+    end
 end
 
-@unprotect(+)
-@unprotect(&)
-@unprotect(*)
+# alternatively, could define an "unprotect" macro if it's usefule elsewhere too
+# macro unprotect(op)
+#     esc(quote
+#         apply_schema(t::StatsModels.FunctionTerm{typeof($op)}, sch::StatsModels.Schema, Mod::Type) =
+#             apply_schema(t.f(t.args...), sch, Mod)
+#     end)
+# end
+
+# @unprotect(+)
+# @unprotect(&)
+# @unprotect(*)
 
 
 """
