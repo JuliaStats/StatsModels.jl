@@ -350,15 +350,12 @@ julia> 1 .- d.a .* d.b
  -2.9996186355944543
 ```
 """
-unprotect(t) = t
-unprotect(t::FunctionTerm{typeof(protect)}) = only(t.args)
 unprotect(::Protected{Ctx}) where Ctx = Ctx
 
-function apply_schema(t::FunctionTerm{typeof(unprotect)}, schema::Schema, Ctx::Protected{OldCtx}) where {OldCtx}
+function apply_schema(t::FunctionTerm{typeof(unprotect)}, schema::Schema, Ctx::Protected)
     tt = only(t.args)
-    apply_schema(tt, schema, OldCtx)
+    apply_schema(tt, schema, unprotect(Ctx))
 end
-
 
 # un-protecting special syntax: &, +, and *
 # 
