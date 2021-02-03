@@ -34,7 +34,7 @@ end
 
 """
 Wrapper for a `StatisticalModel` that has been fit from a `@formula` and tabular
-data.  
+data.
 
 Most functions from the StatsBase API are simply delegated to the wrapped model,
 with the exception of functions like `fit`, `predict`, and `coefnames` where the
@@ -54,7 +54,7 @@ end
 
 """
 Wrapper for a `RegressionModel` that has been fit from a `@formula` and tabular
-data.  
+data.
 
 Most functions from the StatsBase API are simply delegated to the wrapped model,
 with the exception of functions like `fit`, `predict`, and `coefnames` where the
@@ -78,7 +78,7 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
         function StatsBase.fit(::Type{T}, f::FormulaTerm, data, args...;
                                contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(),
                                kwargs...) where T<:$modeltype
-                               
+
             Tables.istable(data) || throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
             cols = columntable(data)
 
@@ -97,7 +97,7 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
 end
 
 @doc """
-    fit(Mod::Type{<:StatisticalModel}, f::FormulaTerm, data, args...; 
+    fit(Mod::Type{<:StatisticalModel}, f::FormulaTerm, data, args...;
         contrasts::Dict{Symbol}, kwargs...)
 
 Convert tabular data into a numeric response vector and predictor matrix using
@@ -130,6 +130,10 @@ StatsBase.r2(mm::TableRegressionModel) = r2(mm.model)
 StatsBase.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
 StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
+
+# delegate to the wrapped model instead of returning the model matrix directly
+# so that the types are the same
+StatsBase.modelmatrix(trmod::TableRegressionModel) = modelmatrix(trmod.model)
 
 function _return_predictions(T, yp::AbstractVector, nonmissings, len)
     out = Vector{Union{eltype(yp),Missing}}(missing, len)
