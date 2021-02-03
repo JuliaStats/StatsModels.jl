@@ -120,7 +120,8 @@ const TableModels = Union{TableStatisticalModel, TableRegressionModel}
                              StatsBase.loglikelihood, StatsBase.nullloglikelihood,
                              StatsBase.dof, StatsBase.dof_residual, StatsBase.nobs,
                              StatsBase.stderror, StatsBase.vcov]
-@delegate TableRegressionModel.model [StatsBase.residuals, StatsBase.response,
+@delegate TableRegressionModel.model [StatsBase.modelmatrix,
+                                      StatsBase.residuals, StatsBase.response,
                                       StatsBase.predict, StatsBase.predict!]
 StatsBase.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
     predict(m.model, new_x; kwargs...)
@@ -130,10 +131,6 @@ StatsBase.r2(mm::TableRegressionModel) = r2(mm.model)
 StatsBase.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
 StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
-
-# delegate to the wrapped model instead of returning the model matrix directly
-# so that the types are the same
-StatsBase.modelmatrix(trmod::TableRegressionModel) = modelmatrix(trmod.model)
 
 function _return_predictions(T, yp::AbstractVector, nonmissings, len)
     out = Vector{Union{eltype(yp),Missing}}(missing, len)
