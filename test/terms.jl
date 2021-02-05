@@ -203,6 +203,11 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test_throws MethodError () & a
         @test_throws MethodError a ~ ()
         @test_throws MethodError () ~ a
+
+        # show methods of empty tuples preserved
+        @test "$(())" == "()"
+        @test "$((a,b))" == "a + b"
+        @test "$((a, ()))" == "(a, ())"
     end
 
 end
