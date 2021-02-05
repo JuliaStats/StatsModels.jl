@@ -173,4 +173,41 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
 
     end
 
+    @testset "Tuple terms" begin
+        using StatsModels: TermOrTerms, TupleTerm, Term
+        a, b, c = Term.((:a, :b, :c))
+
+        # TermOrTerms - one or more AbstractTerms (if more, a tuple)
+        # empty tuples are never terms
+        @test !(() isa TermOrTerms)
+        @test (a, ) isa TermOrTerms
+        @test (a, b) isa TermOrTerms
+        @test (a, b, a&b) isa TermOrTerms
+        @test !(((), a) isa TermOrTerms)
+        # can't contain further tuples
+        @test !((a, (a,), b) isa TermOrTerms)
+
+        # a tuple of AbstractTerms OR Tuples of one or more terms
+        # empty tuples are never terms
+        @test !(() isa TupleTerm)
+        @test (a, ) isa TupleTerm
+        @test (a, b) isa TupleTerm
+        @test (a, b, a&b) isa TupleTerm
+        @test !(((), a) isa TupleTerm)
+        @test (((a,), a) isa TupleTerm)
+
+        # no methods for operators on term and empty tuple (=no type piracy)
+        @test_throws MethodError a + ()
+        @test_throws MethodError () + a
+        @test_throws MethodError a & ()
+        @test_throws MethodError () & a
+        @test_throws MethodError a ~ ()
+        @test_throws MethodError () ~ a
+
+        # show methods of empty tuples preserved
+        @test "$(())" == "()"
+        @test "$((a,b))" == "a + b"
+        @test "$((a, ()))" == "(a, ())"
+    end
+
 end
