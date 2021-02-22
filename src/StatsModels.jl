@@ -33,7 +33,6 @@ export
     ContrastsCoding,
     
     coefnames,
-    dropterm,
     setcontrasts!,
 
     AbstractTerm,
