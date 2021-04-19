@@ -15,6 +15,9 @@ using LinearAlgebra
 
 using Tables: ColumnTable
 
+# for only() support pre-1.4
+using Compat
+
 export
     #re-export from StatsBase:
     StatisticalModel,
@@ -60,6 +63,8 @@ export
     modelcols,
     modelmatrix,
     response,
+    protect,
+    unprotect,
 
     lrtest
 

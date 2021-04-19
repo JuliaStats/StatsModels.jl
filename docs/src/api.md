@@ -48,6 +48,16 @@ collect_matrix_terms
 is_matrix_term
 ```
 
+### Protection
+
+For controlling when 
+
+```@docs
+protect
+unprotect
+Protected
+```
+
 ## Schema
 
 ```@docs

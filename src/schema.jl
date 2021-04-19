@@ -10,7 +10,7 @@
 
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
-terms(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
+terms(t::FunctionTerm) = mapreduce(terms, union, t.args)
 terms(t::AbstractTerm) = [t]
 terms(t::MatrixTerm) = terms(t.terms)
 terms(t::TupleTerm) = mapreduce(terms, union, t)
@@ -36,6 +36,8 @@ struct Schema
     schema::Dict{Term,AbstractTerm}
     Schema(x...) = new(Dict{Term,AbstractTerm}(x...))
 end
+
+Base.broadcastable(s::Schema) = Ref(s)
 
 function Base.show(io::IO, schema::Schema)
     n = length(schema.schema)
@@ -237,6 +239,150 @@ function apply_schema(t::ConstantTerm, schema::Schema, Mod::Type)
     InterceptTerm{t.n==1}()
 end
 
+# general idea is once we hit a FunctionTerm, we need to continue to
+# apply_schema because there might be some child that is un-protected.  So we
+# enter the Protected context and recursively apply_schema, and when we
+# encounter `unprotect` we restore the old context and continue to recursively
+# apply_schema
+"""
+    struct Protected{Ctx}
+
+Represent a context in which the normal special syntax and
+[`apply_schema`](@ref) transformations should not apply.  This is automatically
+applied to the arguments of a [`FunctionTerm`](@ref), meaning that by default
+calls to `+`, `&`, or `~` inside a [`FunctionTerm`](@ref) will be interpreted as
+calls to the normal Julia functions, rather than term union, interaction, or
+formula separation.
+
+The only special behavior with [`apply_schema`](@ref) inside a `Protected`
+context is when a call to [`unprotect`](@ref) is encountered.  At that point,
+everything below the call to `unprotect` is treated as special formula syntax.
+
+A `Protected` context is created inside a [`FunctionTerm`](@ref) automatically,
+but can be manually created with a call to [`protect`](@ref).
+```
+"""
+struct Protected{Ctx} end
+Base.broadcastable(x::Protected) = Ref(x)
+"""
+    protect(term::T)
+
+Create a [`Protected`](@ref) context for interpreting `term` (and descendents) during
+`apply_schema`.
+
+Outside a [`@formula`](@ref), acts as a constructor for the singleton `Protected{T}`.
+
+# Example
+
+```jldoctest; setup = :(using Random; Random.seed!(1))
+julia> d = (y=rand(4), a=[1:4;], b=rand(4))
+
+julia> f = @formula(y ~ 1 + protect(a+b));
+
+julia> modelmatrix(f.rhs, d)
+4×2 Array{Float64,2}:
+ 1.0  1.48861
+ 1.0  2.21097
+ 1.0  3.95192
+ 1.0  4.9999
+
+julia> d.a .+ d.b
+4-element Array{Float64,1}:
+ 1.4886128300795012
+ 2.210968202158536
+ 3.951916339835734
+ 4.999904658898614
+```
+"""
+protect(ctx) = Protected{ctx}()
+# construct singletons to avoid method ambiguities using Type{<:Protected}
+
+function apply_schema(t::FunctionTerm, schema::Schema, Mod::Type)
+    args = apply_schema.(t.args, schema, protect(Mod))
+    FunctionTerm(t.f, args, t.exorig)
+end
+
+apply_schema(t::FunctionTerm, schema::Schema, Ctx::Protected) =
+    FunctionTerm(t.f, apply_schema.(t.args, schema, Ctx), t.exorig)
+apply_schema(t, schema::Schema, Ctx::Protected) = t
+
+function apply_schema(t::FunctionTerm{typeof(protect)}, schema::Schema, Ctx::Type)
+    tt = only(t.args)
+    apply_schema(tt, schema, protect(Ctx))
+end
+
+# protect in Protected context is a no-op
+function apply_schema(t::FunctionTerm{typeof(protect)}, schema::Schema, Ctx::Protected)
+    tt = only(t.args)
+    apply_schema(tt, schema, Ctx)
+end
+
+"""
+    unprotect(term)
+    unprotect(::Protected{T})
+
+Inside a [`@formula`], removes [`Protected`](@ref) status for the argument
+term(s).  This allows the usual special [`@formula`](@ref) interpretation of
+calls to `+`, `&`, `*`, and `~` to be restored inside an otherwise
+[`Protected`](@ref) context.
+
+When called outside a `@formula`, unwraps `Protected{T}` to `T`.
+
+# Example
+
+```jldoctest; setup = :(using Random; Random.seed!(1))
+julia> d = (y=rand(4), a=[1.:4;], b=rand(4));
+
+julia> f = @formula(y ~ 1 - unprotect(a&b));
+
+julia> modelmatrix(f, d)
+4×1 Array{Float64,2}:
+  0.5113871699204988
+  0.5780635956829281
+ -1.855749019507202
+ -2.9996186355944543
+
+julia> 1 .- d.a .* d.b
+4×1 Array{Float64,2}:
+  0.5113871699204988
+  0.5780635956829281
+ -1.855749019507202
+ -2.9996186355944543
+```
+"""
+unprotect(::Protected{Ctx}) where Ctx = Ctx
+
+function apply_schema(t::FunctionTerm{typeof(unprotect)}, schema::Schema, Ctx::Protected)
+    tt = only(t.args)
+    apply_schema(tt, schema, unprotect(Ctx))
+end
+
+# un-protecting special syntax: &, +, and *
+# 
+# if these occur as children of a non-special call, they are protected by
+# default.  so if we encounter them during apply_schema and we're NOT
+# in a Protected context, we need to call the corresponding op on the
+# # arguments of the FunctionCall
+for op in (+, &, *)
+    @eval begin
+        apply_schema(t::FunctionTerm{typeof($op)}, sch::Schema, Mod::Type) =
+            apply_schema(t.f(t.args...), sch, Mod)
+    end
+end
+
+# alternatively, could define an "unprotect" macro if it's usefule elsewhere too
+# macro unprotect(op)
+#     esc(quote
+#         apply_schema(t::StatsModels.FunctionTerm{typeof($op)}, sch::StatsModels.Schema, Mod::Type) =
+#             apply_schema(t.f(t.args...), sch, Mod)
+#     end)
+# end
+
+# @unprotect(+)
+# @unprotect(&)
+# @unprotect(*)
+
+
 """
     has_schema(t::T) where {T<:AbstractTerm}
 
@@ -250,6 +396,8 @@ has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
 has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
 has_schema(t::MatrixTerm) = has_schema(t.terms)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
+# FunctionTerms may always be transformed by apply_schema
+has_schema(t::FunctionTerm) = false
 
 struct FullRank
     schema::Schema
@@ -395,4 +543,4 @@ termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
 termvars(t::TupleTerm) = mapreduce(termvars, union, t, init=Symbol[])
 termvars(t::MatrixTerm) = termvars(t.terms)
 termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
-termvars(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = collect(names)
+termvars(t::FunctionTerm) = mapreduce(termvars, union, t.args, init=Symbol[])

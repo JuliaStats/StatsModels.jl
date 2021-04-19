@@ -417,7 +417,7 @@ poly(t::Symbol, d::Int) = PolyTerm(term(t), term(d))
 function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
                                   sch::StatsModels.Schema,
                                   Mod::Type{<:POLY_CONTEXT})
-    apply_schema(PolyTerm(t.args_parsed...), sch, Mod)
+    apply_schema(PolyTerm(t.args...), sch, Mod)
 end
 
 # apply_schema to internal Terms and check for proper types
