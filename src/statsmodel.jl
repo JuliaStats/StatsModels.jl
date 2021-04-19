@@ -122,7 +122,8 @@ const TableModels = Union{TableStatisticalModel, TableRegressionModel}
                              StatsBase.stderror, StatsBase.vcov]
 @delegate TableRegressionModel.model [StatsBase.modelmatrix,
                                       StatsBase.residuals, StatsBase.response,
-                                      StatsBase.predict, StatsBase.predict!]
+                                      StatsBase.predict, StatsBase.predict!, 
+                                      StatsBase.cooksdistance]
 StatsBase.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
     predict(m.model, new_x; kwargs...)
 # Need to define these manually because of ambiguity using @delegate
