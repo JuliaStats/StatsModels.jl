@@ -193,6 +193,12 @@ function StatsBase.coeftable(model::TableModels; kwargs...)
     ct
 end
 
+_show_fit_stats(io::IO, model::TableModels) = nothing
+
+function _show_fit_stats(io::IO, model::TableRegressionModel)
+    println("R²: ", round(r2(model), sigdigits=4))
+end
+
 # show function that delegates to coeftable
 function Base.show(io::IO, model::TableModels)
     println(io, typeof(model))
@@ -202,6 +208,7 @@ function Base.show(io::IO, model::TableModels)
     try
         println(io,"Coefficients:")
         show(io, coeftable(model))
+        _show_fit_stats(io, model)
     catch e
         if isa(e, MethodError) || isa(e, ErrorException) && occursin("coeftable is not defined", e.msg)
             show(io, model.model)
