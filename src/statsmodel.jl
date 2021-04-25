@@ -133,7 +133,7 @@ const TableModels = Union{TableStatisticalModel, TableRegressionModel}
 @delegate TableRegressionModel.model [StatsBase.modelmatrix,
                                       StatsBase.residuals, StatsBase.response,
                                       StatsBase.predict, StatsBase.predict!,
-                                      StatsBase.cooksdistance]
+                                      StatsBase.cooksdistance, fstatistic]
 StatsBase.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
     predict(m.model, new_x; kwargs...)
 # Need to define these manually because of ambiguity using @delegate
@@ -197,6 +197,14 @@ _show_fit_stats(io::IO, model::TableModels) = nothing
 
 function _show_fit_stats(io::IO, model::TableRegressionModel)
     println("R²: ", round(r2(model), sigdigits=4))
+    try
+        fstat = fstatistic(model)
+        println(io, fstat)
+    catch e
+        if !(isa(e, MethodError) && e.f == fstatistic)
+            rethrow(e)
+        end
+    end
 end
 
 # show function that delegates to coeftable
