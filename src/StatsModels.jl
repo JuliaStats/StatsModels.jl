@@ -31,7 +31,7 @@ export
     SeqDiffCoding,
     HypothesisCoding,
     ContrastsCoding,
-    
+
     coefnames,
     dropterm,
     setcontrasts!,
