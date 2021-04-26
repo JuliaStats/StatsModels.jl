@@ -196,7 +196,8 @@ end
 _show_fit_stats(io::IO, model::TableModels) = nothing
 
 function _show_fit_stats(io::IO, model::TableRegressionModel)
-    println("R²: ", round(r2(model), sigdigits=4))
+    println("R²: ", round(r2(model), sigdigits=4),
+         "\t Adjusted R²: ", round(adjr2(model), sigdigits=4))
     try
         fstat = fstatistic(model)
         println(io, fstat)
