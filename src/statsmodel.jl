@@ -96,6 +96,16 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
     end
 end
 
+"""
+    formula(model)
+
+Retrieve formula from a fitted or specified model
+"""
+function formula end
+
+formula(m::TableStatisticalModel) = m.mf.f
+formula(m::TableRegressionModel) = m.mf.f
+
 @doc """
     fit(Mod::Type{<:StatisticalModel}, f::FormulaTerm, data, args...;
         contrasts::Dict{Symbol}, kwargs...)

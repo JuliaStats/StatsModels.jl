@@ -122,6 +122,8 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     ## coefnames delegated to model frame by default
     @test coefnames(m) == coefnames(ModelFrame(f, d)) == ["(Intercept)", "x1", "x2", "x1 & x2"]
 
+    @test formula(m) == m.mf.f
+
     ## test prediction method
     ## vanilla
     @test predict(m) == [ ones(size(d,1)) Array(d.x1) Array(d.x2) Array(d.x1).*Array(d.x2) ] * collect(1:4)
