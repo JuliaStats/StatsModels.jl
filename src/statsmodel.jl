@@ -96,6 +96,16 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
     end
 end
 
+"""
+    formula(model)
+
+Retrieve formula from a fitted or specified model
+"""
+function formula end
+
+formula(m::TableStatisticalModel) = m.mf.f
+formula(m::TableRegressionModel) = m.mf.f
+
 @doc """
     fit(Mod::Type{<:StatisticalModel}, f::FormulaTerm, data, args...;
         contrasts::Dict{Symbol}, kwargs...)
@@ -132,6 +142,7 @@ StatsBase.r2(mm::TableRegressionModel) = r2(mm.model)
 StatsBase.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
 StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
+StatsBase.loglikelihood(mm::TableModels, c::Colon) = loglikelihood(mm.model, c)
 
 function _return_predictions(T, yp::AbstractVector, nonmissings, len)
     out = Vector{Union{eltype(yp),Missing}}(missing, len)

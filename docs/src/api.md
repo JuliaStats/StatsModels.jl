@@ -64,6 +64,7 @@ fit
 response
 modelmatrix
 lrtest
+formula
 ```
 
 ### Traits

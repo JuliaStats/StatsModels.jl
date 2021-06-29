@@ -35,6 +35,7 @@ export
     coefnames,
     dropterm,
     setcontrasts!,
+    formula,
 
     AbstractTerm,
     ConstantTerm,
