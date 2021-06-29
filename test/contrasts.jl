@@ -227,7 +227,7 @@
         f_sdiff = apply_schema(f, schema(d2, Dict(:x => sdiff_hyp)))
         f_effects = apply_schema(f, schema(d2, Dict(:x => effects_hyp)))
 
-        y_means = by(d2, :x, :y => mean).y_mean
+        y_means = combine(groupby(d2, :x), :y => mean).y_mean
         
         y, X_sdiff = modelcols(f_sdiff, d2)
         @test X_sdiff \ y ≈ [mean(y_means); diff(y_means)]

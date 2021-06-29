@@ -142,6 +142,7 @@ StatsBase.r2(mm::TableRegressionModel) = r2(mm.model)
 StatsBase.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
 StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
+StatsBase.loglikelihood(mm::TableModels, c::Colon) = loglikelihood(mm.model, c)
 
 function _return_predictions(T, yp::AbstractVector, nonmissings, len)
     out = Vector{Union{eltype(yp),Missing}}(missing, len)
