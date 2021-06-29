@@ -47,6 +47,8 @@ StatsBase.deviance(mod::DummyMod) = sum((response(mod) .- predict(mod)).^2)
 # Incorrect but simple definition
 StatsModels.isnested(mod1::DummyMod, mod2::DummyMod; atol::Real=0.0) =
     dof(mod1) <= dof(mod2)
+StatsBase.loglikelihood(mod::DummyMod) = -sum((response(mod) .- predict(mod)).^2)
+StatsBase.loglikelihood(mod::DummyMod, ::Colon) = -(response(mod) .- predict(mod)).^2
 
 # A dummy RegressionModel type that does not support intercept
 struct DummyModNoIntercept <: RegressionModel
@@ -123,6 +125,10 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     @test coefnames(m) == coefnames(ModelFrame(f, d)) == ["(Intercept)", "x1", "x2", "x1 & x2"]
 
     @test formula(m) == m.mf.f
+
+    ## loglikelihood methods from StatsBase
+    @test length(loglikelihood(m, :)) == nrow(d)
+    @test sum(loglikelihood(m, :)) == loglikelihood(m) == -deviance(m)
 
     ## test prediction method
     ## vanilla
