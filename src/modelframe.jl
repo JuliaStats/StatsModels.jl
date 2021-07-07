@@ -71,11 +71,11 @@ missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
 
 function ModelFrame(f::FormulaTerm, data::ColumnTable;
                     model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
-    data, _ = missing_omit(data, f)
-
     sch = schema(f, data, contrasts)
     f = apply_schema(f, sch, M)
-    
+
+    data, _ = missing_omit(data, f)
+
     ModelFrame(f, sch, data, model)
 end
 
