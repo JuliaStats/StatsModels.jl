@@ -33,7 +33,6 @@ export
     ContrastsCoding,
     
     coefnames,
-    dropterm,
     setcontrasts!,
     formula,
 
@@ -46,7 +45,6 @@ export
     FormulaTerm,
     InterceptTerm,
     FunctionTerm,
-    LagTerm,
     MatrixTerm,
 
     lag, lead, # Rexported from ShiftedArrays
