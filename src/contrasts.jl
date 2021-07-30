@@ -111,6 +111,7 @@ struct ContrastsMatrix{C <: AbstractContrasts, T, U}
                              termnames::Vector{U},
                              levels::Vector{T},
                              contrasts::C) where {U,T,C <: AbstractContrasts}
+        allunique(levels) || throw(ArgumentError("levels must be all unique, got $(levels)"))
         invindex = Dict{T,Int}(x=>i for (i,x) in enumerate(levels))
         new{C,T,U}(matrix, termnames, levels, contrasts, invindex)
     end

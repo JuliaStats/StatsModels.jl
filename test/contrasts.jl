@@ -332,4 +332,9 @@
         @test_throws MethodError ContrastsCoding(rand(4,3), base=base)
         
     end
+
+    @testset "Non-unique levels" begin
+        @test_throws ArgumentError ContrastsMatrix(DummyCoding(), ["a", "a", "b"])
+    end
+    
 end
