@@ -15,6 +15,8 @@ using LinearAlgebra
 
 using Tables: ColumnTable
 
+using REPL: levenshtein
+
 export
     #re-export from StatsBase:
     StatisticalModel,

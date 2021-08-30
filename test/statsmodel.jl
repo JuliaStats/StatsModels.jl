@@ -189,7 +189,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     @test predict(m, d4) == predict(m, d)
 
     ## attempting to fit with d4 should fail since it doesn't have :y
-    @test_throws ErrorException fit(DummyMod, f, d4)
+    @test_throws ArgumentError fit(DummyMod, f, d4)
 
     ## fit with contrasts specified
     d.x2p = categorical(d.x2)
