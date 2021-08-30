@@ -91,29 +91,35 @@ function checkcol(table, name :: Symbol)
     if i == 0 # if no such column
         names = Tables.columnnames(table)
         nearestnames = join(fuzzymatch(names, name),", " )
-        throw(ArgumentError("There isn't a variable called '$name' in your data; the nearest names appear to be: $nearestnames" ))
+        return "There isn't a variable called '$name' in your data; the nearest names appear to be: $nearestnames"
     end
+    return ""
 end
 
 """
 Check that each name in the given model `f` exists in the data source `t`; throw an ArgumentError otherwise.
 `t` is something that implements the `Tables` interface.
 """
-function checknamesexist(f :: FormulaTerm, t)
+function checknamesexist(f :: FormulaTerm, t)::String
     if ! Tables.istable(t)
         throw(ArgumentError( "$(typeof(t)) isn't a valid Table type" ))
     end
     for n in StatsModels.termvars(f)
-        checkcol(t, n)
+        msg = checkcol(t, n)
+        if msg != ""
+            return msg
+        end
     end    
+    return ""
 end
     
-
-
 function ModelFrame(f::FormulaTerm, data::ColumnTable;
                     model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
     
-    checknamesexist( f, data )
+    msg = checknamesexist( f, data )
+    if msg != ""
+        throw(ArgumentError(msg))
+    end
 
     data, _ = missing_omit(data, f)
 
