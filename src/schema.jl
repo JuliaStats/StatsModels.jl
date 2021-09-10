@@ -169,7 +169,7 @@ a(continuous)
 function concrete_term(t::Term, d, hints::Dict{Symbol})     
     msg :: String = checkcol( dt, t.sym )
     if msg != ""
-        throw throw(ArgumentError(msg))
+        throw(ArgumentError(msg))
     end
     return concrete_term(t, d, get(hints, t.sym, nothing))
 end
@@ -177,7 +177,7 @@ end
 function concrete_term(t::Term, dt::ColumnTable, hint)
     msg :: String = checkcol( dt, t.sym )
     if msg != ""
-        throw throw(ArgumentError(msg))
+        throw(ArgumentError(msg))
     end
     return concrete_term(t, getproperty(dt, t.sym), hint)
 end
