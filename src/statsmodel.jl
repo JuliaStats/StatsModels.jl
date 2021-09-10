@@ -129,7 +129,7 @@ const TableModels = Union{TableStatisticalModel, TableRegressionModel}
                              StatsBase.deviance, StatsBase.nulldeviance,
                              StatsBase.loglikelihood, StatsBase.nullloglikelihood,
                              StatsBase.dof, StatsBase.dof_residual, StatsBase.nobs,
-                             StatsBase.stderror, StatsBase.vcov]
+                             StatsBase.stderror, StatsBase.vcov, StatsBase.fitted]
 @delegate TableRegressionModel.model [StatsBase.modelmatrix,
                                       StatsBase.residuals, StatsBase.response,
                                       StatsBase.predict, StatsBase.predict!, 
