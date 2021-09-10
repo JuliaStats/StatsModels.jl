@@ -166,13 +166,7 @@ julia> concrete_term(term(:a), (a = [1, 2, 3], b = [0.0, 0.5, 1.0]))
 a(continuous)
 ```
 """
-function concrete_term(t::Term, d, hints::Dict{Symbol})     
-    msg :: String = checkcol( dt, t.sym )
-    if msg != ""
-        throw(ArgumentError(msg))
-    end
-    return concrete_term(t, d, get(hints, t.sym, nothing))
-end
+concrete_term(t::Term, d, hints::Dict{Symbol}) = concrete_term(t, d, get(hints, t.sym, nothing))
 
 function concrete_term(t::Term, dt::ColumnTable, hint)
     msg :: String = checkcol( dt, t.sym )
@@ -182,9 +176,13 @@ function concrete_term(t::Term, dt::ColumnTable, hint)
     return concrete_term(t, getproperty(dt, t.sym), hint)
 end
 
-concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol}) =
-    concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
-
+function concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol})
+    msg :: String = checkcol( dt, t.sym )
+    if msg != ""
+        throw(ArgumentError(msg))
+    end
+    return concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
+end
 
 
 concrete_term(t::Term, d) = concrete_term(t, d, nothing)

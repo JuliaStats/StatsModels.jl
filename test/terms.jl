@@ -210,4 +210,10 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test "$((a, ()))" == "(a, ())"
     end
 
+    @testset "concrete_term error messages" begin
+        t = (a = [1, 2, 3], b = [0.0, 0.5, 1.0])
+        @test Tables.istable(t)
+        @test_throws ArgumentError concrete_term(term(:not_there), t )
+    end
+
 end
