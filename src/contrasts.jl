@@ -234,7 +234,7 @@ Base.getindex(contrasts::ContrastsMatrix{C,T}, rowinds, colinds) where {C,T} =
 # Making a contrast type T only requires that there be a method for
 # contrasts_matrix(T,  baseind, n) and optionally termnames(T, levels, baseind)
 # The rest is boilerplate.
-for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCoding]
+for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
     @eval begin
         mutable struct $contrastType <: AbstractContrasts
             base::Any
@@ -448,7 +448,22 @@ julia> StatsModels.hypothesis_matrix(seqdiff)
 """
 SeqDiffCoding
 
-function contrasts_matrix(C::SeqDiffCoding, baseind, n)
+mutable struct SeqDiffCoding <: AbstractContrasts
+    levels::Union{AbstractVector,Nothing}
+end
+function SeqDiffCoding(; base=nothing, levels::Union{AbstractVector,Nothing}=nothing)
+    if base !== nothing
+        Base.depwarn("`base=` kwarg for `SeqDiffCoding` is deprecated. " *
+                     "Specify full order of levels using `levels=` instead",
+                     :SeqDiffCoding)
+    end
+    return SeqDiffCoding(levels)
+end
+
+baselevel(c::SeqDiffCoding) = c.levels === nothing ? nothing : c.levels[1]
+DataAPI.levels(c::SeqDiffCoding) = c.levels
+
+function contrasts_matrix(C::SeqDiffCoding, _, n)
     mat = zeros(n, n-1)
     for col in 1:n-1
         mat[1:col, col] .= col-n
