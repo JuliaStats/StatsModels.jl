@@ -316,7 +316,7 @@
         @test baselevel(c) == levs[1]
         @test levels(c) == levs
 
-        c = @test_log ((:warn,
+        c = @test_logs((:warn,
                         "`base=` kwarg for `SeqDiffCoding` is deprecated. " *
                         "Specify full order of levels using `levels=` instead"),
                        SeqDiffCoding(base=base))
