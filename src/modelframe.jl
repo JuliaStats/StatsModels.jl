@@ -68,7 +68,6 @@ end
 
 missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
     missing_omit(NamedTuple{tuple(termvars(formula)...)}(data))
-    
 function ModelFrame(f::FormulaTerm, data::ColumnTable;
                     model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
     
