@@ -16,7 +16,7 @@ end
 """
 Return a nice-ish error message if the Symbol `name` isn't a column name in `table`, otherwise a zero-length string.
 """
-function checkcol(table, name :: Symbol)::String
+function checkcol(table, name::Symbol)
     i = Tables.columnindex(table, name)
     if i == 0 # if no such column
         names = Tables.columnnames(table)
