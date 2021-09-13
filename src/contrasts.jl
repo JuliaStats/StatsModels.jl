@@ -453,7 +453,7 @@ mutable struct SeqDiffCoding <: AbstractContrasts
 end
 function SeqDiffCoding(; base=nothing, levels::Union{AbstractVector,Nothing}=nothing)
     if base !== nothing
-        Base.depwarn("`base=` kwarg for `SeqDiffCoding` is deprecated. " *
+        Base.depwarn("`base=` kwarg for `SeqDiffCoding` has no effect and is deprecated. " *
                      "Specify full order of levels using `levels=` instead",
                      :SeqDiffCoding)
     end
