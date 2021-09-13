@@ -317,7 +317,7 @@
         @test levels(c) == levs
 
         c = @test_logs((:warn,
-                        "`base=` kwarg for `SeqDiffCoding` is deprecated. " *
+                        "`base=` kwarg for `SeqDiffCoding` has no effect and is deprecated. " *
                         "Specify full order of levels using `levels=` instead"),
                        SeqDiffCoding(base=base))
         @test baselevel(c) == nothing
