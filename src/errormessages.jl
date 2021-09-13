@@ -5,12 +5,12 @@ Return between 0 and 2 names from `colnames` closest to `name`.
 `colnames` : some iterable collection of symbols
 """
 function fuzzymatch(colnames, name::Symbol)
-        ucname = uppercase(string(name))
-        dist = [(levenshtein(uppercase(string(x)), ucname), x) for x in colnames]
-        sort!(dist)
-        c = [count(x -> x[1] <= i, dist) for i in 0:2]
-        maxd = max(0, searchsortedlast(c, 8) - 1)
-        return [s for (d, s) in dist if d <= maxd]
+    ucname = uppercase(string(name))
+    dist = [(levenshtein(uppercase(string(x)), ucname), x) for x in colnames]
+    sort!(dist)
+    c = [count(x -> x[1] <= i, dist) for i in 0:2]
+    maxd = max(0, searchsortedlast(c, 8) - 1)
+    return [s for (d, s) in dist if d <= maxd]
 end
 
 """
