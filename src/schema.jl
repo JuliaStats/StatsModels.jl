@@ -112,15 +112,15 @@ julia> sch[term(:y)]
 y(continuous)
 ```
 """
-schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
-schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:ColumnTable} =
-    schema(Term.(collect(fieldnames(D))), dt, hints)
+schema(data, hints=Dict{Symbol,Any}()) = schema(Tables.Columns(data), hints)
+schema(dt::Tables.Columns, hints=Dict{Symbol,Any}()) =
+    schema(Term.(collect(Tables.columnnames(dt))), dt, hints)
 schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
-    schema(ts, columntable(data), hints)
+    schema(ts, Tables.Columns(data), hints)
 
 # handle hints:
-schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
-      hints::Dict{Symbol}=Dict{Symbol,Any}()) =
+schema(ts::AbstractVector{<:AbstractTerm}, dt::Tables.Columns,
+       hints::Dict{Symbol}=Dict{Symbol,Any}()) =
     sch = Schema(t=>concrete_term(t, dt, hints) for t in ts)
 
 schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
@@ -168,15 +168,15 @@ a(continuous)
 """
 concrete_term(t::Term, d, hints::Dict{Symbol}) =
     concrete_term(t, d, get(hints, t.sym, nothing))
-concrete_term(t::Term, dt::ColumnTable, hint) =
+concrete_term(t::Term, dt::Tables.Columns, hint) =
     concrete_term(t, getproperty(dt, t.sym), hint)
-concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol}) =
+concrete_term(t::Term, dt::Tables.Columns, hints::Dict{Symbol}) =
     concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
 concrete_term(t::Term, d) = concrete_term(t, d, nothing)
 
 # if the "hint" is already an AbstractTerm, use that
 # need this specified to avoid ambiguity
-concrete_term(t::Term, d::ColumnTable, hint::AbstractTerm) = hint
+concrete_term(t::Term, d::Tables.Columns, hint::AbstractTerm) = hint
 concrete_term(t::Term, x, hint::AbstractTerm) = hint
 
 # second possible fix for #97

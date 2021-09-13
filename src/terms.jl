@@ -430,9 +430,9 @@ function modelcols(t, d::D) where D
     ## like modelcols(::Any, ::NamedTuple) or modelcols(::AbstractTerm, ::NamedTuple)
     ## but that causes ambiguity errors or under-constrained modelcols methods for
     ## custom term types...
-    d isa NamedTuple && throw(ArgumentError("don't know how to generate modelcols for " *
-                                            "term $t. Did you forget to call apply_schema?"))
-    modelcols(t, columntable(d))
+    d isa Tables.Columns && throw(ArgumentError("don't know how to generate modelcols for " *
+                                                "term $t. Did you forget to call apply_schema?"))
+    modelcols(t, Tables.Columns(d))
 end
 
 """
