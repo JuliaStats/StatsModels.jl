@@ -289,8 +289,8 @@
         using StatsModels: baselevel, FullDummyCoding, ContrastsCoding
 
         levs = [:a, :b, :c, :d]
-        base = [:a]
-        for C in [DummyCoding, EffectsCoding, SeqDiffCoding, HelmertCoding]
+        base = [:c]
+        for C in [DummyCoding, EffectsCoding, HelmertCoding]
             c = C()
             @test levels(c) == nothing
             @test baselevel(c) == nothing
@@ -307,6 +307,25 @@
             @test levels(c) == levs
             @test baselevel(c) == base
         end
+
+        c = SeqDiffCoding()
+        @test baselevel(c) == nothing
+        @test levels(c) == nothing
+
+        c = SeqDiffCoding(levels=levs)
+        @test baselevel(c) == levs[1]
+        @test levels(c) == levs
+
+        c = @test_logs((:warn,
+                        "`base=` kwarg for `SeqDiffCoding` has no effect and is deprecated. " *
+                        "Specify full order of levels using `levels=` instead"),
+                       SeqDiffCoding(base=base))
+        @test baselevel(c) == nothing
+        @test levels(c) == nothing
+
+        c = SeqDiffCoding(base=base, levels=levs)
+        @test baselevel(c) == levs[1]
+        @test levels(c) == levs
 
         c = FullDummyCoding()
         @test baselevel(c) == nothing
