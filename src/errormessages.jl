@@ -30,7 +30,7 @@ end
 Check that each name in the given model `f` exists in the data source `t` and return a message if not. Return a zero string otherwise.
 `t` is something that implements the `Tables` interface.
 """
-function checknamesexist(f :: FormulaTerm, t)::String
+function checknamesexist(f::FormulaTerm, t)
     if ! Tables.istable(t)
         throw(ArgumentError( "$(typeof(t)) isn't a valid Table type" ))
     end
