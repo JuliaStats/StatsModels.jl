@@ -68,9 +68,14 @@ end
 
 missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
     missing_omit(NamedTuple{tuple(termvars(formula)...)}(data))
-
 function ModelFrame(f::FormulaTerm, data::ColumnTable;
                     model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
+    
+    msg = checknamesexist( f, data )
+    if msg != ""
+        throw(ArgumentError(msg))
+    end
+
     data, _ = missing_omit(data, f)
 
     sch = schema(f, data, contrasts)

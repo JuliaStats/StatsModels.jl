@@ -15,6 +15,8 @@ using LinearAlgebra
 
 using Tables: ColumnTable
 
+using REPL: levenshtein
+
 export
     #re-export from StatsBase:
     StatisticalModel,
@@ -67,6 +69,7 @@ export
 include("traits.jl")
 include("contrasts.jl")
 include("terms.jl")
+include( "errormessages.jl")
 include("schema.jl")
 include("temporal_terms.jl")
 include("formula.jl")
