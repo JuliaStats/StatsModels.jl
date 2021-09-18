@@ -432,7 +432,7 @@ function modelcols(t, d::D) where D
     ## custom term types...
     d isa Tables.Columns && throw(ArgumentError("don't know how to generate modelcols for " *
                                                 "term $t. Did you forget to call apply_schema?"))
-    modelcols(t, Tables.Columns(d))
+    modelcols(t, Tables.Columns(Tables.columns(d)))
 end
 
 """
@@ -481,19 +481,19 @@ julia> modelcols(MatrixTerm(ts), d)
  9.0  0.05079    0.0  1.0
 ```
 """
-modelcols(ts::TupleTerm, d::NamedTuple) = modelcols.(ts, Ref(d))
+modelcols(ts::TupleTerm, d) = modelcols.(ts, Ref(d))
 
-modelcols(t::Term, d::NamedTuple) =
+modelcols(t::Term, d) =
     throw(ArgumentError("can't generate modelcols for un-typed term $t. " *
                         "Use apply_schema to create concrete terms first"))
 
 # TODO: @generated to unroll the getfield stuff
-modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::NamedTuple) where {Fo,Fa,Names} =
-    ft.fanon.(getfield.(Ref(d), Names)...)
+modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::Columns) where {Fo,Fa,Names} =
+    ft.fanon.(getcolumn.(Ref(d), Names)...)
 
-modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
+modelcols(t::ContinuousTerm, d::Columns) = copy.(getcolumn(d, t.sym))
 
-modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
+modelcols(t::CategoricalTerm, d::Columns) = t.contrasts[getcolumn(d, t.sym), :]
 
 
 """
@@ -523,27 +523,27 @@ function row_kron_insideout(op::Function, args...)
     reshape(broadcast(op, args...), rows, :)
 end
 
-# two options here: either special-case ColumnTable (named tuple of vectors)
-# vs. vanilla NamedTuple, or reshape and use normal broadcasting
-modelcols(t::InteractionTerm, d::NamedTuple) =
-    kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
-
-function modelcols(t::InteractionTerm, d::ColumnTable)
-    row_kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
+function modelcols(t::InteractionTerm, d)
+    if Tables.istable(d)
+        return row_kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
+    else
+        return kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
+    end
 end
 
-modelcols(t::InterceptTerm{true}, d::NamedTuple) = ones(size(first(d)))
-modelcols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1), 0)
+modelcols(t::InterceptTerm{true}, d::Columns) = ones(size(Tables.getcolumn(d, 1), 1))
+modelcols(t::InterceptTerm{false}, d::Columns) = Matrix{Float64}(undef, size(first(d),1), 0)
 
-modelcols(t::FormulaTerm, d::NamedTuple) = (modelcols(t.lhs,d), modelcols(t.rhs, d))
+modelcols(t::FormulaTerm, d::Columns) = (modelcols(t.lhs,d), modelcols(t.rhs, d))
 
-function modelcols(t::MatrixTerm, d::ColumnTable)
-    mat = reduce(hcat, [modelcols(tt, d) for tt in t.terms])
-    reshape(mat, size(mat, 1), :)
+function modelcols(t::MatrixTerm, d::Columns)
+    if Tables.istable(d)
+        mat = reduce(hcat, [modelcols(tt, d) for tt in t.terms])
+        return reshape(mat, size(mat, 1), :)
+    else # single row
+        return reduce(vcat, [modelcols(tt, d) for tt in t.terms])
+    end
 end
-
-modelcols(t::MatrixTerm, d::NamedTuple) =
-    reduce(vcat, [modelcols(tt, d) for tt in t.terms])
 
 vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x

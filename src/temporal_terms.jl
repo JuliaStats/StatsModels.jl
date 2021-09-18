@@ -54,7 +54,7 @@ end
 ShiftedArrays.lead(t::T, n=1) where {T<:AbstractTerm} = LeadLagTerm{T,typeof(lead)}(t, n)
 ShiftedArrays.lag(t::T, n=1) where {T<:AbstractTerm} = LeadLagTerm{T,typeof(lag)}(t, n)
 
-function modelcols(ll::LeadLagTerm{<:Any, F}, d::Tables.ColumnTable) where F
+function modelcols(ll::LeadLagTerm{<:Any, F}, d::Columns) where F
     original_cols = modelcols(ll.term, d)
     return F.instance(original_cols, ll.nsteps)
 end

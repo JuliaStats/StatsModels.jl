@@ -1,6 +1,7 @@
 module StatsModels
 
 using Tables
+using TableOperations
 using StatsBase
 using ShiftedArrays
 using ShiftedArrays: lag, lead
@@ -13,7 +14,7 @@ using StatsFuns: chisqccdf
 using SparseArrays
 using LinearAlgebra
 
-using Tables: ColumnTable
+using Tables: ColumnTable, Columns, getcolumn
 
 export
     #re-export from StatsBase:

@@ -41,46 +41,23 @@ mutable struct ModelFrame{D,M}
     model::Type{M}
 end
 
-
-
-## copied from DataFrames:
-function _nonmissing!(res, col)
-    # workaround until JuliaLang/julia#21256 is fixed
-    eltype(col) >: Missing || return
-    res .&= .!ismissing.(col)
+function missing_omit(data, formula::AbstractTerm)
+    cols = termvars(formula)
+    sel = TableOperations.select(cols...)
+    drop = TableOperations.narrowtypes() ∘ TableOperations.dropmissing()
+    materialize = Tables.materializer(data)
+    return materialize(drop(sel(data)))
 end
 
-
-function missing_omit(d::T) where T<:ColumnTable
-    nonmissings = trues(length(first(d)))
-    for col in d
-        _nonmissing!(nonmissings, col)
-    end
-
-    rows = findall(nonmissings)
-    d_nonmissing =
-        NamedTuple{Tables.names(T)}(tuple((copyto!(similar(col,
-                                                           Base.nonmissingtype(eltype(col)),
-                                                           length(rows)),
-                                                   view(col, rows)) for col in d)...))
-    d_nonmissing, nonmissings
-end
-
-missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
-    missing_omit(NamedTuple{tuple(termvars(formula)...)}(data))
-
-function ModelFrame(f::FormulaTerm, data::ColumnTable;
+function ModelFrame(f::FormulaTerm, data;
                     model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
-    data, _ = missing_omit(data, f)
+    data = missing_omit(data, f)
 
     sch = schema(f, data, contrasts)
     f = apply_schema(f, sch, M)
     
     ModelFrame(f, sch, data, model)
 end
-
-ModelFrame(f::FormulaTerm, data; model=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
-    ModelFrame(f, columntable(data); model=model, contrasts=contrasts)
 
 StatsBase.modelmatrix(f::FormulaTerm, data; kwargs...) = modelmatrix(f.rhs, data; kwargs...)
 
