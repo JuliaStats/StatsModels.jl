@@ -32,16 +32,4 @@
     @test apply_schema(f, schema(df)) == apply_schema(f, schema(df5))
     @test sch != sch2
 
-    @test isequal(schema(df), schema(df2))
-    @test isequal(apply_schema(f, schema(df)), apply_schema(f, schema(df2)))
-    @test !isequal(schema(df), schema(df3))
-    @test !isequal(schema(df), schema(df4))
-    @test !isequal(schema(df), schema(df5))
-    @test !isequal(schema(df), schema(df6))
-    @test !isequal(schema(df), schema(df7))
-    @test !isequal(schema(df), schema(df8))
-    @test !isequal(schema(df8), schema(df))
-    @test isequal(apply_schema(f, schema(df)), apply_schema(f, schema(df5)))
-    @test !isequal(sch, sch2)
-
 end
