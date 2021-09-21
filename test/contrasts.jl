@@ -357,6 +357,8 @@
     end
 
     @testset "other string types" begin
+        using CSV
+
         using StatsModels: ContrastsMatrix
         using DataAPI: levels
 
