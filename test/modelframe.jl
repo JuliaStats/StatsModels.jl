@@ -8,6 +8,11 @@
         mf = ModelFrame(f, df)
         mm = ModelMatrix(mf)
         @test mm.assign == [1, 2, 2, 3, 4, 4]
+        
+        # `q` isn't in df  - should throw ArgumentError
+        f2 = @formula(x ~ y * q)
+        @test_throws ArgumentError ModelFrame(f2, df)
+        
     end
     
 end

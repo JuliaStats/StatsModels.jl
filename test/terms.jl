@@ -18,6 +18,8 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
 
     @testset "concrete_term" begin
         t = term(:aaa)
+        ts = term("aaa")
+        @test t == ts
         @test string(t) == "aaa"
         @test mimestring(t) == "aaa(unknown)"
 
@@ -59,7 +61,7 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test string(t2full) == "aaa"
         @test t1 != t2full
     end
-    
+
     @testset "term operators" begin
         a = term(:a)
         b = term(:b)
@@ -83,9 +85,18 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test string(a & b) == "$a & $b"
         @test mimestring(a & b) == "a(unknown) & b(unknown)"
         c = term(:c)
-        @test (a+b)+c == (a,b,c)
-        @test a+(b+c) == (a,b,c)
-        @test hash((a+b)+c) == hash(a+(b+c))
+        ab = a+b
+        bc = b+c
+        abc = a+b+c
+        @test ab+c == abc
+        @test ab+a == ab
+        @test a+bc == abc
+        @test b+ab == ab
+        @test ab+ab == ab
+        @test ab+bc == abc
+        @test sum((a,b,c)) == abc
+        @test sum((a,)) == a
+        @test +a == a
     end
 
     @testset "expand nested tuples of terms during apply_schema" begin
@@ -179,6 +190,61 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         f5 = @formula(0 ~ (1 & y | x)).rhs
         @test f1 != f5
         @test hash(f1) != hash(f5)
+    end
+
+    @testset "uniqueness of FunctionTerms" begin
+        f1 = @formula(y ~ lag(x,1) + lag(x,1))
+        f2 = @formula(y ~ lag(x,1))
+        f3 = @formula(y ~ lag(x,1) + lag(x,2))
+
+        @test f1.rhs == f2.rhs
+        @test f1.rhs != f3.rhs
+
+        ## addition of two identical function terms
+        @test f2.rhs + f2.rhs == f2.rhs
+    end
+
+    @testset "Tuple terms" begin
+        using StatsModels: TermOrTerms, TupleTerm, Term
+        a, b, c = Term.((:a, :b, :c))
+
+        # TermOrTerms - one or more AbstractTerms (if more, a tuple)
+        # empty tuples are never terms
+        @test !(() isa TermOrTerms)
+        @test (a, ) isa TermOrTerms
+        @test (a, b) isa TermOrTerms
+        @test (a, b, a&b) isa TermOrTerms
+        @test !(((), a) isa TermOrTerms)
+        # can't contain further tuples
+        @test !((a, (a,), b) isa TermOrTerms)
+
+        # a tuple of AbstractTerms OR Tuples of one or more terms
+        # empty tuples are never terms
+        @test !(() isa TupleTerm)
+        @test (a, ) isa TupleTerm
+        @test (a, b) isa TupleTerm
+        @test (a, b, a&b) isa TupleTerm
+        @test !(((), a) isa TupleTerm)
+        @test (((a,), a) isa TupleTerm)
+
+        # no methods for operators on term and empty tuple (=no type piracy)
+        @test_throws MethodError a + ()
+        @test_throws MethodError () + a
+        @test_throws MethodError a & ()
+        @test_throws MethodError () & a
+        @test_throws MethodError a ~ ()
+        @test_throws MethodError () ~ a
+
+        # show methods of empty tuples preserved
+        @test "$(())" == "()"
+        @test "$((a,b))" == "a + b"
+        @test "$((a, ()))" == "(a, ())"
+    end
+
+    @testset "concrete_term error messages" begin
+        t = (a = [1, 2, 3], b = [0.0, 0.5, 1.0])
+        @test Tables.istable(t)
+        @test_throws ArgumentError concrete_term(term(:not_there), t )
     end
 
 end

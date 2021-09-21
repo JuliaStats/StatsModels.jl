@@ -73,7 +73,7 @@ Base.hash(schema::Schema, h::UInt) = hash(schema.schema, h)
 Compute all the invariants necessary to fit a model with `terms`.  A schema is a dict that
 maps `Term`s to their concrete instantiations (either `CategoricalTerm`s or
 `ContinuousTerm`s.  "Hints" may optionally be supplied in the form of a `Dict` mapping term
-names (as `Symbol`s) to term or contrast types.  If a hint is not provided for a variable, 
+names (as `Symbol`s) to term or contrast types.  If a hint is not provided for a variable,
 the appropriate term type will be guessed based on the data type from the data column: any
 numeric data is assumed to be continuous, and any non-numeric data is assumed to be
 categorical.
@@ -85,33 +85,35 @@ mapping `Term`s to their concrete instantiations (`ContinuousTerm` or
 # Example
 
 ```jldoctest 1
-julia> d = (x=sample([:a, :b, :c], 10), y=rand(10));
+julia> using StableRNGs; rng = StableRNG(1);
+
+julia> d = (x=sample(rng, [:a, :b, :c], 10), y=rand(rng, 10));
 
 julia> ts = [Term(:x), Term(:y)];
 
 julia> schema(ts, d)
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> schema(ts, d, Dict(:x => HelmertCoding()))
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> schema(term(:y), d, Dict(:y => CategoricalTerm))
 StatsModels.Schema with 1 entry:
   y => y
 ```
 
-Note that concrete `ContinuousTerm` and `CategoricalTerm` and un-typed `Term`s print the 
+Note that concrete `ContinuousTerm` and `CategoricalTerm` and un-typed `Term`s print the
 same in a container, but when printed alone are different:
 
 ```jldoctest 1
 julia> sch = schema(ts, d)
 StatsModels.Schema with 2 entries:
-  y => y
   x => x
+  y => y
 
 julia> term(:x)
 x(unknown)
@@ -173,17 +175,35 @@ a(EffectsCoding:3→2)
 julia> concrete_term(term(:a), [1, 2, 3], Dict(:a=>EffectsCoding()))
 a(EffectsCoding:3→2)
 
-julia> concrete_term(term(:a), (a = [1, 2, 3], b = rand(3)))
+julia> concrete_term(term(:a), (a = [1, 2, 3], b = [0.0, 0.5, 1.0]))
 a(continuous)
 ```
 """
-concrete_term(t::Term, d, hints::Dict{Symbol}) =
-    concrete_term(t, d, get(hints, t.sym, nothing))
-concrete_term(t::Term, dt::ColumnTable, hint) =
-    concrete_term(t, getproperty(dt, t.sym), hint)
-concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol}) =
-    concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
+concrete_term(t::Term, d, hints::Dict{Symbol}) = concrete_term(t, d, get(hints, t.sym, nothing))
+
+function concrete_term(t::Term, dt::ColumnTable, hint)
+    msg::String = checkcol( dt, t.sym )
+    if msg != ""
+        throw(ArgumentError(msg))
+    end
+    return concrete_term(t, getproperty(dt, t.sym), hint)
+end
+
+function concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol})
+    msg::String = checkcol( dt, t.sym )
+    if msg != ""
+        throw(ArgumentError(msg))
+    end
+    return concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
+end
+
+
 concrete_term(t::Term, d) = concrete_term(t, d, nothing)
+
+# if the "hint" is already an AbstractTerm, use that
+# need this specified to avoid ambiguity
+concrete_term(t::Term, d::ColumnTable, hint::AbstractTerm) = hint
+concrete_term(t::Term, x, hint::AbstractTerm) = hint
 
 # second possible fix for #97
 concrete_term(t, d, hint) = t
@@ -209,9 +229,9 @@ end
 Return a new term that is the result of applying `schema` to term `t` with
 destination model (type) `Mod`.  If `Mod` is omitted, `Nothing` will be used.
 
-When `t` is a `ContinuousTerm` or `CategoricalTerm` already, the term will be returned 
-unchanged _unless_ a matching term is found in the schema.  This allows 
-selective re-setting of a schema to change the contrast coding or levels of a 
+When `t` is a `ContinuousTerm` or `CategoricalTerm` already, the term will be returned
+unchanged _unless_ a matching term is found in the schema.  This allows
+selective re-setting of a schema to change the contrast coding or levels of a
 categorical term, or to change a continuous term to categorical or vice versa.
 
 When defining behavior for custom term types, it's best to dispatch on
@@ -220,7 +240,7 @@ in _most_ cases, but cause method ambiguity in some.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 apply_schema(t, schema, Mod::Type) = t
-apply_schema(terms::TupleTerm, schema, Mod::Type) = sum(apply_schema.(terms, Ref(schema), Mod))
+apply_schema(terms::TupleTerm, schema, Mod::Type) = reduce(+, apply_schema.(terms, Ref(schema), Mod))
 
 apply_schema(t::Term, schema::Schema, Mod::Type) = schema[t]
 apply_schema(ft::FormulaTerm, schema::Schema, Mod::Type) =
@@ -254,6 +274,7 @@ has_schema(t::Term) = false
 has_schema(t::Union{ContinuousTerm,CategoricalTerm}) = true
 has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
 has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
+has_schema(t::MatrixTerm) = has_schema(t.terms)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
 
 struct FullRank
@@ -271,7 +292,7 @@ function apply_schema(t::FormulaTerm, schema::Schema, Mod::Type{<:StatisticalMod
     schema = FullRank(schema)
 
     # Models with the drop_intercept trait do not support intercept terms,
-    # usually because they include one implicitly.
+    # usually because one is always necessarily included during fitting
     if drop_intercept(Mod)
         if hasintercept(t)
             throw(ArgumentError("Model type $Mod doesn't support intercept " *
@@ -289,7 +310,7 @@ function apply_schema(t::FormulaTerm, schema::Schema, Mod::Type{<:StatisticalMod
 end
 
 # strategy is: apply schema, then "repair" if necessary (promote to full rank
-# contrasts).  
+# contrasts).
 #
 # to know whether to repair, need to know context a term appears in.  main
 # effects occur in "own" context.

@@ -4,6 +4,7 @@ using SparseArrays
 
 using StatsModels
 using DataFrames
+using CategoricalArrays
 using StatsBase
 
 using StatsModels: ContrastsMatrix
@@ -17,7 +18,8 @@ my_tests = ["ambiguity.jl",
             "modelframe.jl",
             "statsmodel.jl",
             "contrasts.jl",
-            "extension.jl"]
+            "extension.jl",
+            "traits.jl"]
 
 @testset "StatsModels" begin
     for tf in my_tests

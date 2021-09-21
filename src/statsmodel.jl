@@ -34,7 +34,7 @@ end
 
 """
 Wrapper for a `StatisticalModel` that has been fit from a `@formula` and tabular
-data.  
+data.
 
 Most functions from the StatsBase API are simply delegated to the wrapped model,
 with the exception of functions like `fit`, `predict`, and `coefnames` where the
@@ -54,7 +54,7 @@ end
 
 """
 Wrapper for a `RegressionModel` that has been fit from a `@formula` and tabular
-data.  
+data.
 
 Most functions from the StatsBase API are simply delegated to the wrapped model,
 with the exception of functions like `fit`, `predict`, and `coefnames` where the
@@ -78,7 +78,7 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
         function StatsBase.fit(::Type{T}, f::FormulaTerm, data, args...;
                                contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(),
                                kwargs...) where T<:$modeltype
-                               
+
             Tables.istable(data) || throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
             cols = columntable(data)
 
@@ -96,8 +96,18 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
     end
 end
 
+"""
+    formula(model)
+
+Retrieve formula from a fitted or specified model
+"""
+function formula end
+
+formula(m::TableStatisticalModel) = m.mf.f
+formula(m::TableRegressionModel) = m.mf.f
+
 @doc """
-    fit(Mod::Type{<:StatisticalModel}, f::FormulaTerm, data, args...; 
+    fit(Mod::Type{<:StatisticalModel}, f::FormulaTerm, data, args...;
         contrasts::Dict{Symbol}, kwargs...)
 
 Convert tabular data into a numeric response vector and predictor matrix using
@@ -119,9 +129,11 @@ const TableModels = Union{TableStatisticalModel, TableRegressionModel}
                              StatsBase.deviance, StatsBase.nulldeviance,
                              StatsBase.loglikelihood, StatsBase.nullloglikelihood,
                              StatsBase.dof, StatsBase.dof_residual, StatsBase.nobs,
-                             StatsBase.stderror, StatsBase.vcov]
-@delegate TableRegressionModel.model [StatsBase.residuals, StatsBase.response,
-                                      StatsBase.predict, StatsBase.predict!]
+                             StatsBase.stderror, StatsBase.vcov, StatsBase.fitted]
+@delegate TableRegressionModel.model [StatsBase.modelmatrix,
+                                      StatsBase.residuals, StatsBase.response,
+                                      StatsBase.predict, StatsBase.predict!, 
+                                      StatsBase.cooksdistance]
 StatsBase.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
     predict(m.model, new_x; kwargs...)
 # Need to define these manually because of ambiguity using @delegate
@@ -130,6 +142,7 @@ StatsBase.r2(mm::TableRegressionModel) = r2(mm.model)
 StatsBase.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
 StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
+StatsBase.loglikelihood(mm::TableModels, c::Colon) = loglikelihood(mm.model, c)
 
 function _return_predictions(T, yp::AbstractVector, nonmissings, len)
     out = Vector{Union{eltype(yp),Missing}}(missing, len)
