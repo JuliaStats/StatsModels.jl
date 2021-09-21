@@ -190,6 +190,11 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         f5 = @formula(0 ~ (1 & y | x)).rhs
         @test f1 != f5
         @test hash(f1) != hash(f5)
+
+        ff1 = @formula(y ~ 1 + x + x & y + (1 + x | g))
+        ff2 = @formula(y ~ 1 + x + x & y + (1 + x | g))
+        @test ff1 == ff2
+        @test hash(ff1) == hash(ff2)
     end
 
     @testset "uniqueness of FunctionTerms" begin

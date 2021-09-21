@@ -4,7 +4,7 @@ const TermOrTerms = Union{AbstractTerm, Tuple{AbstractTerm, Vararg{AbstractTerm}
 const TupleTerm = Tuple{TermOrTerms, Vararg{TermOrTerms}}
 
 Base.hash(term::T, h::UInt) where {T<:AbstractTerm} =
-    foldr(hash, getfield(term, field) for field in fieldnames(T); init=h)
+    foldl((h, x) -> hash(x, h), getfield(term, field) for field in fieldnames(T); init=h)
 
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
