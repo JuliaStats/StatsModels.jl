@@ -376,7 +376,7 @@
         c1 = ContrastsMatrix(DummyCoding(), x1_levs)
         c = ContrastsMatrix(DummyCoding(levels=["a", "b", "c"]), x1_levs)
         @test c == c1
-        @test eltype(c.levels) == eltype(c1.levels) != eltype(c.contrasts.levels)
+        @test eltype(c.levels) == eltype(c1.levels)
 
         @test_throws ArgumentError ContrastsMatrix(DummyCoding(levels=[1, 2, 3]), x1_levs)
     end
