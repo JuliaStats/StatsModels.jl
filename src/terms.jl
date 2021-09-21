@@ -1,10 +1,14 @@
-import Base.==
 abstract type AbstractTerm end
 const TermOrTerms = Union{AbstractTerm, Tuple{AbstractTerm, Vararg{AbstractTerm}}}
 const TupleTerm = Tuple{TermOrTerms, Vararg{TermOrTerms}}
 
 Base.hash(term::T, h::UInt) where {T<:AbstractTerm} =
     foldl((h, x) -> hash(x, h), getfield(term, field) for field in fieldnames(T); init=h)
+
+function Base.:(==)(a::A, b::B) where {A<:AbstractTerm, B<:AbstractTerm}
+    fieldnames(A) == fieldnames(B) || return false
+    return all(getfield(a, field) == getfield(b, field) for field in fieldnames(A))
+end
 
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
@@ -42,8 +46,6 @@ struct ConstantTerm{T<:Number} <: AbstractTerm
 end
 width(::ConstantTerm) = 1
 
-==(first::ConstantTerm, second::ConstantTerm) = first.n == second.n
-
 """
     FormulaTerm{L,R} <: AbstractTerm
 
@@ -59,10 +61,6 @@ struct FormulaTerm{L,R} <: AbstractTerm
     lhs::L
     rhs::R
 end
-
-==(first::FormulaTerm, second::FormulaTerm) =
-    first.lhs == second.lhs &&
-    first.rhs == second.rhs
 
 """
     FunctionTerm{Forig,Fanon,Names} <: AbstractTerm
@@ -137,7 +135,7 @@ FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
     FunctionTerm{Fo, Fa, names}(forig, fanon, exorig, args_parsed)
 width(::FunctionTerm) = 1
 
-==(first::FunctionTerm, second::FunctionTerm) =
+Base.:(==)(first::FunctionTerm, second::FunctionTerm) =
     first.forig == second.forig &&
     first.exorig == second.exorig
 Base.hash(term::FunctionTerm, h::UInt) = hash(term.forig, hash(term.exorig, h))
@@ -191,9 +189,6 @@ struct InteractionTerm{Ts} <: AbstractTerm
 end
 width(ts::InteractionTerm) = prod(width(t) for t in ts.terms)
 
-==(first::InteractionTerm, second::InteractionTerm) =
-    first.terms == second.terms
-
 """
     InterceptTerm{HasIntercept} <: AbstractTerm
 
@@ -207,8 +202,7 @@ via the [`implicit_intercept`](@ref) trait).
 struct InterceptTerm{HasIntercept} <: AbstractTerm end
 width(::InterceptTerm{H}) where {H} = H ? 1 : 0
 
-==(first::InterceptTerm, second::InterceptTerm) =
-    width(first) == width(second)
+Base.:(==)(first::InterceptTerm{T}, second::InterceptTerm{S}) where {T,S} = T == S
 
 # Typed terms
 
@@ -234,13 +228,6 @@ struct ContinuousTerm{T} <: AbstractTerm
 end
 width(::ContinuousTerm) = 1
 
-==(first::ContinuousTerm, second::ContinuousTerm) = 
-    first.sym == second.sym &&
-    first.mean == second.mean &&
-    first.var == second.var &&
-    first.min == second.min &&
-    first.max == second.max
-
 """
     CategoricalTerm{C,T,N} <: AbstractTerm
 
@@ -263,11 +250,6 @@ width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 CategoricalTerm(sym::Symbol, contrasts::ContrastsMatrix{C,T}) where {C,T} =
     CategoricalTerm{C,T,length(contrasts.termnames)}(sym, contrasts)
 
-==(first::CategoricalTerm, second::CategoricalTerm) =
-    first.sym == second.sym &&
-    width(first) == width(second) &&
-    first.contrasts == second.contrasts
-
 """
     MatrixTerm{Ts} <: AbstractTerm
 
@@ -284,9 +266,6 @@ end
 # wrap single terms in a tuple
 MatrixTerm(t::AbstractTerm) = MatrixTerm((t, ))
 width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
-
-==(first::MatrixTerm, second::MatrixTerm) =
-    first.terms == second.terms
 
 """
     collect_matrix_terms(ts::TupleTerm)
