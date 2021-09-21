@@ -64,6 +64,8 @@ function ==(first::Schema, second::Schema)
     true
 end
 
+Base.hash(schema::Schema, h::UInt) = hash(schema.schema, h)
+
 """
     schema([terms::AbstractVector{<:AbstractTerm}, ]data, hints::Dict{Symbol})
     schema(term::AbstractTerm, data, hints::Dict{Symbol})
