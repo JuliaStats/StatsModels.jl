@@ -3,6 +3,9 @@ abstract type AbstractTerm end
 const TermOrTerms = Union{AbstractTerm, NTuple{N, AbstractTerm} where N}
 const TupleTerm = NTuple{N, TermOrTerms} where N
 
+Base.hash(term::T, h::UInt) where {T<:AbstractTerm} =
+    foldr(hash, getfield(term, field) for field in fieldnames(T); init=h)
+
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
 
@@ -136,7 +139,8 @@ width(::FunctionTerm) = 1
 
 ==(first::FunctionTerm, second::FunctionTerm) =
     first.forig == second.forig &&
-    first.args_parsed == second.args_parsed
+    first.exorig == second.exorig
+Base.hash(term::FunctionTerm, h::UInt) = hash(term.forig, hash(term.exorig, h))
 
 """
     InteractionTerm{Ts} <: AbstractTerm

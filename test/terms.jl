@@ -28,26 +28,36 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test t0.var == var([1,2,3])
         @test t0.min == 1.0
         @test t0.max == 3.0
+        @test t0 == concrete_term(t, [3, 2, 1])
+        @test hash(t0) == hash(concrete_term(t, [3, 2, 1]))
 
         t1 = concrete_term(t, [:a, :b, :c])
         @test t1.contrasts isa StatsModels.ContrastsMatrix{DummyCoding}
         @test string(t1) == "aaa"
         @test mimestring(t1) == "aaa(DummyCoding:3→2)"
+        @test t1 == concrete_term(t, [:a, :b, :c])
+        @test t1 !== concrete_term(t, [:a, :b, :c])
+        @test hash(t1) == hash(concrete_term(t, [:a, :b, :c]))
 
         t3 = concrete_term(t, [:a, :b, :c], DummyCoding())
         @test t3.contrasts isa StatsModels.ContrastsMatrix{DummyCoding}
         @test string(t3) == "aaa"
         @test mimestring(t3) == "aaa(DummyCoding:3→2)"
+        @test t1 == t3
+        @test hash(t1) == hash(t3)
 
         t2 = concrete_term(t, [:a, :a, :b], EffectsCoding())
         @test t2.contrasts isa StatsModels.ContrastsMatrix{EffectsCoding}
         @test mimestring(t2) == "aaa(EffectsCoding:2→1)"
         @test string(t2) == "aaa"
+        @test t2 == concrete_term(t, [:a, :a, :b], EffectsCoding())
+        @test t1 != t2
 
         t2full = concrete_term(t, [:a, :a, :b], StatsModels.FullDummyCoding())
         @test t2full.contrasts isa StatsModels.ContrastsMatrix{StatsModels.FullDummyCoding}
         @test mimestring(t2full) == "aaa(StatsModels.FullDummyCoding:2→2)"
         @test string(t2full) == "aaa"
+        @test t1 != t2full
     end
     
     @testset "term operators" begin
@@ -75,6 +85,7 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         c = term(:c)
         @test (a+b)+c == (a,b,c)
         @test a+(b+c) == (a,b,c)
+        @test hash((a+b)+c) == hash(a+(b+c))
     end
 
     @testset "expand nested tuples of terms during apply_schema" begin
