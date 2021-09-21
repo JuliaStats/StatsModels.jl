@@ -159,5 +159,26 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         end
 
     end
-    
+
+    @testset "equality of function terms" begin
+        # for now, we use `@formula` to construct the function terms
+        f1 = @formula(0 ~ (1 | x)).rhs
+        f2 = @formula(0 ~ (1 | x)).rhs
+        @test f1 !== f2
+        @test f1 == f2
+        @test hash(f1) == hash(f2)
+
+        f3 = @formula(0 ~ (1 % x)).rhs
+        @test f1 != f3
+        @test hash(f1) != hash(f3)
+        
+        f4 = @formula(0 ~ (x | 1)).rhs
+        @test f1 != f4
+        @test hash(f1) != hash(f4)
+
+        f5 = @formula(0 ~ (1 & y | x)).rhs
+        @test f1 != f5
+        @test hash(f1) != hash(f5)
+    end
+
 end
