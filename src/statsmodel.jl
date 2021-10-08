@@ -144,6 +144,8 @@ StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
 StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
 StatsBase.loglikelihood(mm::TableModels, c::Colon) = loglikelihood(mm.model, c)
 
+isnested(m1::TableModels, m2::TableModels; kwargs...) = isnested(m1.model, m2.model; kwargs...)
+
 function _return_predictions(T, yp::AbstractVector, nonmissings, len)
     out = Vector{Union{eltype(yp),Missing}}(missing, len)
     out[nonmissings] = yp
