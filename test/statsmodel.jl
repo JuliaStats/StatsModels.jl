@@ -106,6 +106,7 @@ end
 StatsBase.fit(::Type{DummyModTwo}, ::Matrix, ::Vector) = DummyModTwo("hello!")
 Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
+
 @testset "stat model types" begin
 
     ## Test fitting
@@ -263,6 +264,19 @@ end
         [1]    1         14.0000                      
         [2]    2     1    3.2600   -10.7400     0.0010
         ──────────────────────────────────────────────"""
+
+    @testset "isnested with TableRegressionModel" begin
+        d = DataFrame(y=y, x1=x1, x2=x2)
+
+        m0 = fit(DummyMod, @formula(y ~ 1), d)
+        m1 = fit(DummyMod, @formula(y ~ 1 + x1), d)
+        m2 = fit(DummyMod, @formula(y ~ 1 + x1 * x2), d)
+
+        @test StatsModels.isnested(m0, m1)
+        @test StatsModels.isnested(m1, m2)
+        @test StatsModels.isnested(m0, m2)
+    end
+    
 
     m0 = DummyModNoIntercept(Float64[], ones(4, 0), y)
     m1 = DummyModNoIntercept([0.3], reshape(x1, :, 1), y)
