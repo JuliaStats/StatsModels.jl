@@ -147,6 +147,9 @@ StatsBase.loglikelihood(mm::TableModels, c::Colon) = loglikelihood(mm.model, c)
 function isnested(m1::TableRegressionModel, m2::TableRegressionModel; kwargs...)
     return isnested(m1.model, m2.model; kwargs...)
 end
+function isnested(m1::TableStatisticalModel, m2::TableStatisticalModel; kwargs...)
+    return isnested(m1.model, m2.model; kwargs...)
+end
 
 function _return_predictions(T, yp::AbstractVector, nonmissings, len)
     out = Vector{Union{eltype(yp),Missing}}(missing, len)
