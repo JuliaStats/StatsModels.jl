@@ -23,6 +23,12 @@ function checkcol(table, name::Symbol)
         nearestnames = join(fuzzymatch(names, name),", " )
         return "There isn't a variable called '$name' in your data; the nearest names appear to be: $nearestnames"
     end
+
+    nrows = length(Tables.getcolumn(table, name))
+    if nrows == 0
+        return "Column $name is empty."
+    end
+
     return ""
 end
 

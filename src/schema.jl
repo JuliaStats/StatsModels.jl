@@ -120,7 +120,7 @@ schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
 
 # handle hints:
 schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
-      hints::Dict{Symbol}=Dict{Symbol,Any}()) =
+       hints::Dict{Symbol}=Dict{Symbol,Any}()) =
     sch = Schema(t=>concrete_term(t, dt, hints) for t in ts)
 
 schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
@@ -169,7 +169,7 @@ a(continuous)
 concrete_term(t::Term, d, hints::Dict{Symbol}) = concrete_term(t, d, get(hints, t.sym, nothing))
 
 function concrete_term(t::Term, dt::ColumnTable, hint)
-    msg::String = checkcol( dt, t.sym )
+    msg = checkcol(dt, t.sym)
     if msg != ""
         throw(ArgumentError(msg))
     end
@@ -177,7 +177,7 @@ function concrete_term(t::Term, dt::ColumnTable, hint)
 end
 
 function concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol})
-    msg::String = checkcol( dt, t.sym )
+    msg = checkcol(dt, t.sym)
     if msg != ""
         throw(ArgumentError(msg))
     end
