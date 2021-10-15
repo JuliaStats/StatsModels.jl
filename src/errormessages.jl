@@ -26,7 +26,7 @@ function checkcol(table, name::Symbol)
 
     nrows = length(Tables.getcolumn(table, name))
     if nrows == 0
-        return "Column $name is empty."
+        return "Column '$name' is empty."
     end
 
     return ""
