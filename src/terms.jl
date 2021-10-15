@@ -2,6 +2,14 @@ abstract type AbstractTerm end
 const TermOrTerms = Union{AbstractTerm, Tuple{AbstractTerm, Vararg{AbstractTerm}}}
 const TupleTerm = Tuple{TermOrTerms, Vararg{TermOrTerms}}
 
+Base.hash(term::T, h::UInt) where {T<:AbstractTerm} =
+    foldl((h, x) -> hash(x, h), getfield(term, field) for field in fieldnames(T); init=h)
+
+function Base.:(==)(a::A, b::B) where {A<:AbstractTerm, B<:AbstractTerm}
+    fieldnames(A) == fieldnames(B) || return false
+    return all(getfield(a, field) == getfield(b, field) for field in fieldnames(A))
+end
+
 width(::T) where {T<:AbstractTerm} =
     throw(ArgumentError("terms of type $T have undefined width"))
 
@@ -127,7 +135,10 @@ FunctionTerm(forig::Fo, fanon::Fa, names::NTuple{N,Symbol},
     FunctionTerm{Fo, Fa, names}(forig, fanon, exorig, args_parsed)
 width(::FunctionTerm) = 1
 
-Base.:(==)(a::FunctionTerm, b::FunctionTerm) = a.forig == b.forig && a.exorig == b.exorig
+Base.:(==)(first::FunctionTerm, second::FunctionTerm) =
+    first.forig == second.forig &&
+    first.exorig == second.exorig
+Base.hash(term::FunctionTerm, h::UInt) = hash(term.forig, hash(term.exorig, h))
 
 """
     InteractionTerm{Ts} <: AbstractTerm
@@ -190,6 +201,8 @@ via the [`implicit_intercept`](@ref) trait).
 """
 struct InterceptTerm{HasIntercept} <: AbstractTerm end
 width(::InterceptTerm{H}) where {H} = H ? 1 : 0
+
+Base.:(==)(first::InterceptTerm{T}, second::InterceptTerm{S}) where {T,S} = T == S
 
 # Typed terms
 

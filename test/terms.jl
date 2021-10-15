@@ -30,26 +30,36 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test t0.var == var([1,2,3])
         @test t0.min == 1.0
         @test t0.max == 3.0
+        @test t0 == concrete_term(t, [3, 2, 1])
+        @test hash(t0) == hash(concrete_term(t, [3, 2, 1]))
 
         t1 = concrete_term(t, [:a, :b, :c])
         @test t1.contrasts isa StatsModels.ContrastsMatrix{DummyCoding}
         @test string(t1) == "aaa"
         @test mimestring(t1) == "aaa(DummyCoding:3→2)"
+        @test t1 == concrete_term(t, [:a, :b, :c])
+        @test t1 !== concrete_term(t, [:a, :b, :c])
+        @test hash(t1) == hash(concrete_term(t, [:a, :b, :c]))
 
         t3 = concrete_term(t, [:a, :b, :c], DummyCoding())
         @test t3.contrasts isa StatsModels.ContrastsMatrix{DummyCoding}
         @test string(t3) == "aaa"
         @test mimestring(t3) == "aaa(DummyCoding:3→2)"
+        @test t1 == t3
+        @test hash(t1) == hash(t3)
 
         t2 = concrete_term(t, [:a, :a, :b], EffectsCoding())
         @test t2.contrasts isa StatsModels.ContrastsMatrix{EffectsCoding}
         @test mimestring(t2) == "aaa(EffectsCoding:2→1)"
         @test string(t2) == "aaa"
+        @test t2 == concrete_term(t, [:a, :a, :b], EffectsCoding())
+        @test t1 != t2
 
         t2full = concrete_term(t, [:a, :a, :b], StatsModels.FullDummyCoding())
         @test t2full.contrasts isa StatsModels.ContrastsMatrix{StatsModels.FullDummyCoding}
         @test mimestring(t2full) == "aaa(StatsModels.FullDummyCoding:2→2)"
         @test string(t2full) == "aaa"
+        @test t1 != t2full
     end
 
     @testset "term operators" begin
@@ -87,18 +97,6 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test sum((a,b,c)) == abc
         @test sum((a,)) == a
         @test +a == a
-    end
-
-    @testset "uniqueness of FunctionTerms" begin
-        f1 = @formula(y ~ lag(x,1) + lag(x,1))
-        f2 = @formula(y ~ lag(x,1))
-        f3 = @formula(y ~ lag(x,1) + lag(x,2))
-
-        @test f1.rhs == f2.rhs
-        @test f1.rhs != f3.rhs
-
-        ## addition of two identical function terms
-        @test f2.rhs + f2.rhs == f2.rhs
     end
 
     @testset "expand nested tuples of terms during apply_schema" begin
@@ -171,6 +169,44 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
             @test omitsintercept(lhs ~ rhs + a)
         end
 
+    end
+
+    @testset "equality of function terms" begin
+        # for now, we use `@formula` to construct the function terms
+        f1 = @formula(0 ~ (1 | x)).rhs
+        f2 = @formula(0 ~ (1 | x)).rhs
+        @test f1 !== f2
+        @test f1 == f2
+        @test hash(f1) == hash(f2)
+
+        f3 = @formula(0 ~ (1 % x)).rhs
+        @test f1 != f3
+        @test hash(f1) != hash(f3)
+        
+        f4 = @formula(0 ~ (x | 1)).rhs
+        @test f1 != f4
+        @test hash(f1) != hash(f4)
+
+        f5 = @formula(0 ~ (1 & y | x)).rhs
+        @test f1 != f5
+        @test hash(f1) != hash(f5)
+
+        ff1 = @formula(y ~ 1 + x + x & y + (1 + x | g))
+        ff2 = @formula(y ~ 1 + x + x & y + (1 + x | g))
+        @test ff1 == ff2
+        @test hash(ff1) == hash(ff2)
+    end
+
+    @testset "uniqueness of FunctionTerms" begin
+        f1 = @formula(y ~ lag(x,1) + lag(x,1))
+        f2 = @formula(y ~ lag(x,1))
+        f3 = @formula(y ~ lag(x,1) + lag(x,2))
+
+        @test f1.rhs == f2.rhs
+        @test f1.rhs != f3.rhs
+
+        ## addition of two identical function terms
+        @test f2.rhs + f2.rhs == f2.rhs
     end
 
     @testset "Tuple terms" begin
