@@ -432,7 +432,7 @@ function modelcols(t, d::D) where D
     ## custom term types...
     d isa Tables.Columns && throw(ArgumentError("don't know how to generate modelcols for " *
                                                 "term $t. Did you forget to call apply_schema?"))
-    modelcols(t, Tables.Columns(Tables.columns(d)))
+    modelcols(t, Tables.Columns(d))
 end
 
 """
