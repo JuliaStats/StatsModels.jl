@@ -201,7 +201,7 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
 
     mat = contrasts_matrix(contrasts, baseind, n)
 
-    ContrastsMatrix(mat, tnames, c_levels, contrasts)
+    ContrastsMatrix(mat, Vector(tnames), Vector(c_levels), contrasts)
 end
 
 ContrastsMatrix(c::Type{<:AbstractContrasts}, levels::AbstractVector) =
