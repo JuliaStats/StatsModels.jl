@@ -43,10 +43,10 @@ end
 
 function missing_omit(data, formula::AbstractTerm)
     cols = termvars(formula)
-    sel = TableOperations.select(cols...)
-    drop = TableOperations.narrowtypes() ∘ TableOperations.dropmissing()
     materialize = Tables.materializer(data)
-    return materialize(drop(sel(data)))
+    data = materialize(TableOperations.select(cols...)(data))
+    drop = TableOperations.narrowtypes() ∘ TableOperations.dropmissing()
+    return materialize(drop(data))
 end
 
 function ModelFrame(f::FormulaTerm, data;
