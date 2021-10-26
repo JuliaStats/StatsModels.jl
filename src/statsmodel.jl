@@ -80,7 +80,7 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
                                kwargs...) where T<:$modeltype
 
             Tables.istable(data) || throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
-            cols = columntable(data)
+            cols = Tables.Columns(data)
 
             mf = ModelFrame(f, cols, model=T, contrasts=contrasts)
             mm = ModelMatrix(mf)
@@ -172,7 +172,7 @@ function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
 
     f = mm.mf.f
-    cols, nonmissings = missing_omit(columntable(data), f.rhs)
+    cols, nonmissings = missing_omit(Tables.Columns(data), f.rhs)
     new_x = modelcols(f.rhs, cols)
     y_pred = predict(mm.model, reshape(new_x, size(new_x, 1), :);
                      kwargs...)
