@@ -357,18 +357,13 @@
     end
 
     @testset "other string types" begin
-        using CSV
+        using WeakRefStrings
 
         using StatsModels: ContrastsMatrix
         using DataAPI: levels
 
         x = ["a", "b", "c", "a", "a", "b"]
-        io = IOBuffer()
-        tab = CSV.write(io, (; x=x, ))
-        seekstart(io)
-        x1 = Tables.columntable(CSV.File(io)).x
-        # this doesn't work w/ Julia < 1.3 because of WeakRefStrings compat
-        # x1 = WeakRefStrings.String1.(x)
+        x1 = WeakRefStrings.String1.(x)
         x1_levs = levels(x1)
 
         @test issetequal(x, x1)
