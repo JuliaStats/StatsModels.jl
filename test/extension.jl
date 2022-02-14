@@ -12,7 +12,7 @@ PolyTerm(t::Term, deg::ConstantTerm) = PolyTerm(t.sym, deg.n)
 StatsModels.apply_schema(t::FunctionTerm{typeof(poly)}, sch, ::Type{<:PolyModel}) =
     PolyTerm(t.args_parsed...)
 
-StatsModels.modelcols(p::PolyTerm, d::NamedTuple) =
+StatsModels.modelcols(p::PolyTerm, d) =
     reduce(hcat, [d[p.term].^n for n in 1:p.deg])
 
 struct NonMatrixTerm{T} <: AbstractTerm

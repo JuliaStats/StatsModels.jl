@@ -488,12 +488,12 @@ modelcols(t::Term, d) =
                         "Use apply_schema to create concrete terms first"))
 
 # TODO: @generated to unroll the getfield stuff
-modelcols(ft::FunctionTerm{Fo,Fa,Names}, d::Columns) where {Fo,Fa,Names} =
+modelcols(ft::FunctionTerm{Fo,Fa,Names}, d) where {Fo,Fa,Names} =
     ft.fanon.(getcolumn.(Ref(d), Names)...)
 
-modelcols(t::ContinuousTerm, d::Columns) = copy.(getcolumn(d, t.sym))
+modelcols(t::ContinuousTerm, d) = copy.(getcolumn(d, t.sym))
 
-modelcols(t::CategoricalTerm, d::Columns) = t.contrasts[getcolumn(d, t.sym), :]
+modelcols(t::CategoricalTerm, d) = t.contrasts[getcolumn(d, t.sym), :]
 
 
 """
@@ -531,12 +531,12 @@ function modelcols(t::InteractionTerm, d)
     end
 end
 
-modelcols(t::InterceptTerm{true}, d::Columns) = ones(size(Tables.getcolumn(d, 1), 1))
-modelcols(t::InterceptTerm{false}, d::Columns) = Matrix{Float64}(undef, size(first(d),1), 0)
+modelcols(t::InterceptTerm{true}, d) = ones(size(Tables.getcolumn(d, 1), 1))
+modelcols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(Tables.getcolumn(d, 1), 1), 0)
 
-modelcols(t::FormulaTerm, d::Columns) = (modelcols(t.lhs,d), modelcols(t.rhs, d))
+modelcols(t::FormulaTerm, d) = (modelcols(t.lhs,d), modelcols(t.rhs, d))
 
-function modelcols(t::MatrixTerm, d::Columns)
+function modelcols(t::MatrixTerm, d)
     if Tables.istable(d)
         mat = reduce(hcat, [modelcols(tt, d) for tt in t.terms])
         return reshape(mat, size(mat, 1), :)

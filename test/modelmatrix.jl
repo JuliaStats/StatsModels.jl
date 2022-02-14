@@ -324,7 +324,7 @@
     mf = ModelFrame(@formula(y ~ 0 + x), d)
     X = ModelMatrix(mf).m
     X[1] = 0.0
-    @test mf.data[:x][1] === 1.0
+    @test mf.data[1, :x] === 1.0
 
     # Ensure string columns are supported
     d1 = DataFrame(A = 1:4, B = categorical(["M", "F", "F", "M"]))
@@ -345,7 +345,6 @@
                       z = repeat([:e, :f], inner = 4))
     
         f = apply_schema(@formula(r ~ 1 + w*x*y*z), schema(d))
-        modelmatrix(f, d)
         @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)
     end
 
