@@ -50,8 +50,6 @@ julia> model = glm(@formula(Result ~ 1 + Treatment), dat, Binomial(), LogitLink(
 julia> bigmodel = glm(@formula(Result ~ 1 + Treatment + Other), dat, Binomial(), LogitLink());
 
 julia> lrtest(nullmodel, model, bigmodel)
-┌ Warning: Could not check whether models are nested as model type TableRegressionModel does not implement isnested: results may not be meaningful
-└ @ StatsModels ~/.julia/dev/StatsModels/src/lrtest.jl:108
 Likelihood-ratio test: 3 models fitted on 12 observations
 ──────────────────────────────────────────────
      DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
@@ -62,8 +60,6 @@ Likelihood-ratio test: 3 models fitted on 12 observations
 ──────────────────────────────────────────────
 
 julia> lrtest(bigmodel, model, nullmodel)
-┌ Warning: Could not check whether models are nested as model type TableRegressionModel does not implement isnested: results may not be meaningful
-└ @ StatsModels ~/.julia/dev/StatsModels/src/lrtest.jl:108
 Likelihood-ratio test: 3 models fitted on 12 observations
 ──────────────────────────────────────────────
      DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
