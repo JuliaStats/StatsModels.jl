@@ -355,5 +355,25 @@
     @testset "Non-unique levels" begin
         @test_throws ArgumentError ContrastsMatrix(DummyCoding(), ["a", "a", "b"])
     end
+
+    @testset "other string types" begin
+        using WeakRefStrings
+
+        using StatsModels: ContrastsMatrix
+        using DataAPI: levels
+
+        x = ["a", "b", "c", "a", "a", "b"]
+        x1 = WeakRefStrings.String1.(x)
+        x1_levs = levels(x1)
+
+        @test issetequal(x, x1)
+
+        c1 = ContrastsMatrix(DummyCoding(), x1_levs)
+        c = ContrastsMatrix(DummyCoding(levels=["a", "b", "c"]), x1_levs)
+        @test c == c1
+        @test eltype(c.levels) == eltype(c1.levels)
+
+        @test_throws ArgumentError ContrastsMatrix(DummyCoding(levels=[1, 2, 3]), x1_levs)
+    end
     
 end

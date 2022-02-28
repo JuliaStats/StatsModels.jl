@@ -120,7 +120,7 @@ end
 # only check equality of matrix, termnames, and levels, and that the type is the
 # same for the contrasts (values are irrelevant).  This ensures that the two
 # will behave identically in creating modelmatrix columns
-Base.:(==)(a::ContrastsMatrix{C,T}, b::ContrastsMatrix{C,T}) where {C<:AbstractContrasts,T} =
+Base.:(==)(a::ContrastsMatrix{C}, b::ContrastsMatrix{C}) where {C<:AbstractContrasts} =
     a.matrix == b.matrix &&
     a.termnames == b.termnames &&
     a.levels == b.levels
@@ -166,17 +166,18 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
     # 3. contrast levels missing from data: would have empty columns, generate a
     #    rank-deficient model matrix.
     c_levels = something(DataAPI.levels(contrasts), levels)
-    if eltype(c_levels) != eltype(levels)
-        throw(ArgumentError("mismatching levels types: got $(eltype(levels)), expected " *
-                            "$(eltype(c_levels)) based on contrasts levels."))
-    end
+    
     mismatched_levels = symdiff(c_levels, levels)
     if !isempty(mismatched_levels)
         throw(ArgumentError("contrasts levels not found in data or vice-versa: " *
                             "$mismatched_levels." *
-                            "\n  Data levels: $levels." *
-                            "\n  Contrast levels: $c_levels"))
+                            "\n  Data levels ($(eltype(levels))): $levels." *
+                            "\n  Contrast levels ($(eltype(c_levels))): $c_levels"))
     end
+
+    # do conversion AFTER checking for levels so users get a nice error message
+    # when they've made a mistake with the level types
+    c_levels = convert(Vector{T}, c_levels)
 
     n = length(c_levels)
     if n == 0
@@ -187,7 +188,7 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
                             "compute contrasts)."))
     end
 
-    # find index of base level. use contrasts.base, then default (1).
+    # find index of base level. use baselevel(contrasts), then default (1).
     base_level = baselevel(contrasts)
     baseind = base_level === nothing ?
               1 :
