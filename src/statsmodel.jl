@@ -132,7 +132,7 @@ const TableModels = Union{TableStatisticalModel, TableRegressionModel}
                              StatsBase.stderror, StatsBase.vcov, StatsBase.fitted]
 @delegate TableRegressionModel.model [StatsBase.modelmatrix,
                                       StatsBase.residuals, StatsBase.response,
-                                      StatsBase.predict, StatsBase.predict!, 
+                                      StatsBase.predict, StatsBase.predict!,
                                       StatsBase.cooksdistance]
 StatsBase.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
     predict(m.model, new_x; kwargs...)
@@ -195,16 +195,15 @@ end
 
 # show function that delegates to coeftable
 function Base.show(io::IO, model::TableModels)
+    println(io, typeof(model))
+    println(io)
+    println(io, model.mf.f)
+    println(io)
     try
-        ct = coeftable(model)
-        println(io, typeof(model))
-        println(io)
-        println(io, model.mf.f)
-        println(io)
         println(io,"Coefficients:")
-        show(io, ct)
+        show(io, coeftable(model))
     catch e
-        if isa(e, ErrorException) && occursin("coeftable is not defined", e.msg)
+        if isa(e, MethodError) || isa(e, ErrorException) && occursin("coeftable is not defined", e.msg)
             show(io, model.model)
         else
             rethrow(e)

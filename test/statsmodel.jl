@@ -106,7 +106,6 @@ end
 StatsBase.fit(::Type{DummyModTwo}, ::Matrix, ::Vector) = DummyModTwo("hello!")
 Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
-
 @testset "stat model types" begin
 
     ## Test fitting
@@ -230,8 +229,8 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     @test predict(m4, d[2:4, :]) == predict(m4)[2:4]
 
     m2 = fit(DummyModTwo, f, d)
+    # make sure show() still works when there is no coeftable method
     show(io, m2)
-
 end
 
 @testset "lrtest" begin
