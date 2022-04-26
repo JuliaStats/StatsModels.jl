@@ -133,7 +133,7 @@ const TableModels = Union{TableStatisticalModel, TableRegressionModel}
 @delegate TableRegressionModel.model [StatsBase.modelmatrix,
                                       StatsBase.residuals, StatsBase.response,
                                       StatsBase.predict, StatsBase.predict!,
-                                      StatsBase.cooksdistance]
+                                      StatsBase.cooksdistance, fstatistic]
 StatsBase.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
     predict(m.model, new_x; kwargs...)
 # Need to define these manually because of ambiguity using @delegate
@@ -193,6 +193,22 @@ function StatsBase.coeftable(model::TableModels; kwargs...)
     ct
 end
 
+_show_fit_stats(io::IO, model::TableModels) = nothing
+
+function _show_fit_stats(io::IO, model::TableRegressionModel)
+    try
+        println("R²: ", round(r2(model), sigdigits=4),
+             "\t Adjusted R²: ", round(adjr2(model), sigdigits=4))
+
+        fstat = fstatistic(model)
+        println(io, fstat)
+    catch e
+        if !(isa(e, MethodError) && (e.f == r2 || e.f == adjr2 || e.f == fstatistic))
+            rethrow(e)
+        end
+    end
+end
+
 # show function that delegates to coeftable
 function Base.show(io::IO, model::TableModels)
     println(io, typeof(model))
@@ -202,6 +218,7 @@ function Base.show(io::IO, model::TableModels)
     try
         println(io,"Coefficients:")
         show(io, coeftable(model))
+        _show_fit_stats(io, model)
     catch e
         if isa(e, MethodError) || isa(e, ErrorException) && occursin("coeftable is not defined", e.msg)
             show(io, model.model)

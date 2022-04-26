@@ -33,7 +33,7 @@ export
     SeqDiffCoding,
     HypothesisCoding,
     ContrastsCoding,
-    
+
     coefnames,
     setcontrasts!,
     formula,
