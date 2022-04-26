@@ -196,13 +196,14 @@ end
 _show_fit_stats(io::IO, model::TableModels) = nothing
 
 function _show_fit_stats(io::IO, model::TableRegressionModel)
-    println("R²: ", round(r2(model), sigdigits=4),
-         "\t Adjusted R²: ", round(adjr2(model), sigdigits=4))
     try
+        println("R²: ", round(r2(model), sigdigits=4),
+             "\t Adjusted R²: ", round(adjr2(model), sigdigits=4))
+
         fstat = fstatistic(model)
         println(io, fstat)
     catch e
-        if !(isa(e, MethodError) && e.f == fstatistic)
+        if !(isa(e, MethodError) && (e.f == r2 || e.f == adjr2 || e.f == fstatistic))
             rethrow(e)
         end
     end
