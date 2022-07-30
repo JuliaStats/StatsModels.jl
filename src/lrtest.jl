@@ -41,7 +41,7 @@ julia> using DataFrames, GLM
 
 julia> dat = DataFrame(Result=[1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1],
                        Treatment=[1, 1, 1, 2, 2, 2, 1, 1, 1, 2, 2, 2],
-                       Other=categorical([1, 1, 2, 1, 2, 1, 3, 1, 1, 2, 2, 1]));
+                       Other=string.([1, 1, 2, 1, 2, 1, 3, 1, 1, 2, 2, 1]));
 
 julia> nullmodel = glm(@formula(Result ~ 1), dat, Binomial(), LogitLink());
 
