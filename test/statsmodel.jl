@@ -97,6 +97,8 @@ StatsBase.dof_residual(mod::DummyModNoIntercept) = length(mod.y) - length(mod.be
 StatsBase.nobs(mod::DummyModNoIntercept) = length(mod.y)
 StatsBase.deviance(mod::DummyModNoIntercept) = sum((response(mod) .- predict(mod)).^2)
 # isnested not implemented to test fallback
+StatsBase.loglikelihood(mod::DummyModNoIntercept) = -sum((response(mod) .- predict(mod)).^2)
+StatsBase.loglikelihood(mod::DummyModNoIntercept, ::Colon) = -(response(mod) .- predict(mod)).^2
 
 ## Another dummy model type to test fall-through show method
 struct DummyModTwo <: RegressionModel
@@ -254,15 +256,15 @@ end
 
     lr1 = lrtest(m0, m1)
     @test isnan(lr1.pval[1])
-    @test lr1.pval[2] ≈ 0.0010484433450981662
+    @test lr1.pval[2] ≈ 3.57538284869704e-6
     @test sprint(show, lr1) == """
         Likelihood-ratio test: 2 models fitted on 4 observations
-        ──────────────────────────────────────────────
-             DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
-        ──────────────────────────────────────────────
-        [1]    1         14.0000                      
-        [2]    2     1    3.2600   -10.7400     0.0010
-        ──────────────────────────────────────────────"""
+        ───────────────────────────────────────────────────────
+             DOF  ΔDOF  Deviance  ΔDeviance    Chisq  p(>Chisq)
+        ───────────────────────────────────────────────────────
+        [1]    1         14.0000                               
+        [2]    2     1    3.2600   -10.7400  10.7400     <1e-05
+        ───────────────────────────────────────────────────────"""
 
     @testset "isnested with TableRegressionModel" begin
         d = DataFrame(y=y, x1=x1, x2=x2)
@@ -275,7 +277,7 @@ end
         @test StatsModels.isnested(m1, m2)
         @test StatsModels.isnested(m0, m2)
     end
-    
+
 
     m0 = DummyModNoIntercept(Float64[], ones(4, 0), y)
     m1 = DummyModNoIntercept([0.3], reshape(x1, :, 1), y)
@@ -296,26 +298,35 @@ end
                      "results may not be meaningful"),
                      lrtest(m0, m1))
     @test isnan(lr2.pval[1])
-    @test lr2.pval[2] ≈ 1.2147224767092312e-5
+    @test lr2.pval[2] ≈ 6.128757581368316e-10
 
     # in 1.6, p value printing has changed (JuliaStats/StatsBase.jl#606)
     if VERSION > v"1.6.0-DEV"
         @test sprint(show, lr2) == """
             Likelihood-ratio test: 2 models fitted on 4 observations
-            ──────────────────────────────────────────────
-                 DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
-            ──────────────────────────────────────────────
-            [1]    0         30.0000                      
-            [2]    1     1   10.8600   -19.1400     <1e-04
-            ──────────────────────────────────────────────"""
+            ───────────────────────────────────────────────────────
+                 DOF  ΔDOF  Deviance  ΔDeviance    Chisq  p(>Chisq)
+            ───────────────────────────────────────────────────────
+            [1]    0         30.0000                               
+            [2]    1     1   10.8600   -19.1400  19.1400     <1e-09
+            ───────────────────────────────────────────────────────"""
     else
         @test sprint(show, lr2) == """
             Likelihood-ratio test: 2 models fitted on 4 observations
-            ──────────────────────────────────────────────
-                 DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
-            ──────────────────────────────────────────────
-            [1]    0         30.0000                      
-            [2]    1     1   10.8600   -19.1400      <1e-4
-            ──────────────────────────────────────────────"""
+            ───────────────────────────────────────────────────────
+                 DOF  ΔDOF  Deviance  ΔDeviance    Chisq  p(>Chisq)
+            ───────────────────────────────────────────────────────
+            [1]    0         30.0000                               
+            [2]    1     1   10.8600   -19.1400  19.1400     <1e-9
+            ───────────────────────────────────────────────────────"""
     end
+
+    # Test that model with more degrees of freedom that does not improve
+    # fit compared with simpler model is accepted, even if deviance is
+    # higher with some tolerance
+    lrtest(DummyMod([1], ones(4, 1), y), DummyMod([1, 0], ones(4, 2), y))
+    lrtest(DummyMod([1], ones(4, 1), y), DummyMod([1, -1e-8], ones(4, 2), y))
+    @test_throws ArgumentError lrtest(DummyMod([1], ones(4, 1), y),
+                                      DummyMod([1, -1e-2], ones(4, 2), y))
+
 end
