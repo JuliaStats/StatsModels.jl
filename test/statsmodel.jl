@@ -259,12 +259,12 @@ end
     @test lr1.pval[2] ≈ 3.57538284869704e-6
     @test sprint(show, lr1) == """
         Likelihood-ratio test: 2 models fitted on 4 observations
-        ───────────────────────────────────────────────────────
-             DOF  ΔDOF  Deviance  ΔDeviance    Chisq  p(>Chisq)
-        ───────────────────────────────────────────────────────
-        [1]    1         14.0000                               
-        [2]    2     1    3.2600   -10.7400  10.7400     <1e-05
-        ───────────────────────────────────────────────────────"""
+        ──────────────────────────────────────────────────────
+             DOF  ΔDOF    LogLik  Deviance    Chisq  p(>Chisq)
+        ──────────────────────────────────────────────────────
+        [1]    1        -14.0000   14.0000                    
+        [2]    2     1   -3.2600    3.2600  21.4800     <1e-05
+        ──────────────────────────────────────────────────────"""
 
     @testset "isnested with TableRegressionModel" begin
         d = DataFrame(y=y, x1=x1, x2=x2)
@@ -304,26 +304,26 @@ end
     if VERSION > v"1.6.0-DEV"
         @test sprint(show, lr2) == """
             Likelihood-ratio test: 2 models fitted on 4 observations
-            ───────────────────────────────────────────────────────
-                 DOF  ΔDOF  Deviance  ΔDeviance    Chisq  p(>Chisq)
-            ───────────────────────────────────────────────────────
-            [1]    0         30.0000                               
-            [2]    1     1   10.8600   -19.1400  19.1400     <1e-09
-            ───────────────────────────────────────────────────────"""
+            ──────────────────────────────────────────────────────
+                 DOF  ΔDOF    LogLik  Deviance    Chisq  p(>Chisq)
+            ──────────────────────────────────────────────────────
+            [1]    0        -30.0000   30.0000                    
+            [2]    1     1  -10.8600   10.8600  38.2800     <1e-09
+            ──────────────────────────────────────────────────────"""
     else
         @test sprint(show, lr2) == """
             Likelihood-ratio test: 2 models fitted on 4 observations
-            ───────────────────────────────────────────────────────
-                 DOF  ΔDOF  Deviance  ΔDeviance    Chisq  p(>Chisq)
-            ───────────────────────────────────────────────────────
-            [1]    0         30.0000                               
-            [2]    1     1   10.8600   -19.1400  19.1400     <1e-9
-            ───────────────────────────────────────────────────────"""
+            ──────────────────────────────────────────────────────
+                 DOF  ΔDOF    LogLik  Deviance    Chisq  p(>Chisq)
+            ──────────────────────────────────────────────────────
+            [1]    0        -30.0000   30.0000                    
+            [2]    1     1  -10.8600   10.8600  38.2800      <1e-9
+            ──────────────────────────────────────────────────────"""
     end
 
     # Test that model with more degrees of freedom that does not improve
-    # fit compared with simpler model is accepted, even if deviance is
-    # higher with some tolerance
+    # fit compared with simpler model is accepted, even if likelihood is
+    # lower with some tolerance
     lrtest(DummyMod([1], ones(4, 1), y), DummyMod([1, 0], ones(4, 2), y))
     lrtest(DummyMod([1], ones(4, 1), y), DummyMod([1, -1e-8], ones(4, 2), y))
     @test_throws ArgumentError lrtest(DummyMod([1], ones(4, 1), y),

@@ -24,9 +24,9 @@ For each sequential pair of statistical models in `mods...`, perform a likelihoo
 test to determine if the first one fits significantly better than the next.
 
 A table is returned containing degrees of freedom (DOF),
-difference in DOF from the preceding model, deviance, difference in deviance
-from the preceding model, and chi-squared statistic (i.e. absolute value of
-twice the log of likelihood ratio) and p-value for the comparison between the two models.
+difference in DOF from the preceding model, log-likelihood, deviance, chi-squared
+statistic (i.e. absolute value of twice the difference in log-likelihood)
+and p-value for the comparison between the two models.
 
 Optional keyword argument `atol` controls the numerical tolerance when testing whether
 the models are nested.
@@ -52,23 +52,23 @@ julia> bigmodel = glm(@formula(Result ~ 1 + Treatment + Other), dat, Binomial(),
 
 julia> lrtest(nullmodel, model, bigmodel)
 Likelihood-ratio test: 3 models fitted on 12 observations
-──────────────────────────────────────────────
-     DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
-──────────────────────────────────────────────
-[1]    1         16.3006
-[2]    2     1   15.9559    -0.3447     0.5571
-[3]    4     2   14.0571    -1.8988     0.3870
-──────────────────────────────────────────────
+────────────────────────────────────────────────────
+     DOF  ΔDOF   LogLik  Deviance   Chisq  p(>Chisq)
+────────────────────────────────────────────────────
+[1]    1        -8.1503   16.3006
+[2]    2     1  -7.9780   15.9559  0.3447     0.5571
+[3]    4     2  -7.0286   14.0571  1.8988     0.3870
+────────────────────────────────────────────────────
 
 julia> lrtest(bigmodel, model, nullmodel)
 Likelihood-ratio test: 3 models fitted on 12 observations
-──────────────────────────────────────────────
-     DOF  ΔDOF  Deviance  ΔDeviance  p(>Chisq)
-──────────────────────────────────────────────
-[1]    4         14.0571
-[2]    2    -2   15.9559     1.8988     0.3870
-[3]    1    -1   16.3006     0.3447     0.5571
-──────────────────────────────────────────────
+────────────────────────────────────────────────────
+     DOF  ΔDOF   LogLik  Deviance   Chisq  p(>Chisq)
+────────────────────────────────────────────────────
+[1]    4        -7.0286   14.0571
+[2]    2    -2  -7.9780   15.9559  1.8988     0.3870
+[3]    1    -1  -8.1503   16.3006  0.3447     0.5571
+────────────────────────────────────────────────────
 ```
 """
 function lrtest(mods::StatisticalModel...; atol::Real=0.0)
@@ -107,19 +107,18 @@ function lrtest(mods::StatisticalModel...; atol::Real=0.0)
     end
 
     dev = deviance.(mods)
-    Δdev = _diff(dev)
 
-    Δdf = _diff(df)
+    Δdf = (NaN, _diff(df)...)
     dfr = Int.(dof_residual.(mods))
 
     ll = loglikelihood.(mods)
     chisq = (NaN, 2 .* abs.(_diff(ll))...)
 
-    for i in 2:length(dev)
-        if ((forward && dev[i-1] < dev[i]) ||
-            (!forward && dev[i-1] > dev[i])) &&
-            dev[i-1] ≉ dev[i]
-               throw(ArgumentError("Residual deviance must not be larger " *
+    for i in 2:length(ll)
+        if ((forward && ll[i-1] > ll[i]) ||
+            (!forward && ll[i-1] < ll[i])) &&
+            ll[i-1] ≉ ll[i]
+               throw(ArgumentError("Log-likelihood must not be lower " *
                                    "in models with more degrees of freedom"))
         end
     end
@@ -131,29 +130,30 @@ end
 function Base.show(io::IO, lrr::LRTestResult{N}) where N
     Δdf = _diff(lrr.dof)
     Δdev = _diff(lrr.deviance)
-    chisq = abs.(_diff(lrr.loglikelihood))
+    chisq = abs.(2 .* _diff(lrr.loglikelihood))
 
     nc = 7
     nr = N
     outrows = Matrix{String}(undef, nr+1, nc)
 
-    outrows[1, :] = ["", "DOF", "ΔDOF", "Deviance", "ΔDeviance", "Chisq", "p(>Chisq)"]
+    outrows[1, :] = ["", "DOF", "ΔDOF", "LogLik", "Deviance", "Chisq", "p(>Chisq)"]
 
     outrows[2, :] = ["[1]", @sprintf("%.0d", lrr.dof[1]), " ",
+                     @sprintf("%.4f", lrr.loglikelihood[1]),
                      @sprintf("%.4f", lrr.deviance[1]),
-                     " ", " ", " "]
+                     " ", " "]
 
     for i in 2:nr
         outrows[i+1, :] = ["[$i]", @sprintf("%.0d", lrr.dof[i]),
                            @sprintf("%.0d", Δdf[i-1]),
+                           @sprintf("%.4f", lrr.loglikelihood[i]),
                            @sprintf("%.4f", lrr.deviance[i]),
-                           @sprintf("%.4f", Δdev[i-1]),
                            @sprintf("%.4f", chisq[i-1]),
                            string(StatsBase.PValue(lrr.pval[i]))]
     end
     colwidths = length.(outrows)
     max_colwidths = [maximum(view(colwidths, :, i)) for i in 1:nc]
-    totwidth = sum(max_colwidths) + 2*6
+    totwidth = sum(max_colwidths) + 2*(nc-1)
 
     println(io, "Likelihood-ratio test: $N models fitted on $(lrr.nobs) observations")
     println(io, '─'^totwidth)
