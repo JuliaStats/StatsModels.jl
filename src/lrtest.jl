@@ -117,7 +117,7 @@ function lrtest(mods::StatisticalModel...; atol::Real=0.0)
     for i in 2:length(ll)
         if ((forward && ll[i-1] > ll[i]) ||
             (!forward && ll[i-1] < ll[i])) &&
-            ll[i-1] ≉ ll[i]
+           !isapprox(ll[i-1], ll[i], atol=atol)
                throw(ArgumentError("Log-likelihood must not be lower " *
                                    "in models with more degrees of freedom"))
         end

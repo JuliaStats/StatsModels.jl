@@ -326,6 +326,7 @@ end
     # lower with some tolerance
     lrtest(DummyMod([1], ones(4, 1), y), DummyMod([1, 0], ones(4, 2), y))
     lrtest(DummyMod([1], ones(4, 1), y), DummyMod([1, -1e-8], ones(4, 2), y))
+    lrtest(DummyMod([1], ones(4, 1), y), DummyMod([1, -1e-2], ones(4, 2), y), atol=1)
     @test_throws ArgumentError lrtest(DummyMod([1], ones(4, 1), y),
                                       DummyMod([1, -1e-2], ones(4, 2), y))
 
