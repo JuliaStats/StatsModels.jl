@@ -206,7 +206,10 @@ concrete_term(t::Term, xs::AbstractVector, ::Nothing) = concrete_term(t, xs, Cat
 concrete_term(t::Term, xs::AbstractArray, ::Type{CategoricalTerm}) = concrete_term(t, xs, DummyCoding())
 
 function concrete_term(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
-    contrmat = ContrastsMatrix(contrasts, intersect(levels(xs), unique(xs)))
+    xlevels = levels(xs)
+    xunique = unique(xs)
+    xused = length(xlevels) == length(xunique) ? xlevels : intersect(xlevels, xunique)
+    contrmat = ContrastsMatrix(contrasts, xused)
     CategoricalTerm(t.sym, contrmat)
 end
 
