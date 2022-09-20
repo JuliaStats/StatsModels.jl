@@ -50,24 +50,26 @@ function _nonmissing!(res, col)
     res .&= .!ismissing.(col)
 end
 
-
+_missing_omit(x::AbstractVector{T}) where T = copyto!(similar(x, nonmissingtype(T)), x)
+_missing_omit(x::AbstractVector, rows) = _missing_omit(view(x, rows))
+    
 function missing_omit(d::T) where T<:ColumnTable
     nonmissings = trues(length(first(d)))
     for col in d
         _nonmissing!(nonmissings, col)
     end
-
-    rows = findall(nonmissings)
-    d_nonmissing =
-        NamedTuple{Tables.names(T)}(tuple((copyto!(similar(col,
-                                                           Base.nonmissingtype(eltype(col)),
-                                                           length(rows)),
-                                                   view(col, rows)) for col in d)...))
+    d_nonmissing = if all(nonmissings)
+        map(_missing_omit, d)
+    else
+        rows = findall(nonmissings)
+        map(Base.Fix2(_missing_omit, rows), d)
+    end
     d_nonmissing, nonmissings
 end
 
 missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
     missing_omit(NamedTuple{tuple(termvars(formula)...)}(data))
+
 function ModelFrame(f::FormulaTerm, data::ColumnTable;
                     model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
     
