@@ -363,7 +363,23 @@ end
 # if these occur as children of a non-special call, they are protected by
 # default.  so if we encounter them during apply_schema and we're NOT
 # in a Protected context, we need to call the corresponding op on the
-# arguments of the FunctionCall
+# arguments of the FunctionCall.
+#
+# to take a concrete example, if we have a function `f` that can do something
+# meaningful with the output of `modelcols(::InteractionTerm, ...)`, then when a
+# user provides something like
+#
+#     @formula(f(unprotect(a & b)))
+#
+# that gets lowered to
+#
+#     FunctionTerm(f, [FuntionTerm(&, [Term(:a), Term(:b)], ...)], ...)
+#
+# and we need to convert it to something like
+#
+#     FuntionTerm(f, [Term(:a) & Term(:b)], ...)
+#
+# during schema application
 for op in (+, &, *)
     @eval begin
         apply_schema(t::FunctionTerm{typeof($op)}, sch::Schema, Mod::Type) =
