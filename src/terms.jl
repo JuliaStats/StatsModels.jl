@@ -414,7 +414,7 @@ Base.:+(as::TupleTerm, bs::TupleTerm) = (union(as, bs)..., )
 # * expansion
 Base.:*(a::TermOrTerms, b::TermOrTerms) = a + b + a&b
 
-cleanup(terms::TupleTerm) = tuple(sort!(unique!([terms...]), by=degree)...)
+cleanup(terms::TupleTerm) = Tuple(sort!(unique!(collect(terms)), by=degree))
 cleanup(x) = x
 
 degree(::AbstractTerm) = 1

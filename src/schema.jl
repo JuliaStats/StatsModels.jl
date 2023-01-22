@@ -264,6 +264,7 @@ but can be manually created with a call to [`protect`](@ref).
 """
 struct Protected{Ctx} end
 Base.broadcastable(x::Protected) = Ref(x)
+
 """
     protect(term::T)
 
@@ -295,7 +296,7 @@ julia> d.a .+ d.b
 ```
 """
 protect(ctx) = Protected{ctx}()
-# construct singletons to avoid method ambiguities using Type{<:Protected}
+# return instances rather than types to avoid method ambiguities using Type{<:Protected}
 
 function apply_schema(t::FunctionTerm, schema::Schema, Mod::Type)
     args = apply_schema.(t.args, schema, protect(Mod))
@@ -350,7 +351,7 @@ julia> 1 .- d.a .* d.b
  -2.9996186355944543
 ```
 """
-unprotect(::Protected{Ctx}) where Ctx = Ctx
+unprotect(::Protected{Ctx}) where {Ctx} = Ctx
 
 function apply_schema(t::FunctionTerm{typeof(unprotect)}, schema::Schema, Ctx::Protected)
     tt = only(t.args)
@@ -362,7 +363,7 @@ end
 # if these occur as children of a non-special call, they are protected by
 # default.  so if we encounter them during apply_schema and we're NOT
 # in a Protected context, we need to call the corresponding op on the
-# # arguments of the FunctionCall
+# arguments of the FunctionCall
 for op in (+, &, *)
     @eval begin
         apply_schema(t::FunctionTerm{typeof($op)}, sch::Schema, Mod::Type) =

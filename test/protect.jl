@@ -29,9 +29,8 @@
         ff = apply_schema(@formula(0 ~ 1 - unprotect(a+b)), schema(d))
         @test_broken modelcols(ff.rhs, d) == 1 .- [d.a d.b]
 
-        # and even if we define a broadcasting version, still fails because of
-        # packing the result into a right-sized container.  end up with a tuple
-        # of arrays which needs to be collected into a matrix
+        # and even if we define a broadcasting version, still fails because it
+        # gives a tuple of arrays instead of a matrix
         my_sub = (x,y) -> x .- y
         ff = apply_schema(@formula(0 ~ my_sub(1, unprotect(a+b))), schema(d))
         @test_broken modelcols(ff.rhs, d) == 1 .- [d.a d.b]

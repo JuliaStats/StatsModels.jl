@@ -37,7 +37,7 @@ end
 
         f_plain = apply_schema(f, sch)
         @test f_plain.rhs.terms[1] isa FunctionTerm
-        # this is true but == not defined correctly and apply_schema creates a new instance
+        # this works but == is not defined correctly and apply_schema creates a new instance
         @test_broken f_plain == apply_schema(f, sch, Nothing)
         @test last(modelcols(f_plain, d)) == hcat(d[:x].^3)
         
