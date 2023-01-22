@@ -31,18 +31,18 @@ terms(t::LeadLagTerm) = (t.term, )
 function apply_schema(t::FunctionTerm{F}, sch::Schema, ctx::Type) where F<:Union{typeof(lead), typeof(lag)}
     opname = string(nameof(F.instance))
     if length(t.args) == 1  # lag(term)
-        term_parsed = first(t.args)
+        term = first(t.args)
         nsteps = 1
     elseif length(t.args) == 2  # lag(term, nsteps)
-        term_parsed, nsteps_parsed = t.args
-        (nsteps_parsed isa ConstantTerm) ||
-            throw(ArgumentError("$opname step must be a number (got $nsteps_parsed)"))
-        nsteps = nsteps_parsed.n
+        term, nsteps = t.args
+        (nsteps isa ConstantTerm) ||
+            throw(ArgumentError("$opname step must be a number (got $nsteps)"))
+        nsteps = nsteps.n
     else
         throw(ArgumentError("`$opname` terms require 1 or 2 arguments."))
     end
 
-    term = apply_schema(term_parsed, sch, ctx)
+    term = apply_schema(term, sch, ctx)
     return LeadLagTerm{typeof(term), F}(term, nsteps)
 end
 
