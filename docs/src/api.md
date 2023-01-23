@@ -57,7 +57,7 @@ syntax ("unprotected").
 ```@docs
 protect
 unprotect
-@unprotect
+@support_unprotect
 Protected
 ```
 
