@@ -50,11 +50,14 @@ is_matrix_term
 
 ### Protection
 
-For controlling when 
+For more fine-grained control over whether function calls are treated as normal
+julia calls ("protected" and captured as `FunctionTerm`s) or as `@formula`
+syntax ("unprotected").
 
 ```@docs
 protect
 unprotect
+@unprotect
 Protected
 ```
 
