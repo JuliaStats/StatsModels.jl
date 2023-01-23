@@ -378,6 +378,8 @@ end
 """
     StatsModels.@unprotect f
 
+Generate methods necessary for function `f` to support [`unprotect`](@ref).
+
 Any function call that occurs as a child of a protected call is also protected
 by default.  In order to support _unprotecting_ functions/operators that work
 directly on `Term`s (like the built-in "special" operators `+`, `&`, `*`, and
