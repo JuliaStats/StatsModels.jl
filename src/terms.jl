@@ -375,19 +375,23 @@ Base.show(io::IO, mime::MIME"text/plain", t::MatrixTerm; prefix="") =
 ################################################################################
 # operators on Terms that create new terms:
 
-
 Base.:~(lhs::TermOrTerms, rhs::TermOrTerms) = FormulaTerm(lhs, cleanup(rhs))
 
 Base.:&(term::AbstractTerm) = term
 Base.:&(a::AbstractTerm, b::AbstractTerm) = InteractionTerm((a,b))
 
-Base.:&(::ConstantTerm, b::AbstractTerm) = b
-Base.:&(a::AbstractTerm, ::ConstantTerm) = a
+function validate_interaction(t::ConstantTerm)
+    t.n == 1 ||
+        throw(ArgumentError("only allowed constants in interaction terms are 1, got $(t.n)"))
+    return t
+end
+Base.:&(a::ConstantTerm, b::AbstractTerm) = (validate_interaction(a); b)
+Base.:&(a::AbstractTerm, b::ConstantTerm) = (validate_interaction(b); a)
 
 # Avoid method ambiguities
-Base.:&(::ConstantTerm, b::InteractionTerm) = b
-Base.:&(a::InteractionTerm, ::ConstantTerm) = a
-Base.:&(a::ConstantTerm, ::ConstantTerm) = a
+Base.:&(a::ConstantTerm, b::InteractionTerm) = (validate_interaction(a); b)
+Base.:&(a::InteractionTerm, b::ConstantTerm) = (validate_interaction(b); a)
+Base.:&(a::ConstantTerm, b::ConstantTerm) = (validate_interaction(a); validate_interaction(b); a)
 
 # associative rule
 Base.:&(it::InteractionTerm, term::AbstractTerm) =

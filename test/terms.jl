@@ -109,8 +109,10 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
             @test one & (a&b) == a&b
 
             # two constant terms takes the first:
-            @test one & two == one
-            @test two & one == two
+            @test_throws ArgumentError one & two
+            @test_throws ArgumentError two & one
+            @test_throws ArgumentError (a&b) & two == a&b
+            @test_throws ArgumentError two & (a&b) == a&b
         end
 
         @testset "Tuples and singletons" begin
