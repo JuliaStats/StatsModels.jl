@@ -425,7 +425,7 @@ If `base` is omitted or `nothing`, the first level is used as the base.
 
 ```jldoctest seqdiff
 julia> seqdiff = StatsModels.ContrastsMatrix(SeqDiffCoding(), ["a", "b", "c", "d"]).matrix
-4×3 Array{Float64,2}:
+4×3 Matrix{Float64}:
  -0.75  -0.5  -0.25
   0.25  -0.5  -0.25
   0.25   0.5  -0.25
@@ -440,7 +440,7 @@ and third, and the third and fourth, respectively:
 
 ```jldoctest seqdiff
 julia> StatsModels.hypothesis_matrix(seqdiff)
-3×4 Array{Int64,2}:
+3×4 Matrix{Int64}:
  -1   1   0  0
   0  -1   1  0
   0   0  -1  1
@@ -508,7 +508,7 @@ Contrasts are derived the hypothesis matrix by taking the pseudoinverse:
 julia> using LinearAlgebra
 
 julia> sdiff_contrasts = pinv(sdiff_hypothesis)
-4×3 Array{Float64,2}:
+4×3 Matrix{Float64}:
  -0.75  -0.5  -0.25
   0.25  -0.5  -0.25
   0.25   0.5  -0.25
@@ -520,7 +520,7 @@ The above matrix is what is produced by constructing a [`ContrastsMatrix`](@ref)
 
 ```jldoctest hyp
 julia> StatsModels.ContrastsMatrix(HypothesisCoding(sdiff_hypothesis), ["a", "b", "c", "d"]).matrix
-4×3 Array{Float64,2}:
+4×3 Matrix{Float64}:
  -0.75  -0.5  -0.25
   0.25  -0.5  -0.25
   0.25   0.5  -0.25
@@ -581,12 +581,12 @@ of the levels for each entry in the hypothesis vectors.  If omitted, the
 julia> hc = HypothesisCoding(["a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]]);
 
 julia> hc.hypotheses
-2×3 Array{Int64,2}:
+2×3 Matrix{Int64}:
  1  1  0
  0  1  1
 
 julia> hc.labels
-2-element Array{String,1}:
+2-element Vector{String}:
  "a_and_b"
  "b_and_c"
 ```
@@ -692,14 +692,14 @@ observations in every cell.  This is only important for non-orthgonal contrasts
 
 ```jldoctest hypmat
 julia> cmat = StatsModels.contrasts_matrix(DummyCoding(), 1, 4)
-4×3 Array{Float64,2}:
+4×3 Matrix{Float64}:
  0.0  0.0  0.0
  1.0  0.0  0.0
  0.0  1.0  0.0
  0.0  0.0  1.0
 
 julia> StatsModels.hypothesis_matrix(cmat)
-4×4 Array{Int64,2}:
+4×4 Matrix{Int64}:
   1  0  0  0
  -1  1  0  0
  -1  0  1  0
@@ -713,7 +713,7 @@ it by forcing `intercept=false`:
 
 ```jldoctest hypmat
 julia> StatsModels.hypothesis_matrix(cmat, intercept=false)
-3×4 Array{Int64,2}:
+3×4 Matrix{Int64}:
  0  1  0  0
  0  0  1  0
  0  0  0  1
@@ -737,7 +737,7 @@ Finally, the hypothesis matrix for a constructed `ContrastsMatrix` (as stored by
 
 ```jldoctest hypmat
 julia> StatsModels.hypothesis_matrix(StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b", "c", "d"]))
-4×4 Array{Int64,2}:
+4×4 Matrix{Int64}:
   1  0  0  0
  -1  1  0  0
  -1  0  1  0

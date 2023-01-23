@@ -57,38 +57,25 @@ struct FormulaTerm{L,R} <: AbstractTerm
 end
 
 """
-    FunctionTerm{Forig,Fanon,Names} <: AbstractTerm
+    FunctionTerm{F,Args} <: AbstractTerm
 
-Represents a call to a Julia function.  The first type parameter is the type
-of the function as originally specified (e.g., `typeof(log)`), while the second
-is the type of the anonymous function that will be applied element-wise to the
-data table.
+Represents a call to a Julia function.  The first type parameter is the type of
+the captured function (e.g., `typeof(log)`), and the second is the types of the
+captured arguments (e.g., a `Vector` of `AbstractTerm`s).
 
-The `FunctionTerm` _also_ captures the arguments of the original call and parses
-them _as if_ they were part of a special DSL call, applying the rules to expand
-`*`, distribute `&` over `+`, and wrap symbols in `Term`s.
-
-By storing the original function as a type parameter _and_ pessimistically
-parsing the arguments as if they're part of a special DSL call, this allows
-custom syntax to be supported with minimal extra effort.  Packages can dispatch
-on `apply_schema(f::FunctionTerm{typeof(special_syntax)}, schema,
-::Type{<:MyModel})` and pull out the arguments parsed as terms from
-`f.args_parsed` to construct their own custom terms.
+Nested function calls are captured as further `FunctionTerm`s.
 
 # Fields
 
-* `forig::Forig`: the original function (e.g., `log`)
-* `fanon::Fanon`: the generated anonymous function (e.g., `(a, b) -> log(1+a+b)`)
+* `f::F`: the captured function (e.g., `log`)
+* `args::Args`: the arguments of the call passed to `@formula`, each captured as
+  an `AbstractTerm`.  Usually this is a `Vector{<:AbstractTerm}`.
 * `exorig::Expr`: the original expression passed to `@formula`
-* `args_parsed::Vector`: the arguments of the call passed to `@formula`, each
-  parsed _as if_ the call was a "special" DSL call.
 
 # Type parameters
 
-* `Forig`: the type of the original function (e.g., `typeof(log)`)
-* `Fanon`: the type of the generated anonymous function
-* `Names`: the names of the arguments to the anonymous function (as a
-  `NTuple{N,Symbol}`)
+* `F`: the type of the captured function (e.g., `typeof(log)`)
+* `Args`: the type of container of captured arguments.
 
 # Example
 
@@ -101,19 +88,25 @@ Predictors:
   (a,b)->log(1 + a + b)
 
 julia> typeof(f.rhs)
-FunctionTerm{typeof(log),var"#1#2",(:a, :b)}
+FunctionTerm{typeof(log), Vector{FunctionTerm{typeof(+), Vector{AbstractTerm}}}}
 
-julia> f.rhs.forig(1 + 3 + 4)
-2.0794415416798357
+julia> typeof(only(f.rhs.args))
+FunctionTerm{typeof(+), Vector{AbstractTerm}}
 
-julia> f.rhs.fanon(3, 4)
+julia> only(f.rhs.args).args
+3-element Vector{AbstractTerm}:
+ 1
+ a(unknown)
+ b(unknown)
+
+julia> f.rhs.f(1 + 3 + 4)
 2.0794415416798357
 
 julia> modelcols(f.rhs, (a=3, b=4))
 2.0794415416798357
 
 julia> modelcols(f.rhs, (a=[3, 4], b=[4, 5]))
-2-element Array{Float64,1}:
+2-element Vector{Float64}:
  2.0794415416798357
  2.302585092994046
 ```
@@ -156,7 +149,7 @@ julia> t = apply_schema(t, schema(d))
 a(continuous) & b(continuous) & c(DummyCoding:3→2)
 
 julia> modelcols(t, d)
-9×2 Array{Float64,2}:
+9×2 Matrix{Float64}:
  0.0       0.0
  1.88748   0.0
  0.0       1.33701
@@ -473,7 +466,7 @@ julia> cols = modelcols(ts, d)
 ([1, 2, 3, 4, 5, 6, 7, 8, 9], [0.5851946422124186, 0.07733793456911231, 0.7166282400543453, 0.3203570514066232, 0.6530930076222579, 0.2366391513734556, 0.7096838914472361, 0.5577872440804086, 0.05079002172175784], [0.0 0.0; 1.0 0.0; … ; 1.0 0.0; 0.0 1.0])
 
 julia> reduce(hcat, cols)
-9×4 Array{Float64,2}:
+9×4 Matrix{Float64}:
  1.0  0.585195   0.0  0.0
  2.0  0.0773379  1.0  0.0
  3.0  0.716628   0.0  1.0
@@ -485,7 +478,7 @@ julia> reduce(hcat, cols)
  9.0  0.05079    0.0  1.0
 
 julia> modelcols(MatrixTerm(ts), d)
-9×4 Array{Float64,2}:
+9×4 Matrix{Float64}:
  1.0  0.585195   0.0  0.0
  2.0  0.0773379  1.0  0.0
  3.0  0.716628   0.0  1.0
@@ -622,7 +615,7 @@ a(unknown)
 b(unknown)
 
 julia> typeof(ts)
-Tuple{ConstantTerm{Int64},Term,Term}
+Tuple{ConstantTerm{Int64}, Term, Term}
 ```
 """
 term(n::Number) = ConstantTerm(n)

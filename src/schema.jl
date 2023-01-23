@@ -293,23 +293,23 @@ Outside a [`@formula`](@ref), acts as a constructor for the singleton `Protected
 # Example
 
 ```jldoctest; setup = :(using Random; Random.seed!(1))
-julia> d = (y=rand(4), a=[1:4;], b=rand(4))
+julia> d = (y=rand(4), a=[1:4;], b=rand(4));
 
 julia> f = @formula(y ~ 1 + protect(a+b));
 
 julia> modelmatrix(f.rhs, d)
-4×2 Array{Float64,2}:
- 1.0  1.48861
- 1.0  2.21097
- 1.0  3.95192
- 1.0  4.9999
+4×2 Matrix{Float64}:
+ 1.0  1.91493
+ 1.0  2.19281
+ 1.0  3.77018
+ 1.0  4.78052
 
 julia> d.a .+ d.b
-4-element Array{Float64,1}:
- 1.4886128300795012
- 2.210968202158536
- 3.951916339835734
- 4.999904658898614
+4-element Vector{Float64}:
+ 1.9149290036628313
+ 2.1928081162458755
+ 3.7701803478856664
+ 4.7805192636751865
 ```
 """
 protect(ctx) = Protected{ctx}()
@@ -354,18 +354,18 @@ julia> d = (y=rand(4), a=[1.:4;], b=rand(4));
 julia> f = @formula(y ~ 1 - unprotect(a&b));
 
 julia> modelmatrix(f, d)
-4×1 Array{Float64,2}:
-  0.5113871699204988
-  0.5780635956829281
- -1.855749019507202
- -2.9996186355944543
+4×1 Matrix{Float64}:
+  0.08507099633716864
+  0.6143837675082491
+ -1.310541043656999
+ -2.1220770547007453
 
 julia> 1 .- d.a .* d.b
-4×1 Array{Float64,2}:
-  0.5113871699204988
-  0.5780635956829281
- -1.855749019507202
- -2.9996186355944543
+4-element Vector{Float64}:
+  0.08507099633716864
+  0.6143837675082491
+ -1.310541043656999
+ -2.1220770547007453
 ```
 """
 unprotect(::Protected{Ctx}) where {Ctx} = Ctx
