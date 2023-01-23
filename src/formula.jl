@@ -63,8 +63,6 @@ macro formula(ex)
     parse!(ex)
 end
 
-const SPECIALS = (:+, :&, :*, :~)
-
 function parse!(ex::Expr, protected::Bool=false)
     catch_dollar(ex)
     check_call(ex)

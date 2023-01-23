@@ -66,6 +66,8 @@ export
 
     lrtest
 
+const SPECIALS = (:+, :&, :*, :~)
+
 include("traits.jl")
 include("contrasts.jl")
 include("terms.jl")

@@ -427,7 +427,7 @@ macro unprotect(op)
 end
 
 for op in SPECIALS
-    @unprotect op
+    @eval @unprotect $op
 end
 
 
