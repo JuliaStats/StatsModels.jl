@@ -269,7 +269,7 @@ discussed below in [Categorical variables in Formulas](@ref).
 
 ```julia
 julia> StatsModels.ContrastsMatrix(StatsModels.FullDummyCoding(), ["a", "b", "c", "d"]).matrix
-4×4 Array{Float64,2}:
+4×4 Matrix{Float64}:
  1.0  0.0  0.0  0.0
  0.0  1.0  0.0  0.0
  0.0  0.0  1.0  0.0
@@ -308,7 +308,7 @@ Also known as "treatment coding" or "one-hot encoding".
 
 ```julia
 julia> StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b", "c", "d"]).matrix
-4×3 Array{Float64,2}:
+4×3 Matrix{Float64}:
  0.0  0.0  0.0
  1.0  0.0  0.0
  0.0  1.0  0.0
@@ -350,7 +350,7 @@ systems.
 
 ```julia
 julia> StatsModels.ContrastsMatrix(EffectsCoding(), ["a", "b", "c", "d"]).matrix
-4×3 Array{Float64,2}:
+4×3 Matrix{Float64}:
  -1.0  -1.0  -1.0
   1.0   0.0   0.0
   0.0   1.0   0.0
@@ -387,7 +387,7 @@ mean-centered (mean 0) and orthogonal.
 
 ```julia
 julia> StatsModels.ContrastsMatrix(HelmertCoding(), ["a", "b", "c", "d"]).matrix
-4×3 Array{Float64,2}:
+4×3 Matrix{Float64}:
  -1.0  -1.0  -1.0
   1.0  -1.0  -1.0
   0.0   2.0  -1.0
@@ -725,7 +725,7 @@ pseudo-inverse matrix can be obtained as `Float64` by setting `tolerance=0`:
 
 ```julia-repl
 julia> StatsModels.hypothesis_matrix(cmat, tolerance=0) # ugly
-4×4 Array{Float64,2}:
+4×4 Matrix{Float64}:
   1.0  -2.23753e-16   6.91749e-18  -1.31485e-16
  -1.0   1.0          -2.42066e-16   9.93754e-17
  -1.0   4.94472e-17   1.0           9.93754e-17
