@@ -76,6 +76,8 @@ apply_schema
 fit
 response
 modelmatrix
+lrtest
+formula
 ```
 
 ### Traits

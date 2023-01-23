@@ -122,7 +122,7 @@ schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
 
 # handle hints:
 schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
-      hints::Dict{Symbol}=Dict{Symbol,Any}()) =
+       hints::Dict{Symbol}=Dict{Symbol,Any}()) =
     sch = Schema(t=>concrete_term(t, dt, hints) for t in ts)
 
 schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
@@ -168,12 +168,25 @@ julia> concrete_term(term(:a), (a = [1, 2, 3], b = [0.0, 0.5, 1.0]))
 a(continuous)
 ```
 """
-concrete_term(t::Term, d, hints::Dict{Symbol}) =
-    concrete_term(t, d, get(hints, t.sym, nothing))
-concrete_term(t::Term, dt::ColumnTable, hint) =
-    concrete_term(t, getproperty(dt, t.sym), hint)
-concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol}) =
-    concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
+concrete_term(t::Term, d, hints::Dict{Symbol}) = concrete_term(t, d, get(hints, t.sym, nothing))
+
+function concrete_term(t::Term, dt::ColumnTable, hint)
+    msg = checkcol(dt, t.sym)
+    if msg != ""
+        throw(ArgumentError(msg))
+    end
+    return concrete_term(t, getproperty(dt, t.sym), hint)
+end
+
+function concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol})
+    msg = checkcol(dt, t.sym)
+    if msg != ""
+        throw(ArgumentError(msg))
+    end
+    return concrete_term(t, getproperty(dt, t.sym), get(hints, t.sym, nothing))
+end
+
+
 concrete_term(t::Term, d) = concrete_term(t, d, nothing)
 
 # if the "hint" is already an AbstractTerm, use that
@@ -195,7 +208,10 @@ concrete_term(t::Term, xs::AbstractVector, ::Nothing) = concrete_term(t, xs, Cat
 concrete_term(t::Term, xs::AbstractArray, ::Type{CategoricalTerm}) = concrete_term(t, xs, DummyCoding())
 
 function concrete_term(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
-    contrmat = ContrastsMatrix(contrasts, intersect(levels(xs), unique(xs)))
+    xlevels = levels(xs)
+    xunique = unique(xs)
+    xused = length(xlevels) == length(xunique) ? xlevels : intersect(xlevels, xunique)
+    contrmat = ContrastsMatrix(contrasts, xused)
     CategoricalTerm(t.sym, contrmat)
 end
 

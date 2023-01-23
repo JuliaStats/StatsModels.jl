@@ -4,6 +4,7 @@ using SparseArrays
 
 using StatsModels
 using DataFrames
+using CategoricalArrays
 using StatsBase
 
 using StatsModels: ContrastsMatrix

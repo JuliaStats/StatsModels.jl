@@ -227,7 +227,7 @@
         f_sdiff = apply_schema(f, schema(d2, Dict(:x => sdiff_hyp)))
         f_effects = apply_schema(f, schema(d2, Dict(:x => effects_hyp)))
 
-        y_means = by(d2, :x, :y => mean).y_mean
+        y_means = combine(groupby(d2, :x), :y => mean).y_mean
         
         y, X_sdiff = modelcols(f_sdiff, d2)
         @test X_sdiff \ y ≈ [mean(y_means); diff(y_means)]
@@ -289,8 +289,8 @@
         using StatsModels: baselevel, FullDummyCoding, ContrastsCoding
 
         levs = [:a, :b, :c, :d]
-        base = [:a]
-        for C in [DummyCoding, EffectsCoding, SeqDiffCoding, HelmertCoding]
+        base = [:c]
+        for C in [DummyCoding, EffectsCoding, HelmertCoding]
             c = C()
             @test levels(c) == nothing
             @test baselevel(c) == nothing
@@ -307,6 +307,25 @@
             @test levels(c) == levs
             @test baselevel(c) == base
         end
+
+        c = SeqDiffCoding()
+        @test baselevel(c) == nothing
+        @test levels(c) == nothing
+
+        c = SeqDiffCoding(levels=levs)
+        @test baselevel(c) == levs[1]
+        @test levels(c) == levs
+
+        c = @test_logs((:warn,
+                        "`base=` kwarg for `SeqDiffCoding` has no effect and is deprecated. " *
+                        "Specify full order of levels using `levels=` instead"),
+                       SeqDiffCoding(base=base))
+        @test baselevel(c) == nothing
+        @test levels(c) == nothing
+
+        c = SeqDiffCoding(base=base, levels=levs)
+        @test baselevel(c) == levs[1]
+        @test levels(c) == levs
 
         c = FullDummyCoding()
         @test baselevel(c) == nothing
@@ -332,4 +351,29 @@
         @test_throws MethodError ContrastsCoding(rand(4,3), base=base)
         
     end
+
+    @testset "Non-unique levels" begin
+        @test_throws ArgumentError ContrastsMatrix(DummyCoding(), ["a", "a", "b"])
+    end
+
+    @testset "other string types" begin
+        using WeakRefStrings
+
+        using StatsModels: ContrastsMatrix
+        using DataAPI: levels
+
+        x = ["a", "b", "c", "a", "a", "b"]
+        x1 = WeakRefStrings.String1.(x)
+        x1_levs = levels(x1)
+
+        @test issetequal(x, x1)
+
+        c1 = ContrastsMatrix(DummyCoding(), x1_levs)
+        c = ContrastsMatrix(DummyCoding(levels=["a", "b", "c"]), x1_levs)
+        @test c == c1
+        @test eltype(c.levels) == eltype(c1.levels)
+
+        @test_throws ArgumentError ContrastsMatrix(DummyCoding(levels=[1, 2, 3]), x1_levs)
+    end
+    
 end

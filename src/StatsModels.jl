@@ -15,8 +15,7 @@ using LinearAlgebra
 
 using Tables: ColumnTable
 
-# for only() support pre-1.4
-using Compat
+using REPL: levenshtein
 
 export
     #re-export from StatsBase:
@@ -36,8 +35,8 @@ export
     ContrastsCoding,
     
     coefnames,
-    dropterm,
     setcontrasts!,
+    formula,
 
     AbstractTerm,
     ConstantTerm,
@@ -48,7 +47,6 @@ export
     FormulaTerm,
     InterceptTerm,
     FunctionTerm,
-    LagTerm,
     MatrixTerm,
 
     lag, lead, # Rexported from ShiftedArrays
@@ -71,6 +69,7 @@ export
 include("traits.jl")
 include("contrasts.jl")
 include("terms.jl")
+include("errormessages.jl")
 include("schema.jl")
 include("temporal_terms.jl")
 include("formula.jl")

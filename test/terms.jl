@@ -208,4 +208,47 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
 
     end
 
+    @testset "Tuple terms" begin
+        using StatsModels: TermOrTerms, TupleTerm, Term
+        a, b, c = Term.((:a, :b, :c))
+
+        # TermOrTerms - one or more AbstractTerms (if more, a tuple)
+        # empty tuples are never terms
+        @test !(() isa TermOrTerms)
+        @test (a, ) isa TermOrTerms
+        @test (a, b) isa TermOrTerms
+        @test (a, b, a&b) isa TermOrTerms
+        @test !(((), a) isa TermOrTerms)
+        # can't contain further tuples
+        @test !((a, (a,), b) isa TermOrTerms)
+
+        # a tuple of AbstractTerms OR Tuples of one or more terms
+        # empty tuples are never terms
+        @test !(() isa TupleTerm)
+        @test (a, ) isa TupleTerm
+        @test (a, b) isa TupleTerm
+        @test (a, b, a&b) isa TupleTerm
+        @test !(((), a) isa TupleTerm)
+        @test (((a,), a) isa TupleTerm)
+
+        # no methods for operators on term and empty tuple (=no type piracy)
+        @test_throws MethodError a + ()
+        @test_throws MethodError () + a
+        @test_throws MethodError a & ()
+        @test_throws MethodError () & a
+        @test_throws MethodError a ~ ()
+        @test_throws MethodError () ~ a
+
+        # show methods of empty tuples preserved
+        @test "$(())" == "()"
+        @test "$((a,b))" == "a + b"
+        @test "$((a, ()))" == "(a, ())"
+    end
+
+    @testset "concrete_term error messages" begin
+        t = (a = [1, 2, 3], b = [0.0, 0.5, 1.0])
+        @test Tables.istable(t)
+        @test_throws ArgumentError concrete_term(term(:not_there), t )
+    end
+
 end

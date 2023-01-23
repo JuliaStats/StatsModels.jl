@@ -111,6 +111,7 @@ struct ContrastsMatrix{C <: AbstractContrasts, T, U}
                              termnames::Vector{U},
                              levels::Vector{T},
                              contrasts::C) where {U,T,C <: AbstractContrasts}
+        allunique(levels) || throw(ArgumentError("levels must be all unique, got $(levels)"))
         invindex = Dict{T,Int}(x=>i for (i,x) in enumerate(levels))
         new{C,T,U}(matrix, termnames, levels, contrasts, invindex)
     end
@@ -119,7 +120,7 @@ end
 # only check equality of matrix, termnames, and levels, and that the type is the
 # same for the contrasts (values are irrelevant).  This ensures that the two
 # will behave identically in creating modelmatrix columns
-Base.:(==)(a::ContrastsMatrix{C,T}, b::ContrastsMatrix{C,T}) where {C<:AbstractContrasts,T} =
+Base.:(==)(a::ContrastsMatrix{C}, b::ContrastsMatrix{C}) where {C<:AbstractContrasts} =
     a.matrix == b.matrix &&
     a.termnames == b.termnames &&
     a.levels == b.levels
@@ -165,17 +166,18 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
     # 3. contrast levels missing from data: would have empty columns, generate a
     #    rank-deficient model matrix.
     c_levels = something(DataAPI.levels(contrasts), levels)
-    if eltype(c_levels) != eltype(levels)
-        throw(ArgumentError("mismatching levels types: got $(eltype(levels)), expected " *
-                            "$(eltype(c_levels)) based on contrasts levels."))
-    end
+    
     mismatched_levels = symdiff(c_levels, levels)
     if !isempty(mismatched_levels)
         throw(ArgumentError("contrasts levels not found in data or vice-versa: " *
                             "$mismatched_levels." *
-                            "\n  Data levels: $levels." *
-                            "\n  Contrast levels: $c_levels"))
+                            "\n  Data levels ($(eltype(levels))): $levels." *
+                            "\n  Contrast levels ($(eltype(c_levels))): $c_levels"))
     end
+
+    # do conversion AFTER checking for levels so users get a nice error message
+    # when they've made a mistake with the level types
+    c_levels = convert(Vector{T}, c_levels)
 
     n = length(c_levels)
     if n == 0
@@ -186,7 +188,7 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
                             "compute contrasts)."))
     end
 
-    # find index of base level. use contrasts.base, then default (1).
+    # find index of base level. use baselevel(contrasts), then default (1).
     base_level = baselevel(contrasts)
     baseind = base_level === nothing ?
               1 :
@@ -233,7 +235,7 @@ Base.getindex(contrasts::ContrastsMatrix{C,T}, rowinds, colinds) where {C,T} =
 # Making a contrast type T only requires that there be a method for
 # contrasts_matrix(T,  baseind, n) and optionally termnames(T, levels, baseind)
 # The rest is boilerplate.
-for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding, :SeqDiffCoding]
+for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
     @eval begin
         mutable struct $contrastType <: AbstractContrasts
             base::Any
@@ -447,7 +449,22 @@ julia> StatsModels.hypothesis_matrix(seqdiff)
 """
 SeqDiffCoding
 
-function contrasts_matrix(C::SeqDiffCoding, baseind, n)
+mutable struct SeqDiffCoding <: AbstractContrasts
+    levels::Union{AbstractVector,Nothing}
+end
+function SeqDiffCoding(; base=nothing, levels::Union{AbstractVector,Nothing}=nothing)
+    if base !== nothing
+        Base.depwarn("`base=` kwarg for `SeqDiffCoding` has no effect and is deprecated. " *
+                     "Specify full order of levels using `levels=` instead",
+                     :SeqDiffCoding)
+    end
+    return SeqDiffCoding(levels)
+end
+
+baselevel(c::SeqDiffCoding) = c.levels === nothing ? nothing : c.levels[1]
+DataAPI.levels(c::SeqDiffCoding) = c.levels
+
+function contrasts_matrix(C::SeqDiffCoding, _, n)
     mat = zeros(n, n-1)
     for col in 1:n-1
         mat[1:col, col] .= col-n
