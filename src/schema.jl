@@ -247,16 +247,17 @@ end
 """
     struct Protected{Ctx}
 
-Represent a context in which the normal special syntax and
-[`apply_schema`](@ref) transformations should not apply.  This is automatically
-applied to the arguments of a [`FunctionTerm`](@ref), meaning that by default
-calls to `+`, `&`, or `~` inside a [`FunctionTerm`](@ref) will be interpreted as
-calls to the normal Julia functions, rather than term union, interaction, or
-formula separation.
+Represent a context in which `@formula` DSL syntax (e.g. `&` to construct
+[`InteractionTerm`](@ref) rather than bitwise-and) and [`apply_schema`](@ref)
+transformations should not apply.  This is automatically applied to the
+arguments of a [`FunctionTerm`](@ref), meaning that by default calls to `+`,
+`&`, or `~` inside a [`FunctionTerm`](@ref) will be interpreted as calls to the
+normal Julia functions, rather than term union, interaction, or formula
+separation.
 
 The only special behavior with [`apply_schema`](@ref) inside a `Protected`
 context is when a call to [`unprotect`](@ref) is encountered.  At that point,
-everything below the call to `unprotect` is treated as special formula syntax.
+everything below the call to `unprotect` is treated as formula-specific syntax.
 
 A `Protected` context is created inside a [`FunctionTerm`](@ref) automatically,
 but can be manually created with a call to [`protect`](@ref).
@@ -323,7 +324,7 @@ end
     unprotect(::Protected{T})
 
 Inside a [`@formula`], removes [`Protected`](@ref) status for the argument
-term(s).  This allows the usual special [`@formula`](@ref) interpretation of
+term(s).  This allows the [`@formula`](@ref)-specific interpretation of
 calls to `+`, `&`, `*`, and `~` to be restored inside an otherwise
 [`Protected`](@ref) context.
 
