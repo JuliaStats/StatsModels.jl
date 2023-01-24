@@ -57,22 +57,22 @@ expression returned by the `@formula` macro is evaluated.  At this point, the
 julia> using StatsModels;
 
 julia> dump(Term(:a) & Term(:b))
-InteractionTerm{Tuple{Term,Term}}
-  terms: Tuple{Term,Term}
+InteractionTerm{Tuple{Term, Term}}
+  terms: Tuple{Term, Term}
     1: Term
       sym: Symbol a
     2: Term
       sym: Symbol b
 
 julia> dump(Term(:a) + Term(:b))
-Tuple{Term,Term}
+Tuple{Term, Term}
   1: Term
     sym: Symbol a
   2: Term
     sym: Symbol b
 
 julia> dump(Term(:y) ~ Term(:a))
-FormulaTerm{Term,Term}
+FormulaTerm{Term, Term}
   lhs: Term
     sym: Symbol y
   rhs: Term
@@ -274,7 +274,7 @@ Predictors:
   b(unknown) & c(unknown)
 
 julia> typeof(f)
-FormulaTerm{Term,Tuple{ConstantTerm{Int64},Term,Term,Term,InteractionTerm{Tuple{Term,Term}}}}
+FormulaTerm{Term, Tuple{ConstantTerm{Int64}, Term, Term, Term, InteractionTerm{Tuple{Term, Term}}}}
 
 julia> f = apply_schema(f, schema(f, df))
 FormulaTerm
@@ -288,7 +288,7 @@ Predictors:
   b(continuous) & c(DummyCoding:3→2)
 
 julia> typeof(f)
-FormulaTerm{ContinuousTerm{Float64},MatrixTerm{Tuple{InterceptTerm{true},ContinuousTerm{Float64},ContinuousTerm{Float64},CategoricalTerm{DummyCoding,String,2},InteractionTerm{Tuple{ContinuousTerm{Float64},CategoricalTerm{DummyCoding,String,2}}}}}}
+FormulaTerm{ContinuousTerm{Float64}, MatrixTerm{Tuple{InterceptTerm{true}, ContinuousTerm{Float64}, ContinuousTerm{Float64}, CategoricalTerm{DummyCoding, String, 2}, InteractionTerm{Tuple{ContinuousTerm{Float64}, CategoricalTerm{DummyCoding, String, 2}}}}}}
 ```
 
 This transformation is done by calling `apply_schema(term, schema, modeltype)`
@@ -312,7 +312,7 @@ right-hand (predictor) sides.
 julia> resp, pred = modelcols(f, df);
 
 julia> resp
-9-element Array{Float64,1}:
+9-element Vector{Float64}:
  0.5851946422124186
  0.07733793456911231
  0.7166282400543453
@@ -324,7 +324,7 @@ julia> resp
  0.05079002172175784
 
 julia> pred
-9×7 Array{Float64,2}:
+9×7 Matrix{Float64}:
  1.0  1.0  0.236782  0.0  0.0  0.0       0.0
  1.0  2.0  0.943741  1.0  0.0  0.943741  0.0
  1.0  3.0  0.445671  0.0  1.0  0.0       0.445671
@@ -355,7 +355,7 @@ julia> t = f.rhs.terms[end]
 b(continuous) & c(DummyCoding:3→2)
 
 julia> modelcols(t, df)
-9×2 Array{Float64,2}:
+9×2 Matrix{Float64}:
  0.0       0.0
  0.943741  0.0
  0.0       0.445671
@@ -417,7 +417,7 @@ poly(t::Symbol, d::Int) = PolyTerm(term(t), term(d))
 function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
                                   sch::StatsModels.Schema,
                                   Mod::Type{<:POLY_CONTEXT})
-    apply_schema(PolyTerm(t.args_parsed...), sch, Mod)
+    apply_schema(PolyTerm(t.args...), sch, Mod)
 end
 
 # apply_schema to internal Terms and check for proper types
@@ -485,14 +485,14 @@ Predictors:
   poly(b, 2) & a(continuous)
 
 julia> modelcols(f.rhs, data)
-4×6 Array{Float64,2}:
+4×6 Matrix{Float64}:
  1.0  1.0   1.0  0.757746  0.757746  0.757746
  1.0  2.0   4.0  0.419294  0.838587  1.67717
  1.0  3.0   9.0  0.412607  1.23782   3.71347
  1.0  4.0  16.0  0.454589  1.81836   7.27343
 
 julia> coefnames(f.rhs)
-6-element Array{String,1}:
+6-element Vector{String}:
  "(Intercept)"
  "b^1"
  "b^2"
@@ -513,7 +513,7 @@ julia> sim_dat = DataFrame(a=rand(rng, 100).-0.5, b=randn(rng, 100).-0.5);
 julia> sim_dat.y = randn(rng, 100) .+ 1 .+ 2*sim_dat.a .+ 3*sim_dat.b.^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(a,2) + poly(b,2)), sim_dat)
-StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 y ~ 1 + poly(a, 2) + poly(b, 2)
 
@@ -521,7 +521,7 @@ Coefficients:
 ──────────────────────────────────────────────────────────────────────────
                  Coef.  Std. Error      t  Pr(>|t|)   Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   0.89288    0.181485    4.92    <1e-5    0.532586    1.25317
+(Intercept)   0.89288    0.181485    4.92    <1e-05   0.532586    1.25317
 a^1           2.73324    0.349194    7.83    <1e-11   2.04001     3.42648
 a^2          -1.0114     1.34262    -0.75    0.4531  -3.67684     1.65404
 b^1           0.214424   0.136868    1.57    0.1205  -0.0572944   0.486142
@@ -554,7 +554,7 @@ julia> pt = poly(:a, 3)
 poly(a, 3)
 
 julia> typeof(pt) # contains schema-less `Term`
-PolyTerm{Term,ConstantTerm{Int64}}
+PolyTerm{Term, ConstantTerm{Int64}}
 ```
 
 !!! note
@@ -575,7 +575,7 @@ julia> poly(my_col, my_degree)
 poly(a, 3)
 
 julia> poly.([:a, :b], my_degree)
-2-element Array{PolyTerm{Term,ConstantTerm{Int64}},1}:
+2-element Vector{PolyTerm{Term, ConstantTerm{Int64}}}:
  poly(a, 3)
  poly(b, 3)
 ```
@@ -595,10 +595,10 @@ julia> pt = apply_schema(PolyTerm(term(:b), term(2)),
 poly(b, 2)
 
 julia> typeof(pt) # now holds a `ContinuousTerm`
-PolyTerm{ContinuousTerm{Float64},Int64}
+PolyTerm{ContinuousTerm{Float64}, Int64}
 
 julia> modelcols(pt, data)
-4×2 Array{Int64,2}:
+4×2 Matrix{Int64}:
  1   1
  2   4
  3   9
@@ -622,7 +622,7 @@ Predictors:
   poly(b, 2)
 
 julia> fit(LinearModel, poly_formula, sim_dat)
-StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 y ~ 1 + poly(a, 2) + poly(b, 2)
 
@@ -630,7 +630,7 @@ Coefficients:
 ──────────────────────────────────────────────────────────────────────────
                  Coef.  Std. Error      t  Pr(>|t|)   Lower 95%  Upper 95%
 ──────────────────────────────────────────────────────────────────────────
-(Intercept)   0.89288    0.181485    4.92    <1e-5    0.532586    1.25317
+(Intercept)   0.89288    0.181485    4.92    <1e-05   0.532586    1.25317
 a^1           2.73324    0.349194    7.83    <1e-11   2.04001     3.42648
 a^2          -1.0114     1.34262    -0.75    0.4531  -3.67684     1.65404
 b^1           0.214424   0.136868    1.57    0.1205  -0.0572944   0.486142
@@ -672,14 +672,14 @@ Predictors:
   (b)->poly(b, 2) & a(continuous)
 
 julia> modelcols(f.rhs, data)
-4×4 Array{Float64,2}:
+4×4 Matrix{Float64}:
  1.0   1.0  0.757746  0.757746
  1.0   4.0  0.419294  1.67717
  1.0   9.0  0.412607  3.71347
  1.0  16.0  0.454589  7.27343
 
 julia> coefnames(f.rhs)
-4-element Array{String,1}:
+4-element Vector{String}:
  "(Intercept)"
  "poly(b, 2)"
  "a"
@@ -704,14 +704,14 @@ Predictors:
   poly(b, 2) & a(continuous)
 
 julia> modelcols(f2.rhs, data)
-4×6 Array{Float64,2}:
+4×6 Matrix{Float64}:
  1.0  1.0   1.0  0.757746  0.757746  0.757746
  1.0  2.0   4.0  0.419294  0.838587  1.67717
  1.0  3.0   9.0  0.412607  1.23782   3.71347
  1.0  4.0  16.0  0.454589  1.81836   7.27343
 
 julia> coefnames(f2.rhs)
-6-element Array{String,1}:
+6-element Vector{String}:
  "(Intercept)"
  "b^1"
  "b^2"
@@ -729,7 +729,7 @@ julia> sim_dat = DataFrame(b=randn(rng, 100));
 julia> sim_dat.y = randn(rng, 100) .+ 1 .+ 2*sim_dat.b .+ 3*sim_dat.b.^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
-StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 y ~ 1 + :(poly(b, 2))
 
@@ -742,7 +742,7 @@ poly(b, 2)   2.95861    0.174347  16.97    <1e-30   2.61262     3.30459
 ───────────────────────────────────────────────────────────────────────
 
 julia> fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
-StatsModels.TableRegressionModel{GeneralizedLinearModel{GLM.GlmResp{Array{Float64,1},Normal{Float64},IdentityLink},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{GeneralizedLinearModel{GLM.GlmResp{Vector{Float64}, Normal{Float64}, IdentityLink}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 y ~ 1 + poly(b, 2)
 

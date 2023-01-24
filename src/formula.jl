@@ -8,7 +8,7 @@
 ## in R as y ~ a + b + a:b is written :(y ~ a + b + a&b) in Julia.
 ## The equivalent R expression, y ~ a*b, is the same in Julia
 
-## The lhs of a one-sided formula is 'nothing'
+## The lhs of a one-sided formula is 0
 ## The rhs of a formula can be 1
 
 is_call(ex::Expr) = Meta.isexpr(ex, :call)
@@ -60,220 +60,31 @@ The rules that are applied are
 macro formula(ex)
     is_call(ex, :~) || throw(ArgumentError("expected formula separator ~, got $(ex.head)"))
     length(ex.args) == 3 ||  throw(ArgumentError("malformed expression in formula $ex"))
-    terms!(sort_terms!(parse!(ex)))
+    parse!(ex)
 end
 
-"""
-    abstract type FormulaRewrite end
-
-Formula parsing is expressed as a bunch of expression re-writes, each of which
-is a subtype of `FormulaRewrite`.  There are two methods that dispatch on these
-types: `applies(ex, child_idx, rule::Type{<:FormulaRewrite})` checks whether the
-re-write `rule` needs to be applied at argument `child_idx` of expression `ex`,
-and `rewrite!(ex, child_idx, rule::Type{<:FormulaRewrite})` re-writes `ex`
-according to `rule` at position `child_idx`, and returns the next `child_idx`
-that needs to be checked.
-"""
-abstract type FormulaRewrite end
-
-"""
-    struct Star <: FormulaRewrite end
-
-Expand `a*b` to `a + b + a&b` (`*(a,b)` to `+(a,b,&(a,b))`).  Applies
-recursively to multiple `*` arguments, so needs a clean-up pass (from
-distributive/associative).
-"""
-struct Star <: FormulaRewrite end
-applies(ex::Expr, child_idx::Int, ::Type{Star}) = is_call(ex.args[child_idx], :*)
-expand_star(a, b) = Expr(:call, :+, a, b, Expr(:call, :&, a, b))
-function rewrite!(ex::Expr, child_idx::Int, ::Type{Star})
-    child = ex.args[child_idx]
-    @debug "  expand star: $ex -> "
-    child.args = reduce(expand_star, child.args[2:end]).args
-    @debug "               $ex"
-    child_idx
-end
-
-"""
-    struct AssociativeRule <: FormulaRewrite end
-
-Apply associative rule: if in an expression headed by an associative operator
-(`+,&,*`) and the sub-expression `child_idx` is headed by the same operator,
-splice that child's children into it's location.
-"""
-struct AssociativeRule <: FormulaRewrite end
-const ASSOCIATIVE = (:+, :&, :*)
-applies(ex::Expr, child_idx::Int, ::Type{AssociativeRule}) =
-    is_call(ex) &&
-    ex.args[1] in ASSOCIATIVE &&
-    is_call(ex.args[child_idx], ex.args[1])
-function rewrite!(ex::Expr, child_idx::Int, ::Type{AssociativeRule})
-    @debug "    associative: $ex -> "
-    splice!(ex.args, child_idx, ex.args[child_idx].args[2:end])
-    @debug "                 $ex"
-    child_idx
-end
-
-
-"""
-    struct Distributive <: FormulaRewrite end
-
-Distributive propery: `&(a..., +(b...), c...)` to `+(&(a..., b_i, c...)_i...)`.
-Replace outer call (:&) with inner call (:+), whose arguments are copies of the
-outer call, one for each argument of the inner call.  For the ith new child, the
-original inner call is replaced with the ith argument of the inner call.
-"""
-struct Distributive <: FormulaRewrite end
-const DISTRIBUTIVE = Set([:& => :+])
-applies(ex::Expr, child_idx::Int, ::Type{Distributive}) =
-    is_call(ex) &&
-    is_call(ex.args[child_idx]) &&
-    (ex.args[1] => ex.args[child_idx].args[1]) in DISTRIBUTIVE
-function rewrite!(ex::Expr, child_idx::Int, ::Type{Distributive})
-    @debug "    distributive: $ex -> "
-    new_args = deepcopy(ex.args[child_idx].args)
-    for i in 2:length(new_args)
-        new_child = deepcopy(ex)
-        new_child.args[child_idx] = new_args[i]
-        new_args[i] = new_child
-    end
-    ex.args = new_args
-    @debug "                  $ex"
-    # TODO: is it really necessary to re-check _every_argument after this?
-    2
-end
-
-"""
-    And1 <: FormulaRewrite
-
-Remove numbers from interaction terms, so `1&x` becomes `&(x)` (which is later 
-cleaned up by `EmptyAnd`).
-"""
-struct And1 <: FormulaRewrite end
-applies(ex::Expr, child_idx::Int, ::Type{And1}) =
-    is_call(ex, :&) && ex.args[child_idx] isa Number
-function rewrite!(ex::Expr, child_idx::Int, ::Type{And1})
-    @debug "    &1: $ex ->"
-    ex.args[child_idx] == 1 ||
-        @warn "Number $(ex.args[child_idx]) removed from interaction term $ex"
-    deleteat!(ex.args, child_idx)
-    @debug "        $ex"
-    child_idx
-end
-
-# default re-write is a no-op (go to next child)
-rewrite!(ex::Expr, child_idx::Int, ::Nothing) = child_idx+1
-
-# like `findfirst` but returns the first element where predicate is true, or
-# nothing
-function filterfirst(f::Function, a::AbstractArray)
-    idx = findfirst(f, a)
-    idx === nothing ? nothing : a[idx]
-end
-
-const SPECIALS = (:+, :&, :*, :~)
-
-parse!(x) = parse!(x, [And1, Star, AssociativeRule, Distributive])
-parse!(x, rewrites) = x
-function parse!(ex::Expr, rewrites::Vector)
-    @debug "parsing $ex"
+function parse!(ex::Expr, protected::Bool=false)
     catch_dollar(ex)
     check_call(ex)
 
-    # don't recurse into captured calls
-    if is_call(ex, :capture_call) || is_call(ex, :(StatsModels.capture_call))
-        @debug "  skipping capture_call"
-        return ex
-    end
-
-    # parse a copy of non-special calls
-    ex_parsed = ex.args[1] ∉ SPECIALS ? deepcopy(ex) : ex
-    
-    # iterate over children, checking for special rules
-    child_idx = 2
-    while child_idx <= length(ex_parsed.args)
-        @debug "  ($(ex_parsed.args[1])) i=$child_idx: $(ex_parsed.args[child_idx])"
-        # depth first: parse each child first
-        parse!(ex_parsed.args[child_idx], rewrites)
-        # find first rewrite rule that applies
-        rule = filterfirst(r->applies(ex_parsed, child_idx, r), rewrites)
-        # re-write according to that rule and update the child to position rewrite nex_parsedt
-        child_idx = rewrite!(ex_parsed, child_idx, rule)
-    end
-    @debug "done: $ex_parsed"
-
-    if ex.args[1] ∈ SPECIALS
-        return ex_parsed
-    else
-        @debug "  capturing non-special call $ex"
-        return capture_call_ex!(ex, ex_parsed)
-    end
-end
-
-"""
-    capture_call_ex!(ex::Expr, ex_parsed::Expr)
-
-Capture a call to a function that is not part of the formula DSL.  This replaces
-`ex` with a call to [`capture_call`](@ref).  `ex_parsed` is a copy of `ex` whose
-arguments have been parsed according to the normal formula DSL rules and which 
-will be passed as the final argument to `capture_call`.
-"""
-function capture_call_ex!(ex::Expr, ex_parsed::Expr)
-    symbols = extract_symbols(ex)
-    symbols_ex = Expr(:tuple, symbols...)
-    f_anon_ex = esc(Expr(:(->), symbols_ex, copy(ex)))
-    f_orig = ex.args[1]
-    ex.args = [:capture_call,
-               esc(f_orig),
-               f_anon_ex,
-               tuple(symbols...),
-               Meta.quot(deepcopy(ex)),
-               :[$(ex_parsed.args[2:end]...)]]
-    return ex
-end
-
-
-# generate Term expressions for symbols (including parsed args of non-special calls
-terms!(::Nothing) = :(nothing)
-terms!(s::Symbol) = :(Term($(Meta.quot(s))))
-terms!(n::Number) = :(ConstantTerm($n))
-function terms!(ex::Expr)
-    if ex.args[1] ∈ SPECIALS
+    if ex.args[1] ∈ SPECIALS && !protected
         ex.args[1] = esc(ex.args[1])
-        ex.args[2:end] .= terms!.(ex.args[2:end])
-    elseif is_call(ex, :capture_call)
-        # final argument of capture_call holds parsed terms
-        ex.args[end].args .= terms!.(ex.args[end].args)
+        ex.args[2:end] .= parse!.(ex.args[2:end], false)
+    else
+        # capture non-special call, or special call inside a non-special
+        exorig = deepcopy(ex)
+        f = esc(ex.args[1])
+        args = parse!.(ex.args[2:end], true)
+        ex.args = [:FunctionTerm,
+                   f,
+                   :[$(args...)],
+                   Meta.quot(exorig)]
+        ex
     end
     return ex
+    
 end
 
-
-function sort_terms!(ex::Expr)
-    check_call(ex)
-    if ex.args[1] ∈ ASSOCIATIVE
-        sort!(view(ex.args, 2:length(ex.args)), by=degree)
-    elseif is_call(ex, :capture_call)
-        sort_terms!.(ex.args[end].args)
-    else
-        # recursively sort children
-        sort_terms!.(ex.args)
-    end
-    ex
-end
-sort_terms!(x) = x
-
-degree(i::Integer) = 0
-degree(::Symbol) = 1
-function degree(ex::Expr)
-    check_call(ex)
-    if ex.args[1] == :&
-        length(ex.args) - 1
-    elseif ex.args[1] == :|
-        # put ranef terms at end
-        typemax(Int)
-    else
-        # arbitrary functions are treated as main effect terms
-        1
-    end
-end
+parse!(::Nothing, protected) = :(nothing)
+parse!(s::Symbol, protected) = :(Term($(Meta.quot(s))))
+parse!(n::Number, protected) = :(ConstantTerm($n))

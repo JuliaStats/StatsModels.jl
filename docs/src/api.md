@@ -4,7 +4,6 @@ DocTestSetup = quote
     using StatsModels, Random, StatsBase
     Random.seed!(2001)
 end
-DocTestFilters = [r"([a-z]*) => \1", r"getfield\(.*##[0-9]+#[0-9]+"]
 ```
 
 # StatsModels.jl API
@@ -46,6 +45,19 @@ lag
 MatrixTerm
 collect_matrix_terms
 is_matrix_term
+```
+
+### Protection
+
+For more fine-grained control over whether function calls are treated as normal
+Julia calls ("protected" and captured as `FunctionTerm`s) or as `@formula`
+syntax ("unprotected").
+
+```@docs
+protect
+unprotect
+@support_unprotect
+Protected
 ```
 
 ## Schema

@@ -10,7 +10,7 @@
 
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
-terms(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = Term.(names)
+terms(t::FunctionTerm) = mapreduce(terms, union, t.args)
 terms(t::AbstractTerm) = [t]
 terms(t::MatrixTerm) = terms(t.terms)
 terms(t::TupleTerm) = mapreduce(terms, union, t)
@@ -36,6 +36,8 @@ struct Schema
     schema::Dict{Term,AbstractTerm}
     Schema(x...) = new(Dict{Term,AbstractTerm}(x...))
 end
+
+Base.broadcastable(s::Schema) = Ref(s)
 
 function Base.show(io::IO, schema::Schema)
     n = length(schema.schema)
@@ -253,6 +255,185 @@ function apply_schema(t::ConstantTerm, schema::Schema, Mod::Type)
     InterceptTerm{t.n==1}()
 end
 
+# general idea is once we hit a FunctionTerm, we need to continue to
+# apply_schema because there might be some child that is un-protected.  So we
+# enter the Protected context and recursively apply_schema, and when we
+# encounter `unprotect` we restore the old context and continue to recursively
+# apply_schema
+"""
+    struct Protected{Ctx}
+
+Represent a context in which `@formula` DSL syntax (e.g. `&` to construct
+[`InteractionTerm`](@ref) rather than bitwise-and) and [`apply_schema`](@ref)
+transformations should not apply.  This is automatically applied to the
+arguments of a [`FunctionTerm`](@ref), meaning that by default calls to `+`,
+`&`, or `~` inside a [`FunctionTerm`](@ref) will be interpreted as calls to the
+normal Julia functions, rather than term union, interaction, or formula
+separation.
+
+The only special behavior with [`apply_schema`](@ref) inside a `Protected`
+context is when a call to [`unprotect`](@ref) is encountered.  At that point,
+everything below the call to `unprotect` is treated as formula-specific syntax.
+
+A `Protected` context is created inside a [`FunctionTerm`](@ref) automatically,
+but can be manually created with a call to [`protect`](@ref).
+```
+"""
+struct Protected{Ctx} end
+Base.broadcastable(x::Protected) = Ref(x)
+
+"""
+    protect(term::T)
+
+Create a [`Protected`](@ref) context for interpreting `term` (and descendents) during
+`apply_schema`.
+
+Outside a [`@formula`](@ref), acts as a constructor for the singleton `Protected{T}`.
+
+# Example
+
+```jldoctest; setup = :(using Random; Random.seed!(1))
+julia> d = (y=rand(4), a=[1:4;], b=rand(4));
+
+julia> f = @formula(y ~ 1 + protect(a+b));
+
+julia> modelmatrix(f.rhs, d)
+4×2 Matrix{Float64}:
+ 1.0  1.91493
+ 1.0  2.19281
+ 1.0  3.77018
+ 1.0  4.78052
+
+julia> d.a .+ d.b
+4-element Vector{Float64}:
+ 1.9149290036628313
+ 2.1928081162458755
+ 3.7701803478856664
+ 4.7805192636751865
+```
+"""
+protect(ctx) = Protected{ctx}()
+# return instances rather than types to avoid method ambiguities using Type{<:Protected}
+
+function apply_schema(t::FunctionTerm, schema::Schema, Mod::Type)
+    args = apply_schema.(t.args, schema, protect(Mod))
+    FunctionTerm(t.f, args, t.exorig)
+end
+
+apply_schema(t::FunctionTerm, schema::Schema, Ctx::Protected) =
+    FunctionTerm(t.f, apply_schema.(t.args, schema, Ctx), t.exorig)
+apply_schema(t, schema::Schema, Ctx::Protected) = t
+
+function apply_schema(t::FunctionTerm{typeof(protect)}, schema::Schema, Ctx::Type)
+    tt = only(t.args)
+    apply_schema(tt, schema, protect(Ctx))
+end
+
+# protect in Protected context is a no-op
+function apply_schema(t::FunctionTerm{typeof(protect)}, schema::Schema, Ctx::Protected)
+    tt = only(t.args)
+    apply_schema(tt, schema, Ctx)
+end
+
+"""
+    unprotect(term)
+    unprotect(::Protected{T})
+
+Inside a [`@formula`], removes [`Protected`](@ref) status for the argument
+term(s).  This allows the [`@formula`](@ref)-specific interpretation of
+calls to `+`, `&`, `*`, and `~` to be restored inside an otherwise
+[`Protected`](@ref) context.
+
+When called outside a `@formula`, unwraps `Protected{T}` to `T`.
+
+# Example
+
+```jldoctest; setup = :(using Random; Random.seed!(1))
+julia> d = (y=rand(4), a=[1.:4;], b=rand(4));
+
+julia> f = @formula(y ~ 1 - unprotect(a&b));
+
+julia> modelmatrix(f, d)
+4×1 Matrix{Float64}:
+  0.08507099633716864
+  0.6143837675082491
+ -1.310541043656999
+ -2.1220770547007453
+
+julia> 1 .- d.a .* d.b
+4-element Vector{Float64}:
+  0.08507099633716864
+  0.6143837675082491
+ -1.310541043656999
+ -2.1220770547007453
+```
+"""
+unprotect(::Protected{Ctx}) where {Ctx} = Ctx
+
+function apply_schema(t::FunctionTerm{typeof(unprotect)}, schema::Schema, Ctx::Protected)
+    tt = only(t.args)
+    apply_schema(tt, schema, unprotect(Ctx))
+end
+
+"""
+    StatsModels.@support_unprotect f
+
+Generate methods necessary for function `f` to support [`unprotect`](@ref)
+inside of a `@formula`.
+
+Any function call that occurs as a child of a protected call is also protected
+by default.  In order to support _unprotecting_ functions/operators that work
+directly on `Term`s (like the built-in "special" operators `+`, `&`, `*`, and
+`~`), we need to add methods for `apply_schema(::FunctionTerm{typeof(f)}, ...)`
+that calls `f` on the captured arguments.
+
+This macro generates the necessary method for `f`.  For this to do something
+reasonable, a few conditions must be met:
+
+1. Methods must exist for `f(args::AbstractTerm...)` matching the specific
+   signatures that users provide when calling `f` in `@formula` (and usually,
+   returns an `AbstractTerm` of some kind).
+
+2. The custom term type returned by `new_term = f(args::AbstractTerm...)` needs
+   to do something reasonable when `modelcols` is called on it.
+
+3. The thing returned by `modelcols(new_term, data)` needs to be something that
+   can be consumed as input to whatever the parent call was for `f` in the
+   original formula expression.
+
+To take a concrete example, if we have a function `g` that can do something
+meaningful with the output of `modelcols(::InteractionTerm, ...)`, then when a
+user provides something like
+
+    @formula(g(unprotect(a & b)))
+
+that gets lowered to
+
+    FunctionTerm(g, [FuntionTerm(&, [Term(:a), Term(:b)], ...)], ...)
+
+and we need to convert it to something like
+
+    FuntionTerm(g, [Term(:a) & Term(:b)], ...)
+
+during schema application, which is what the method generated by `@support_unprotect &`
+does.
+"""
+macro support_unprotect(op)
+    ex = quote
+        function apply_schema(t::StatsModels.FunctionTerm{typeof($op)},
+                              sch::StatsModels.Schema,
+                              Mod::Type)
+            apply_schema(t.f(t.args...), sch, Mod)
+        end
+    end
+    return esc(ex)
+end
+
+for op in SPECIALS
+    @eval @support_unprotect $op
+end
+
+
 """
     has_schema(t::T) where {T<:AbstractTerm}
 
@@ -266,6 +447,8 @@ has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
 has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
 has_schema(t::MatrixTerm) = has_schema(t.terms)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
+# FunctionTerms may always be transformed by apply_schema
+has_schema(t::FunctionTerm) = false
 
 struct FullRank
     schema::Schema
@@ -411,4 +594,4 @@ termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
 termvars(t::TupleTerm) = mapreduce(termvars, union, t, init=Symbol[])
 termvars(t::MatrixTerm) = termvars(t.terms)
 termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
-termvars(t::FunctionTerm{Fo,Fa,names}) where {Fo,Fa,names} = collect(names)
+termvars(t::FunctionTerm) = mapreduce(termvars, union, t.args, init=Symbol[])

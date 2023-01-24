@@ -61,8 +61,12 @@ export
     modelcols,
     modelmatrix,
     response,
+    protect,
+    unprotect,
 
     lrtest
+
+const SPECIALS = (:+, :&, :*, :~)
 
 include("traits.jl")
 include("contrasts.jl")

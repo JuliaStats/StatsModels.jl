@@ -2,7 +2,6 @@ using Documenter, StatsModels
 
 DocMeta.setdocmeta!(StatsModels, :DocTestSetup, :(using StatsModels, StatsBase); recursive=true)
 
-
 using Pkg
 Pkg.precompile()
 
@@ -16,7 +15,8 @@ makedocs(
         "Temporal variables and Time Series Terms" => "temporal_terms.md",
         "API documentation" => "api.md"
     ],
-    modules = [StatsModels]
+    modules = [StatsModels],
+    doctestfilters = [r"([a-z]*) => \1", r"getfield\(.*##[0-9]+#[0-9]+"]
 )
 
 deploydocs(

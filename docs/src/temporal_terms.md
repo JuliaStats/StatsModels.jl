@@ -50,7 +50,7 @@ Predictors:
   lead(x, 2)
 
 julia> modelmatrix(f, df)
-5×3 reshape(::Array{Union{Missing, Int64},2}, 5, 3) with eltype Union{Missing, Int64}:
+5×3 reshape(::Matrix{Union{Missing, Int64}}, 5, 3) with eltype Union{Missing, Int64}:
   2   missing   6
   4   missing   8
   6  2         10
@@ -88,10 +88,10 @@ Predictors:
   lead(x, 2)
 
 julia> modelmatrix(f2, df)
-5×3 reshape(::Array{Union{Missing, Int64},2}, 5, 3) with eltype Union{Missing, Int64}:
-  2   missing   6       
-  4   missing   8       
-  6  2         10       
+5×3 reshape(::Matrix{Union{Missing, Int64}}, 5, 3) with eltype Union{Missing, Int64}:
+  2   missing   6
+  4   missing   8
+  6  2         10
   8  4           missing
  10  6           missing
 ```

@@ -74,19 +74,56 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test a & b == InteractionTerm((a,b))
         @test string(a & b) == "$a & $b"
         @test mimestring(a & b) == "a(unknown) & b(unknown)"
-        c = term(:c)
-        ab = a+b
-        bc = b+c
-        abc = a+b+c
-        @test ab+c == abc
-        @test ab+a == ab
-        @test a+bc == abc
-        @test b+ab == ab
-        @test ab+ab == ab
-        @test ab+bc == abc
-        @test sum((a,b,c)) == abc
-        @test sum((a,)) == a
-        @test +a == a
+
+        @testset "Associative property of +" begin
+            a, b, c = term(:a), term(:b), term(:c)
+            ab = a+b
+            bc = b+c
+            abc = a+b+c
+            @test ab+c == abc
+            @test ab+a == ab
+            @test a+bc == abc
+            @test b+ab == ab
+            @test ab+ab == ab
+            @test ab+bc == abc
+        end
+
+        @testset "Associative property of &" begin
+            a, b, c = term(:a), term(:b), term(:c)
+            ab = a&b
+            bc = b&c
+            abc = a&b&c
+            @test ab&c == abc
+            @test ab&a == ab
+            @test a&bc == abc
+            @test b&ab == ab
+            @test ab&ab == ab
+            @test ab&bc == abc
+        end
+
+        @testset "And-1" begin
+            a, b, one, two = term(:a), term(:b), term(1), term(2)
+            @test a & one == a
+            @test one & a == a
+            @test (a&b) & one == a&b
+            @test one & (a&b) == a&b
+
+            # two constant terms takes the first:
+            @test_throws ArgumentError one & two
+            @test_throws ArgumentError two & one
+            @test_throws ArgumentError (a&b) & two == a&b
+            @test_throws ArgumentError two & (a&b) == a&b
+        end
+
+        @testset "Tuples and singletons" begin
+            a, b, c = term(:a), term(:b), term(:c)
+            @test sum((a,b,c)) == a+b+c
+            @test sum((a,)) == a
+            @test +a == a
+
+            @test (&)(a) == a
+        end
+        
     end
 
     @testset "uniqueness of FunctionTerms" begin

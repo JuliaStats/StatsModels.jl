@@ -82,7 +82,7 @@ Predictors:
 julia> resp, pred = modelcols(f, df);
 
 julia> pred
-9×7 Array{Float64,2}:
+9×7 Matrix{Float64}:
  1.0  1.0  0.236782  0.0  0.0  0.0       0.0
  1.0  2.0  0.943741  1.0  0.0  0.943741  0.0
  1.0  3.0  0.445671  0.0  1.0  0.0       0.445671
@@ -173,7 +173,7 @@ package) are treated like normal Julia code, and evaluated elementwise:
 
 ```jldoctest 1
 julia> modelmatrix(@formula(y ~ 1 + a + log(1+a)), df)
-9×3 Array{Float64,2}:
+9×3 Matrix{Float64}:
  1.0  1.0  0.693147
  1.0  2.0  1.09861
  1.0  3.0  1.38629
@@ -197,7 +197,7 @@ julia> gt_e(s) = any(c > 'e' for c in s)
 gt_e (generic function with 1 method)
 
 julia> modelmatrix(@formula(y ~ 1 + gt_e(c)), df)
-9×2 Array{Float64,2}:
+9×2 Matrix{Float64}:
  1.0  0.0
  1.0  0.0
  1.0  1.0
@@ -218,8 +218,9 @@ For instance, to fit a linear regression to a log-transformed response:
 ```jldoctest 1
 julia> using GLM
 
+
 julia> lm(@formula(log(y) ~ 1 + a + b), df)
-StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 :(log(y)) ~ 1 + a + b
 
@@ -235,7 +236,7 @@ b            -1.63199      1.12678   -1.45    0.1977  -4.38911    1.12513
 julia> df.log_y = log.(df.y);
 
 julia> lm(@formula(log_y ~ 1 + a + b), df)            # equivalent
-StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 log_y ~ 1 + a + b
 
@@ -250,12 +251,12 @@ b            -1.63199      1.12678   -1.45    0.1977  -4.38911    1.12513
 
 ```
 
-The no-op function `identity` can be used to block the normal formula-specific
+The `protect` function can be used to block the normal formula-specific
 interpretation of `+`, `*`, and `&`:
 
 ```jldoctest 1
-julia> modelmatrix(@formula(y ~ 1 + b + identity(1+b)), df)
-9×3 Array{Float64,2}:
+julia> modelmatrix(@formula(y ~ 1 + b + protect(1+b)), df)
+9×3 Matrix{Float64}:
  1.0  0.236782  1.23678
  1.0  0.943741  1.94374
  1.0  0.445671  1.44567
@@ -270,10 +271,19 @@ julia> modelmatrix(@formula(y ~ 1 + b + identity(1+b)), df)
 ## Constructing a formula programmatically
 
 A formula can be constructed at runtime by creating `Term`s and combining them
-with the formula operators `+`, `&`, and `~`:
+with the formula operators `+`, `&`, `*`, and `~`:
 
 ```jldoctest 1
-julia> Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) & Term(:b)
+julia> Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:a) & Term(:b)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown)
+  a(unknown) & b(unknown)
+  
+julia> Term(:y) ~ ConstantTerm(1) + Term(:a) * Term(:b)
 FormulaTerm
 Response:
   y(unknown)
@@ -283,20 +293,6 @@ Predictors:
   b(unknown)
   a(unknown) & b(unknown)
 ```
-
-!!! warning
-
-    Even though the `@formula` macro supports arbitrary julia functions,
-    runtime (programmatic) formula construction does not.  This is because to
-    resolve a symbol giving a function's _name_ into the actual _function_
-    itself, it's necessary to `eval`.  In practice this is not often an issue,
-    _except_ in cases where a package provides special syntax by overloading a
-    function (like `|` for
-    [MixedModels.jl](https://github.com/dmbates/MixedModels.jl), or `absorb`
-    for [Econometrics.jl](https://github.com/Nosferican/Econometrics.jl)).  In
-    these cases, you should use the corresponding constructors for the actual
-    terms themselves (e.g., `RanefTerm` and `FixedEffectsTerm` respectively), as
-    long as the packages have [implemented support for them](@ref extend-runtime).
 
 The [`term`](@ref) function constructs a term of the appropriate type from
 symbols or strings (`Term`) and numbers (`ConstantTerm`), which makes it easy to 
@@ -335,6 +331,59 @@ true
 
 ```
 
+### Constructing a `FunctionTerm` programmatically
+
+It is also possible to create a `FunctionTerm` programmatically, matching the
+behavior of what happens when a call to a function like `log` is encountered
+inside the `@formula` macro, although it takes a bit of care to get right.  In
+the future we may add more convenience methods to "lift" functions into the
+"term domain" but for now they must be constructed manually, like so:
+
+```jldoctest 1
+julia> log_term(t::AbstractTerm) = FunctionTerm(log, [t], :(log($(t))))
+log_term (generic function with 1 method)
+
+julia> log_term(term(:y))
+(y)->log(y)
+
+julia> f = log_term(term(:y)) ~ sum(ts)
+FormulaTerm
+Response:
+  (y)->log(y)
+Predictors:
+  1
+  a(unknown)
+  b(unknown)
+
+julia> response(f, df)
+9-element Vector{Float64}:
+ -0.5358107653592508
+ -2.5595706990153952
+ -0.3331980664948834
+ -1.1383191195688154
+ -0.4260357285735626
+ -1.4412188661761132
+ -0.34293563140185523
+ -0.5837776723176953
+ -2.980055366491228
+ 
+julia> lm(f, df)
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
+
+:(log(y)) ~ 1 + a + b
+
+Coefficients:
+──────────────────────────────────────────────────────────────────────────
+                  Coef.  Std. Error      t  Pr(>|t|)  Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   0.0698025    0.928295   0.08    0.9425  -2.20165    2.34126
+a            -0.105669     0.128107  -0.82    0.4410  -0.419136   0.207797
+b            -1.63199      1.12678   -1.45    0.1977  -4.38911    1.12513
+──────────────────────────────────────────────────────────────────────────
+```
+
+Compared with the example above, the result is the same.
+
 ## Fitting a model from a formula
 
 The main use of `@formula` is to streamline specifying and fitting statistical
@@ -363,7 +412,7 @@ julia> ϵ = randn(rng, 100)*0.1;
 julia> data.y = X*β_true .+ ϵ;
 
 julia> mod = fit(LinearModel, @formula(y ~ 1 + a*b), data)
-StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Array{Float64,1}},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 y ~ 1 + a + b + a & b
 
