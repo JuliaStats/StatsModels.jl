@@ -60,7 +60,7 @@ end
     FunctionTerm{F,Args} <: AbstractTerm
 
 Represents a call to a Julia function.  The first type parameter is the type of
-the captured function (e.g., `typeof(log)`), and the second is the types of the
+the captured function (e.g., `typeof(log)`), and the second is the type of the
 captured arguments (e.g., a `Vector` of `AbstractTerm`s).
 
 Nested function calls are captured as further `FunctionTerm`s.
