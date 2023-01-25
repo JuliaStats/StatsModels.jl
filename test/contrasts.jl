@@ -204,9 +204,11 @@
         effects_hyp = [-1 2 -1
                        -1 -1 2] ./ 3
 
+        levs = levels(d.x)
         @test modelmatrix(setcontrasts!(mf,
                                         x = HypothesisCoding(effects_hyp,
-                                                             labels=levels(d.x)[2:end]))) ≈
+                                                             levels=levs,
+                                                             labels=levs[2:end]))) ≈
             modelmatrix(setcontrasts!(mf, x = EffectsCoding()))
 
         d2 = DataFrame(y = rand(100),
@@ -215,13 +217,14 @@
         sdiff_hyp = HypothesisCoding([-1 1 0 0
                                       0 -1 1 0
                                       0 0 -1 1],
-                                     labels = ["b-a", "c-b", "d-c"])
+                                     labels=["b-a", "c-b", "d-c"],
+                                     levels=[:a, :b, :c, :d])
 
         effects_hyp = HypothesisCoding([-1 3 -1 -1
                                         -1 -1 3 -1
                                         -1 -1 -1 3] ./ 4,
-                                       labels = levels(d2.x)[2:end])
-
+                                       labels = levels(d2.x)[2:end],
+                                       levels=[:a, :b, :c, :d])
         f = apply_schema(@formula(y ~ 1 + x), schema(d2))
 
         f_sdiff = apply_schema(f, schema(d2, Dict(:x => sdiff_hyp)))
