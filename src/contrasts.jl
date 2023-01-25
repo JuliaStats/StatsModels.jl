@@ -241,8 +241,6 @@ for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
             base::Any=nothing
             levels::Union{AbstractVector,Nothing}=nothing
         end
-        ## constructor with optional keyword arguments, defaulting to nothing
-        $contrastType(; base=nothing, levels::Union{AbstractVector,Nothing}=nothing) = $contrastType(base, levels)
         baselevel(c::$contrastType) = c.base
         DataAPI.levels(c::$contrastType) = c.levels
     end
