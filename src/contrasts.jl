@@ -237,9 +237,9 @@ Base.getindex(contrasts::ContrastsMatrix, rowinds, colinds) =
 # The rest is boilerplate.
 for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
     @eval begin
-        mutable struct $contrastType <: AbstractContrasts
-            base::Any
-            levels::Union{AbstractVector,Nothing}
+        Base.@kwdef mutable struct $contrastType <: AbstractContrasts
+            base::Any=nothing
+            levels::Union{AbstractVector,Nothing}=nothing
         end
         ## constructor with optional keyword arguments, defaulting to nothing
         $contrastType(; base=nothing, levels::Union{AbstractVector,Nothing}=nothing) = $contrastType(base, levels)
@@ -447,18 +447,8 @@ julia> StatsModels.hypothesis_matrix(seqdiff)
 ```
 
 """
-SeqDiffCoding
-
-mutable struct SeqDiffCoding <: AbstractContrasts
-    levels::Union{AbstractVector,Nothing}
-end
-function SeqDiffCoding(; base=nothing, levels::Union{AbstractVector,Nothing}=nothing)
-    if base !== nothing
-        Base.depwarn("`base=` kwarg for `SeqDiffCoding` has no effect and is deprecated. " *
-                     "Specify full order of levels using `levels=` instead",
-                     :SeqDiffCoding)
-    end
-    return SeqDiffCoding(levels)
+Base.@kwdef mutable struct SeqDiffCoding <: AbstractContrasts
+    levels::Union{AbstractVector,Nothing}=nothing
 end
 
 baselevel(c::SeqDiffCoding) = c.levels === nothing ? nothing : c.levels[1]
