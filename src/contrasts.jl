@@ -101,7 +101,7 @@ of Memory and Language, 110_, 104038. https://doi.org/10.1016/j.jml.2019.104038
 abstract type AbstractContrasts end
 
 # Contrasts + Levels (usually from data) = ContrastsMatrix
-struct ContrastsMatrix{C <: AbstractContrasts, T, U, M <: AbstractMatrix}
+struct ContrastsMatrix{C <: AbstractContrasts, M <: AbstractMatrix, T, U}
     matrix::M
     termnames::Vector{U}
     levels::Vector{T}
@@ -113,7 +113,7 @@ struct ContrastsMatrix{C <: AbstractContrasts, T, U, M <: AbstractMatrix}
                              contrasts::C) where {U, T, C <: AbstractContrasts, M <: AbstractMatrix}
         allunique(levels) || throw(ArgumentError("levels must be all unique, got $(levels)"))
         invindex = Dict{T,Int}(x=>i for (i,x) in enumerate(levels))
-        new{C,T,U,M}(matrix, termnames, levels, contrasts, invindex)
+        new{C,M,T,U}(matrix, termnames, levels, contrasts, invindex)
     end
 end
 
@@ -229,7 +229,7 @@ function termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Intege
     levels[not_base]
 end
 
-Base.getindex(contrasts::ContrastsMatrix{C,T}, rowinds, colinds) where {C,T} =
+Base.getindex(contrasts::ContrastsMatrix, rowinds, colinds) =
     getindex(contrasts.matrix, getindex.(Ref(contrasts.invindex), rowinds), colinds)
 
 # Making a contrast type T only requires that there be a method for
