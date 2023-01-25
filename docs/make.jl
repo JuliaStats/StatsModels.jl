@@ -16,7 +16,8 @@ makedocs(
         "API documentation" => "api.md"
     ],
     modules = [StatsModels],
-    doctestfilters = [r"([a-z]*) => \1", r"getfield\(.*##[0-9]+#[0-9]+"]
+    doctestfilters = [r"([a-z]*) => \1", r"getfield\(.*##[0-9]+#[0-9]+"],
+    strict=Documenter.except(:missing_docs)
 )
 
 deploydocs(
