@@ -389,13 +389,17 @@
                                              cmat.contrasts)
 
         @test spcmat.matrix isa SparseMatrixCSC
+        @test cmat.matrix == spcmat.matrix
 
         term = CategoricalTerm(:x, cmat)
         spterm = CategoricalTerm(:x, spcmat)
 
-        @test modelcols(term, (; x=repeat('a':'d'; inner=2))) isa Matrix
-        @test modelcols(spterm, (; x=repeat('a':'d'; inner=2))) isa SparseMatrixCSC
-
+        mm = modelcols(term, (; x=repeat('a':'d'; inner=2)))
+        smm = modelcols(spterm, (; x=repeat('a':'d'; inner=2)))
+        
+        @test mm isa Matrix
+        @test smm isa SparseMatrixCSC
+        @test mm == smm
     end
     
 end
