@@ -375,5 +375,27 @@
 
         @test_throws ArgumentError ContrastsMatrix(DummyCoding(levels=[1, 2, 3]), x1_levs)
     end
+
+    @testset "other matrix types" begin
+        using SparseArrays
+        contrasts = DummyCoding()
+        mat = StatsModels.contrasts_matrix(contrasts, 1, 4)
+        spmat = sparse(mat)
+
+        cmat = StatsModels.ContrastsMatrix(contrasts, 'a':'d')
+        spcmat = StatsModels.ContrastsMatrix(sparse(cmat.matrix),
+                                             cmat.termnames,
+                                             cmat.levels,
+                                             cmat.contrasts)
+
+        @test spcmat.matrix isa SparseMatrixCSC
+
+        term = CategoricalTerm(:x, cmat)
+        spterm = CategoricalTerm(:x, spcmat)
+
+        @test modelcols(term, (; x=repeat('a':'d'; inner=2))) isa Matrix
+        @test modelcols(spterm, (; x=repeat('a':'d'; inner=2))) isa SparseMatrixCSC
+
+    end
     
 end
