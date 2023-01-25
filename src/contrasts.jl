@@ -101,19 +101,19 @@ of Memory and Language, 110_, 104038. https://doi.org/10.1016/j.jml.2019.104038
 abstract type AbstractContrasts end
 
 # Contrasts + Levels (usually from data) = ContrastsMatrix
-struct ContrastsMatrix{C <: AbstractContrasts, T, U}
-    matrix::Matrix{Float64}
+struct ContrastsMatrix{C <: AbstractContrasts, T, U, M <: AbstractMatrix}
+    matrix::M
     termnames::Vector{U}
     levels::Vector{T}
     contrasts::C
     invindex::Dict{T,Int}
-    function ContrastsMatrix(matrix::AbstractMatrix,
+    function ContrastsMatrix(matrix::M,
                              termnames::Vector{U},
                              levels::Vector{T},
-                             contrasts::C) where {U,T,C <: AbstractContrasts}
+                             contrasts::C) where {U, T, C <: AbstractContrasts, M <: AbstractMatrix}
         allunique(levels) || throw(ArgumentError("levels must be all unique, got $(levels)"))
         invindex = Dict{T,Int}(x=>i for (i,x) in enumerate(levels))
-        new{C,T,U}(matrix, termnames, levels, contrasts, invindex)
+        new{C,T,U,M}(matrix, termnames, levels, contrasts, invindex)
     end
 end
 
