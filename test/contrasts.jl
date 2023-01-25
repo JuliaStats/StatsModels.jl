@@ -154,11 +154,11 @@
 
     hypotheses2 = pinv(contrasts2)
     # need labels for hypothesis coding
-    # TODO for a future release, make this an error
-    # @test_throws ArgumentError HypothesisCoding(hypotheses2)
+    @test_throws ArgumentError HypothesisCoding(hypotheses2)
 
     hyp_labels = ["2a+b-c", "-a+b+2c"]
-    setcontrasts!(mf, x = HypothesisCoding(hypotheses2, labels=hyp_labels))
+    levs = levels(d.x)
+    setcontrasts!(mf, x = HypothesisCoding(hypotheses2, labels=hyp_labels, levels=levs))
     @test ModelMatrix(mf).m ≈ [1  1  1
                                1  1  0
                                1  0  1
@@ -170,7 +170,7 @@
     hypotheses3 = [1 1 0
                    0 1 1]
     hyp_labels3 = ["a+b", "b+c"]
-    hc3 = HypothesisCoding(hypotheses3, labels=hyp_labels3)
+    hc3 = HypothesisCoding(hypotheses3, labels=hyp_labels3, levels=levs)
     setcontrasts!(mf, x = hc3)
     @test !(ModelMatrix(mf).m ≈ [1  1  1
                                  1  1  0
@@ -181,11 +181,11 @@
 
     # accepts <:AbstractMatrix
     hypotheses4 = hcat([1, 1, 0], [0, 1, 1])'
-    hc4 = HypothesisCoding(hypotheses4, labels=hyp_labels3)
+    hc4 = HypothesisCoding(hypotheses4, labels=hyp_labels3, levels=levs)
     @test hc4.contrasts ≈ hc3.contrasts
 
     # specify labels via Vector{Pair}
-    hc5 = HypothesisCoding(["a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]])
+    hc5 = HypothesisCoding(["a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]]; levels=levs)
     @test hc5.contrasts[:, 1] ≈ hc3.contrasts[:,1]
     @test hc5.contrasts[:, 2] ≈ hc3.contrasts[:,2]
     @test hc5.labels == ["a_and_b", "b_and_c"]
