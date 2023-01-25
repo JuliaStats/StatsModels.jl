@@ -624,12 +624,6 @@ mutable struct ContrastsCoding{T<:AbstractMatrix} <: AbstractContrasts
     levels::Union{Vector,Nothing}
 
     function ContrastsCoding(mat::T, levels::Union{AbstractVector,Nothing}) where {T<:AbstractMatrix}
-        Base.depwarn("`ContrastsCoding(contrasts)` is deprecated and will not be" *
-                     " exported in the future.  Future versions will require" *
-                     " `StatsModels.ContrastsCoding` or `using StatsModels: " *
-                     "ContrastsCoding`.  For general users we recommend " *
-                     "`HypothesisCoding(pinv(contrasts))` instead.", 
-                     :ContrastsCoding)
         check_contrasts_size(mat, levels)
         new{T}(mat, levels)
     end
