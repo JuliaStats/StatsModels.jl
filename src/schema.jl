@@ -591,7 +591,8 @@ macro support_unprotect(op, sch_types...)
             function StatsModels.apply_schema(t::StatsModels.FunctionTerm{typeof($op)},
                                               sch::$sch_type,
                                               Mod::Type)
-                apply_schema(t.f(t.args...), sch, Mod)
+                args = apply_schema.(t.args, Ref(sch), Mod)
+                apply_schema(t.f(args...), sch, Mod)
             end
         end
         push!(ex.args, sub_ex)
