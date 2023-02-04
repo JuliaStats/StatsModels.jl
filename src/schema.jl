@@ -543,7 +543,7 @@ termvars(t::FunctionTerm) = mapreduce(termvars, union, t.args, init=Symbol[])
 
 Generate methods necessary for function `f` to support [`unprotect`](@ref)
 inside of a `@formula` with a schema of types `sch_types`.  If not specified,
-`sch_types` defaults to `(Schema, FullRank)` (the two schema types defined in
+`sch_types` defaults to `Schema, FullRank` (the two schema types defined in
 StatsModels itself).
 
 Any function call that occurs as a child of a protected call is also protected
