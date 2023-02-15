@@ -178,7 +178,7 @@ StatsModels.Schema with 2 entries:
 
 While `schema` is a convenient way to generate a schema automatically from a
 data source, in some cases it may be preferable to create a schema manually.  In
-particular, `schema` peforms a complete sweep through the data, and if your
+particular, `schema` performs a complete sweep through the data, and if your
 dataset is very large or truly streaming (online), then this may be
 undesirable.  In such cases, you can construct a schema from instances of the
 relevant concrete terms ([`ContinuousTerm`](@ref) or [`CategoricalTerm`](@ref)),

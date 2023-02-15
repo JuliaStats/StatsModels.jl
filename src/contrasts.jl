@@ -685,7 +685,7 @@ predictor, whereas each row of the hypothesis matrix is the interpretation of a
 predictor with weights for each level given in the columns.
 
 Note that this assumes a *balanced design* where there are the same number of
-observations in every cell.  This is only important for non-orthgonal contrasts
+observations in every cell.  This is only important for non-orthogonal contrasts
 (including contrasts that are not orthogonal with the intercept).
 
 # Examples
