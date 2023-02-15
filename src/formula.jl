@@ -40,7 +40,7 @@ Operators that have special interpretations in this syntax are
 * `~` is the formula separator, where it is a binary operator (the first
   argument is the left-hand side, and the second is the right-hand side.
 * `+` concatenates variables as columns when generating a model matrix.
-* `&` representes an _interaction_ between two or more variables, which
+* `&` represents an _interaction_ between two or more variables, which
   corresponds to a row-wise kronecker product of the individual terms
   (or element-wise product if all terms involved are continuous/scalar).
 * `*` expands to all main effects and interactions: `a*b` is equivalent to

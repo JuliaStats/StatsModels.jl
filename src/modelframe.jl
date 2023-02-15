@@ -174,7 +174,7 @@ function setcontrasts!(mf::ModelFrame, contrasts::Dict{Symbol})
     # TODO: don't consume the whole table again if it's not needed
     new_schema = schema([term(k) for k in keys(contrasts)], mf.data, contrasts)
 
-    # warn of no-op for keys that dont correspond to known terms from old schema
+    # warn of no-op for keys that don't correspond to known terms from old schema
     unknown_keys = [k for k in keys(new_schema) if !haskey(mf.schema, k)]
     if !isempty(unknown_keys)
         unknown_keys_str = join(unknown_keys, ", ", " and ")
