@@ -21,11 +21,7 @@
         # interaction, and combined
 
         # helper to "lift" function into FunctionTerm constructor
-        function ft(f)
-            return function(args...)
-                return FunctionTerm(f, args, :($f($(args...))))
-            end
-        end
+        ft(f, args...) = FunctionTerm(f, args, :($f($(args...))))
 
         sch = schema(d)
         a, b, c = apply_schema.(term.((:a, :b, :c)), Ref(sch))
@@ -36,7 +32,7 @@
                      (~) => FormulaTerm)
 
         for (op, typ) in ops_types, sch in (sch, FullRank(sch))
-            f = ft(op)(a, b)
+            f = ft(op, a, b)
             @test f isa FunctionTerm{typeof(op)}
             ff = apply_schema(f, sch)
             @test ff isa typ
@@ -44,11 +40,11 @@
         end
 
         # make sure it's recursively applied
-        f = ft(*)(ft(+)(a, b), c)
+        f = ft(*, ft(+, a, b), c)
         @test apply_schema(f, sch) == (a + b) * c
 
         # stops once it hits an non-special call still
-        f = ft(+)(a, ft(log)(ft(+)(term(1), b)))
+        f = ft(+, a, ft(log, ft(+, term(1), b)))
         @test apply_schema(f, sch) == (a, f.args[2])
 
         # testing behavior of modelcols
