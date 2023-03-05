@@ -154,7 +154,9 @@
 
     hypotheses2 = pinv(contrasts2)
     # need labels for hypothesis coding
-    @test_throws ArgumentError HypothesisCoding(hypotheses2)
+    @test_throws UndefKeywordError HypothesisCoding(hypotheses2)
+    @test_throws UndefKeywordError HypothesisCoding(hypotheses2; labels=["a", "b"])
+    @test_throws UndefKeywordError HypothesisCoding(hypotheses2; levels=["a", "b"])
 
     hyp_labels = ["2a+b-c", "-a+b+2c"]
     levs = levels(d.x)

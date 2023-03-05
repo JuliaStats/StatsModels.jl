@@ -539,12 +539,8 @@ mutable struct HypothesisCoding{T<:AbstractMatrix, S<:AbstractMatrix} <: Abstrac
     labels::Union{AbstractVector,Nothing}
 
     function HypothesisCoding(hypotheses::T;
-                              levels::Union{AbstractVector,Nothing}=nothing,
-                              labels::Union{AbstractVector,Nothing}=nothing) where {T<:AbstractMatrix}
-        levels === nothing &&
-            throw(ArgumentError("kwarg `levels` must be specified for HypothesisCoding"))
-        labels === nothing &&
-            throw(ArgumentError("kwarg `labels` must be specified for HypothesisCoding"))
+                              levels::AbstractVector,
+                              labels::AbstractVector) where {T<:AbstractMatrix}
         contrasts = pinv(hypotheses)
         S = typeof(contrasts)
         check_contrasts_size(contrasts, levels)
