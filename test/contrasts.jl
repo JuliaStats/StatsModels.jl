@@ -328,14 +328,14 @@
         @test_throws MethodError FullDummyCoding(levels=levs)
         @test_throws MethodError FullDummyCoding(base=base)
 
-        @test_throws ArgumentError HypothesisCoding(rand(3,4))
-        @test_throws ArgumentError HypothesisCoding(rand(3,4), levels=levs)
-        @test_throws ArgumentError HypothesisCoding(rand(3,4), labels=levs[1:3])
+        @test_throws UnderKeywordError HypothesisCoding(rand(3,4))
+        @test_throws UnderKeywordError HypothesisCoding(rand(3,4), levels=levs)
+        @test_throws UnderKeywordError HypothesisCoding(rand(3,4), labels=levs[1:3])
         c = HypothesisCoding(rand(3,4), levels=levs, labels=levs[1:3])
         @test baselevel(c) == nothing
         @test levels(c) == levs
         # no notion of base level for HypothesisCoding
-        @test_throws MethodError HypothesisCoding(rand(3,4), base=base)
+        @test_throws UndefKeywordError HypothesisCoding(rand(3,4), base=base)
 
         c = ContrastsCoding(rand(4,3))
         @test baselevel(c) == levels(c) == nothing
