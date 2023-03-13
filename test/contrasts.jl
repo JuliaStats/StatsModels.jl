@@ -375,7 +375,6 @@
         using SparseArrays
         contrasts = DummyCoding()
         mat = StatsModels.contrasts_matrix(contrasts, 1, 4)
-        spmat = sparse(mat)
 
         cmat = StatsModels.ContrastsMatrix(contrasts, 'a':'d')
         spcmat = StatsModels.ContrastsMatrix(sparse(cmat.matrix),
