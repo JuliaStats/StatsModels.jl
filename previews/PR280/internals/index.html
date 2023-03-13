@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Internals and extending the @formula · StatsModels.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">StatsModels.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Introduction</a></li><li><a class="tocitem" href="../formula/">Modeling tabular data</a></li><li class="is-active"><a class="tocitem" href>Internals and extending the <code>@formula</code></a><ul class="internal"><li><a class="tocitem" href="#The-lifecycle-of-a-@formula"><span>The lifecycle of a <code>@formula</code></span></a></li><li><a class="tocitem" href="#extending"><span>Extending <code>@formula</code> syntax</span></a></li></ul></li><li><a class="tocitem" href="../contrasts/">Contrast coding categorical variables</a></li><li><a class="tocitem" href="../temporal_terms/">Temporal variables and Time Series Terms</a></li><li><a class="tocitem" href="../api/">API documentation</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Internals and extending the <code>@formula</code></a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Internals and extending the <code>@formula</code></a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaStats/StatsModels.jl/blob/master/docs/src/internals.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Internals-and-extending-the-formula-DSL"><a class="docs-heading-anchor" href="#Internals-and-extending-the-formula-DSL">Internals and extending the formula DSL</a><a id="Internals-and-extending-the-formula-DSL-1"></a><a class="docs-heading-anchor-permalink" href="#Internals-and-extending-the-formula-DSL" title="Permalink"></a></h1><p>This section is intended to help <strong>package developers</strong> understand the internals of how a <code>@formula</code> becomes a numerical matrix, in order to use, manipulate, and even extend the DSL.  The Julia <code>@formula</code> is designed to be as extensible as possible through the normal Julian mechanisms of multiple dispatch.</p><h2 id="The-lifecycle-of-a-@formula"><a class="docs-heading-anchor" href="#The-lifecycle-of-a-@formula">The lifecycle of a <code>@formula</code></a><a id="The-lifecycle-of-a-@formula-1"></a><a class="docs-heading-anchor-permalink" href="#The-lifecycle-of-a-@formula" title="Permalink"></a></h2><p>A formula goes through a number of stages, starting as an expression that&#39;s passed to the <code>@formula</code> macro and ending up generating a numeric matrix when ultimately combined with a tabular data source:</p><ol><li>&quot;Syntax time&quot; when only the surface syntax is available, when the <code>@formula</code> macro is invoked.</li><li>&quot;Schema time&quot; incorporates information about <strong>data invariants</strong> (types of each variable, levels of categorical variables, summary statistics for continuous variables) and the overall structure of the <strong>data</strong>, during the invocation of <code>schema</code>.</li><li>&quot;Semantics time&quot; incorporates information about the <strong>model type (context)</strong>, and custom terms, during the call to <code>apply_schema</code>.</li><li>&quot;Data time&quot; when the actual data values themselves are available.</li></ol><p>For in-memory (columnar) tables, there is not much difference between &quot;data time&quot; and &quot;schema time&quot; in practice, but in principle it&#39;s important to distinguish between these when dealing with truly streaming data, or large data stores where calculating invariants of the data may be expensive.</p><h3 id="Syntax-time-(@formula)"><a class="docs-heading-anchor" href="#Syntax-time-(@formula)">Syntax time (<code>@formula</code>)</a><a id="Syntax-time-(@formula)-1"></a><a class="docs-heading-anchor-permalink" href="#Syntax-time-(@formula)" title="Permalink"></a></h3><p>The <code>@formula</code> macro does syntactic transformations of the formula expression. At this point, <em>only</em> the expression itself is available, and there&#39;s no way to know whether a term corresponds to a continuous or categorical variable.</p><p>For standard formulae, this amounts to applying the syntactic rules for the DSL operators (expanding <code>*</code> and applying the distributive and associative rules), and wrapping each symbol in a <code>Term</code> constructor:</p><pre><code class="language-julia-repl hljs">julia&gt; @macroexpand @formula(y ~ 1 + a*b)
+:(Term(:y) ~ ConstantTerm(1) + Term(:a) + Term(:b) + Term(:a) &amp; Term(:b))</code></pre><p>Note that much of the action happens <em>outside</em> the <code>@formula</code> macro, when the expression returned by the <code>@formula</code> macro is evaluated.  At this point, the <code>Term</code>s are combined to create higher-order terms via overloaded methods for <code>~</code>, <code>+</code>, and <code>&amp;</code>:</p><pre><code class="language-julia-repl hljs">julia&gt; using StatsModels;
+
+julia&gt; dump(Term(:a) &amp; Term(:b))
+InteractionTerm{Tuple{Term, Term}}
+  terms: Tuple{Term, Term}
+    1: Term
+      sym: Symbol a
+    2: Term
+      sym: Symbol b
+
+julia&gt; dump(Term(:a) + Term(:b))
+Tuple{Term, Term}
+  1: Term
+    sym: Symbol a
+  2: Term
+    sym: Symbol b
+
+julia&gt; dump(Term(:y) ~ Term(:a))
+FormulaTerm{Term, Term}
+  lhs: Term
+    sym: Symbol y
+  rhs: Term
+    sym: Symbol a</code></pre><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>As always, you can introspect which method is called with</p><pre><code class="language-julia hljs">julia&gt; @which Term(:a) &amp; Term(:b)
+&amp;(terms::AbstractTerm...) in StatsModels at /home/dave/.julia/dev/StatsModels/src/terms.jl:399</code></pre></div></div><p>The reason that the actual construction of higher-order terms is done after the macro is expanded is that it makes it much easier to create a formula programmatically:</p><pre><code class="language-julia-repl hljs">julia&gt; f = Term(:y) ~ sum(term.([1, :a, :b, :c]))
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown)
+  b(unknown)
+  c(unknown)
+
+julia&gt; f == @formula(y ~ 1 + a + b + c)
+true</code></pre><p>The major exception to this is that non-DSL calls <strong>must</strong> be specified using the <code>@formula</code> macro.  The reason for this is that non-DSL calls are &quot;captured&quot; and turned into anonymous functions that can be evaluated elementwise, which has to happen at compile time.  For instance, the call to <code>log</code> in <code>@formula(y ~ log(a+b))</code> is converted into the anonymous function <code>(a,b) -&gt; log(a+b)</code>.</p><p>Internally a lot of the work at syntax time is done by the <code>parse!</code> function.</p><h3 id="Schema-time-(schema)"><a class="docs-heading-anchor" href="#Schema-time-(schema)">Schema time (<code>schema</code>)</a><a id="Schema-time-(schema)-1"></a><a class="docs-heading-anchor-permalink" href="#Schema-time-(schema)" title="Permalink"></a></h3><p>The next phase of life for a formula requires some information about the data it will be used with.  This is represented by a <em>schema</em>, a mapping from placeholder <code>Term</code>s to <em>concrete</em> terms—like <code>ContinuousTerm</code> <code>CategoricalTerm</code>—which represent all the summary information about a data column necessary to create a model matrix from that column.</p><p>There are a number of ways to construct a schema, ranging from fully automatic to fully manual.</p><h4 id="Fully-automatic:-schema"><a class="docs-heading-anchor" href="#Fully-automatic:-schema">Fully automatic: <code>schema</code></a><a id="Fully-automatic:-schema-1"></a><a class="docs-heading-anchor-permalink" href="#Fully-automatic:-schema" title="Permalink"></a></h4><p>The most convenient way to automatically compute a schema is with the <code>schema</code> function.  By default, it will create a schema for every column in the data:</p><pre><code class="language-julia-repl hljs">julia&gt; using DataFrames    # for pretty printing---any Table will do
+
+julia&gt; using StableRNGs; rng = StableRNG(1);
+
+julia&gt; df = DataFrame(y = rand(rng, 9), a = 1:9, b = rand(rng, 9), c = repeat([&quot;a&quot;,&quot;b&quot;,&quot;c&quot;], 3))
+9×4 DataFrame
+ Row │ y          a      b         c
+     │ Float64    Int64  Float64   String
+─────┼────────────────────────────────────
+   1 │ 0.585195       1  0.236782  a
+   2 │ 0.0773379      2  0.943741  b
+   3 │ 0.716628       3  0.445671  c
+   4 │ 0.320357       4  0.763679  a
+   5 │ 0.653093       5  0.145071  b
+   6 │ 0.236639       6  0.021124  c
+   7 │ 0.709684       7  0.152545  a
+   8 │ 0.557787       8  0.617492  b
+   9 │ 0.05079        9  0.481531  c
+
+julia&gt; schema(df)
+StatsModels.Schema with 4 entries:
+  y =&gt; y
+  a =&gt; a
+  b =&gt; b
+  c =&gt; c</code></pre><p>However, if a term (including a <code>FormulaTerm</code>) is provided, the schema will be computed based only on the necessary variables:</p><pre><code class="language-julia-repl hljs">julia&gt; schema(@formula(y ~ 1 + a), df)
+StatsModels.Schema with 2 entries:
+  y =&gt; y
+  a =&gt; a
+
+julia&gt; schema(Term(:a) + Term(:b), df)
+StatsModels.Schema with 2 entries:
+  a =&gt; a
+  b =&gt; b</code></pre><h4 id="Fully-manual:-term-constructors"><a class="docs-heading-anchor" href="#Fully-manual:-term-constructors">Fully manual: term constructors</a><a id="Fully-manual:-term-constructors-1"></a><a class="docs-heading-anchor-permalink" href="#Fully-manual:-term-constructors" title="Permalink"></a></h4><p>While <code>schema</code> is a convenient way to generate a schema automatically from a data source, in some cases it may be preferable to create a schema manually.  In particular, <code>schema</code> performs a complete sweep through the data, and if your dataset is very large or truly streaming (online), then this may be undesirable.  In such cases, you can construct a schema from instances of the relevant concrete terms (<a href="../api/#StatsModels.ContinuousTerm"><code>ContinuousTerm</code></a> or <a href="../api/#StatsModels.CategoricalTerm"><code>CategoricalTerm</code></a>), in a number of ways.</p><p>The constructors for concrete terms provide the maximum level of control.  A <code>ContinuousTerm</code> stores values for the mean, standard deviation, minimum, and maximum, while a <code>CategoricalTerm</code> stores the <a href="../contrasts/#StatsModels.ContrastsMatrix"><code>StatsModels.ContrastsMatrix</code></a> that defines the mapping from levels to predictors, and these need to be manually supplied to the constructors:</p><div class="admonition is-warning"><header class="admonition-header">Warning</header><div class="admonition-body"><p>The format of the invariants stored in a term are implementation details and subject to change.</p></div></div><pre><code class="language-julia-repl hljs">julia&gt; cont_a = ContinuousTerm(:a, 0., 1., -1., 1.)
+a(continuous)
+
+julia&gt; cat_b = CategoricalTerm(:b, StatsModels.ContrastsMatrix(DummyCoding(), [:a, :b, :c]))
+b(DummyCoding:3→2)</code></pre><p>The <code>Term</code>-concrete term pairs can then be passed to the <code>StatsModels.Schema</code> constructor (a wrapper for the underlying <code>Dict{Term,AbstractTerm}</code>):</p><pre><code class="language-julia-repl hljs">julia&gt; sch1 = StatsModels.Schema(term(:a) =&gt; cont_a, term(:b) =&gt; cat_b)
+StatsModels.Schema with 2 entries:
+  a =&gt; a
+  b =&gt; b</code></pre><h4 id="Semi-automatic:-data-subsets"><a class="docs-heading-anchor" href="#Semi-automatic:-data-subsets">Semi-automatic: data subsets</a><a id="Semi-automatic:-data-subsets-1"></a><a class="docs-heading-anchor-permalink" href="#Semi-automatic:-data-subsets" title="Permalink"></a></h4><p>A slightly more convenient method for generating a schema is provided by the <a href="../api/#StatsModels.concrete_term"><code>concrete_term</code></a> internal function, which extracts invariants from a data column and returns a concrete type.  This can be used to generate concrete terms from data vectors constructed to have the same invariants that you care about in your actual data (e.g., the same unique values for categorical data, and the same minimum/maximum values or the same mean/variance for continuous):</p><pre><code class="language-julia-repl hljs">julia&gt; cont_a2 = concrete_term(term(:a), [-1., 1.])
+a(continuous)
+
+julia&gt; cat_b2 = concrete_term(term(:b), [:a, :b, :c])
+b(DummyCoding:3→2)
+
+julia&gt; sch2 = StatsModels.Schema(term(:a) =&gt; cont_a2, term(:b) =&gt; cat_b2)
+StatsModels.Schema with 2 entries:
+  a =&gt; a
+  b =&gt; b</code></pre><p>Finally, you could also call <code>schema</code> on a <code>NamedTuple</code> of vectors (e.g., a <code>Tables.ColumnTable</code>) with the necessary invariants:</p><pre><code class="language-julia-repl hljs">julia&gt; sch3 = schema((a=[-1., 1], b=[:a, :b, :c]))
+StatsModels.Schema with 2 entries:
+  a =&gt; a
+  b =&gt; b</code></pre><h3 id="Semantics-time-(apply_schema)"><a class="docs-heading-anchor" href="#Semantics-time-(apply_schema)">Semantics time (<code>apply_schema</code>)</a><a id="Semantics-time-(apply_schema)-1"></a><a class="docs-heading-anchor-permalink" href="#Semantics-time-(apply_schema)" title="Permalink"></a></h3><p>The next stage of life for a formula happens when <em>semantic</em> information is available, which includes the schema of the data to be transformed as well as the <em>context</em>, or the type of model that will be fit.  This stage is implemented by <a href="../api/#StatsModels.apply_schema"><code>apply_schema</code></a>.  Among other things, this <em>instantiates</em> placeholder terms:</p><ul><li><code>Term</code>s become <code>ContinuousTerm</code>s or <code>CategoricalTerm</code>s</li><li><code>ConstantTerm</code>s become <code>InterceptTerm</code>s</li><li>Tuples of terms become <a href="../api/#StatsModels.MatrixTerm"><code>MatrixTerm</code></a>s where appropriate to explicitly indicate they should be concatenated into a single model matrix</li><li>Any model-specific (context-specific) interpretation of the terms is made, including transforming calls to functions that have special meaning in particular contexts into their special term types (see the section on <a href="#extending">Extending <code>@formula</code> syntax</a> below)</li></ul><pre><code class="language-julia-repl hljs">julia&gt; f = @formula(y ~ 1 + a + b * c)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  a(unknown)
+  b(unknown)
+  c(unknown)
+  b(unknown) &amp; c(unknown)
+
+julia&gt; typeof(f)
+FormulaTerm{Term, Tuple{ConstantTerm{Int64}, Term, Term, Term, InteractionTerm{Tuple{Term, Term}}}}
+
+julia&gt; f = apply_schema(f, schema(f, df))
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  a(continuous)
+  b(continuous)
+  c(DummyCoding:3→2)
+  b(continuous) &amp; c(DummyCoding:3→2)
+
+julia&gt; typeof(f)
+FormulaTerm{ContinuousTerm{Float64}, MatrixTerm{Tuple{InterceptTerm{true}, ContinuousTerm{Float64}, ContinuousTerm{Float64}, CategoricalTerm{DummyCoding, String, 2}, InteractionTerm{Tuple{ContinuousTerm{Float64}, CategoricalTerm{DummyCoding, String, 2}}}}}}</code></pre><p>This transformation is done by calling <code>apply_schema(term, schema, modeltype)</code> recursively on each term (the <code>modeltype</code> defaults to <code>StatisticalModel</code> when fitting a statistical model, and <code>Nothing</code> if <code>apply_schema</code> is called with only two arguments).  Because <code>apply_schema</code> dispatches on the term, schema, and model type, this stage allows generic context-aware transformations, based on <em>both</em> the source (schema) <em>and</em> the destination (model type).  This is the primary mechanisms by which the formula DSL can be extended (<a href="#extending">see below</a> for more details)</p><h3 id="Data-time-(modelcols)"><a class="docs-heading-anchor" href="#Data-time-(modelcols)">Data time (<code>modelcols</code>)</a><a id="Data-time-(modelcols)-1"></a><a class="docs-heading-anchor-permalink" href="#Data-time-(modelcols)" title="Permalink"></a></h3><p>At the end of &quot;schema time&quot;, a formula encapsulates all the information needed to convert a table into a numeric model matrix.  That is, it is ready for &quot;data time&quot;.  The main API method is <a href="../api/#StatsModels.modelcols"><code>modelcols</code></a>, which when applied to a <code>FormulaTerm</code> returns a tuple of the numeric forms for the left- (response) and right-hand (predictor) sides.</p><pre><code class="language-julia-repl hljs">julia&gt; resp, pred = modelcols(f, df);
+
+julia&gt; resp
+9-element Vector{Float64}:
+ 0.5851946422124186
+ 0.07733793456911231
+ 0.7166282400543453
+ 0.3203570514066232
+ 0.6530930076222579
+ 0.2366391513734556
+ 0.7096838914472361
+ 0.5577872440804086
+ 0.05079002172175784
+
+julia&gt; pred
+9×7 Matrix{Float64}:
+ 1.0  1.0  0.236782  0.0  0.0  0.0       0.0
+ 1.0  2.0  0.943741  1.0  0.0  0.943741  0.0
+ 1.0  3.0  0.445671  0.0  1.0  0.0       0.445671
+ 1.0  4.0  0.763679  0.0  0.0  0.0       0.0
+ 1.0  5.0  0.145071  1.0  0.0  0.145071  0.0
+ 1.0  6.0  0.021124  0.0  1.0  0.0       0.021124
+ 1.0  7.0  0.152545  0.0  0.0  0.0       0.0
+ 1.0  8.0  0.617492  1.0  0.0  0.617492  0.0
+ 1.0  9.0  0.481531  0.0  1.0  0.0       0.481531
+</code></pre><p><code>modelcols</code> can also take a single row from a table, as a <code>NamedTuple</code>:</p><pre><code class="language-julia-repl hljs">julia&gt; using Tables
+
+julia&gt; modelcols(f, first(Tables.rowtable(df)))
+(0.5851946422124186, [1.0, 1.0, 0.236781883208121, 0.0, 0.0, 0.0, 0.0])
+</code></pre><p>Any <code>AbstractTerm</code> can be passed to <code>modelcols</code> with a table, which returns one or more numeric arrays:</p><pre><code class="language-julia-repl hljs">julia&gt; t = f.rhs.terms[end]
+b(continuous) &amp; c(DummyCoding:3→2)
+
+julia&gt; modelcols(t, df)
+9×2 Matrix{Float64}:
+ 0.0       0.0
+ 0.943741  0.0
+ 0.0       0.445671
+ 0.0       0.0
+ 0.145071  0.0
+ 0.0       0.021124
+ 0.0       0.0
+ 0.617492  0.0
+ 0.0       0.481531
+</code></pre><h2 id="extending"><a class="docs-heading-anchor" href="#extending">Extending <code>@formula</code> syntax</a><a id="extending-1"></a><a class="docs-heading-anchor-permalink" href="#extending" title="Permalink"></a></h2><p>Package authors may want to create additional syntax to the <code>@formula</code> DSL so their users can conveniently specify particular kinds of models.  StatsModels.jl provides mechanisms for such extensions that do <em>not</em> rely on compile time &quot;macro magic&quot;, but on standard julian mechanisms of multiple dispatch.</p><p>Extensions have three components:</p><ol><li><strong>Syntax</strong>: the Julia function which is given special meaning inside a formula.</li><li><strong>Context</strong>: the model type(s) where this extension applies</li><li><strong>Behavior</strong>: how tabular data is transformed under this extension</li></ol><p>These correspond to the stages summarized above (syntax time, schema time, and data time)</p><h3 id="An-example-of-custom-syntax:-poly"><a class="docs-heading-anchor" href="#An-example-of-custom-syntax:-poly">An example of custom syntax: <code>poly</code></a><a id="An-example-of-custom-syntax:-poly-1"></a><a class="docs-heading-anchor-permalink" href="#An-example-of-custom-syntax:-poly" title="Permalink"></a></h3><p>As an example, we&#39;ll add syntax for specifying a <a href="https://en.wikipedia.org/wiki/Polynomial_regression">polynomial regression</a> model, which fits a regression using polynomial basis functions of a continuous predictor.</p><p>The first step is to specify the <strong>syntax</strong> we&#39;re going to use.  While it&#39;s possible to use an existing function, the best practice is to define a new function to make dispatch less ambiguous.</p><pre><code class="language-julia hljs">using StatsBase
+# syntax: best practice to define a _new_ function
+poly(x, n) = x^n
+
+# type of model where syntax applies: here this applies to any model type
+const POLY_CONTEXT = Any
+
+# struct for behavior
+struct PolyTerm{T,D} &lt;: AbstractTerm
+    term::T
+    deg::D
+end
+
+Base.show(io::IO, p::PolyTerm) = print(io, &quot;poly($(p.term), $(p.deg))&quot;)
+
+# for `poly` use at run-time (outside @formula), return a schema-less PolyTerm
+poly(t::Symbol, d::Int) = PolyTerm(term(t), term(d))
+
+# for `poly` use inside @formula: create a schemaless PolyTerm and apply_schema
+function StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+                                  sch::StatsModels.Schema,
+                                  Mod::Type{&lt;:POLY_CONTEXT})
+    apply_schema(PolyTerm(t.args...), sch, Mod)
+end
+
+# apply_schema to internal Terms and check for proper types
+function StatsModels.apply_schema(t::PolyTerm,
+                                  sch::StatsModels.Schema,
+                                  Mod::Type{&lt;:POLY_CONTEXT})
+    term = apply_schema(t.term, sch, Mod)
+    isa(term, ContinuousTerm) ||
+        throw(ArgumentError(&quot;PolyTerm only works with continuous terms (got $term)&quot;))
+    isa(t.deg, ConstantTerm) ||
+        throw(ArgumentError(&quot;PolyTerm degree must be a number (got $t.deg)&quot;))
+    PolyTerm(term, t.deg.n)
+end
+
+function StatsModels.modelcols(p::PolyTerm, d::NamedTuple)
+    col = modelcols(p.term, d)
+    reduce(hcat, [col.^n for n in 1:p.deg])
+end
+
+# the basic terms contained within a PolyTerm (for schema extraction)
+StatsModels.terms(p::PolyTerm) = terms(p.term)
+# names variables from the data that a PolyTerm relies on
+StatsModels.termvars(p::PolyTerm) = StatsModels.termvars(p.term)
+# number of columns in the matrix this term produces
+StatsModels.width(p::PolyTerm) = p.deg
+
+StatsBase.coefnames(p::PolyTerm) = coefnames(p.term) .* &quot;^&quot; .* string.(1:p.deg)
+
+# output
+
+</code></pre><p>Now, we can use <code>poly</code> in a formula:</p><pre><code class="language-julia-repl hljs">julia&gt; data = DataFrame(y = rand(rng, 4), a = rand(rng, 4), b = [1:4;])
+4×3 DataFrame
+ Row │ y         a         b
+     │ Float64   Float64   Int64
+─────┼───────────────────────────
+   1 │ 0.752223  0.757746      1
+   2 │ 0.314815  0.419294      2
+   3 │ 0.858522  0.412607      3
+   4 │ 0.698713  0.454589      4
+
+julia&gt; f = @formula(y ~ 1 + poly(b, 2) * a)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  (b)-&gt;poly(b, 2)
+  a(unknown)
+  (b)-&gt;poly(b, 2) &amp; a(unknown)
+
+julia&gt; f = apply_schema(f, schema(data))
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  poly(b, 2)
+  a(continuous)
+  poly(b, 2) &amp; a(continuous)
+
+julia&gt; modelcols(f.rhs, data)
+4×6 Matrix{Float64}:
+ 1.0  1.0   1.0  0.757746  0.757746  0.757746
+ 1.0  2.0   4.0  0.419294  0.838587  1.67717
+ 1.0  3.0   9.0  0.412607  1.23782   3.71347
+ 1.0  4.0  16.0  0.454589  1.81836   7.27343
+
+julia&gt; coefnames(f.rhs)
+6-element Vector{String}:
+ &quot;(Intercept)&quot;
+ &quot;b^1&quot;
+ &quot;b^2&quot;
+ &quot;a&quot;
+ &quot;b^1 &amp; a&quot;
+ &quot;b^2 &amp; a&quot;
+</code></pre><p>And in a linear regression, with simulated data where there is an effect of <code>a^1</code> and of <code>b^2</code> (but not <code>a^2</code> or <code>b^1</code>):</p><pre><code class="language-julia-repl hljs">julia&gt; using GLM
+
+julia&gt; sim_dat = DataFrame(a=rand(rng, 100).-0.5, b=randn(rng, 100).-0.5);
+
+julia&gt; sim_dat.y = randn(rng, 100) .+ 1 .+ 2*sim_dat.a .+ 3*sim_dat.b.^2;
+
+julia&gt; fit(LinearModel, @formula(y ~ 1 + poly(a,2) + poly(b,2)), sim_dat)
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
+
+y ~ 1 + poly(a, 2) + poly(b, 2)
+
+Coefficients:
+──────────────────────────────────────────────────────────────────────────
+                 Coef.  Std. Error      t  Pr(&gt;|t|)   Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   0.89288    0.181485    4.92    &lt;1e-05   0.532586    1.25317
+a^1           2.73324    0.349194    7.83    &lt;1e-11   2.04001     3.42648
+a^2          -1.0114     1.34262    -0.75    0.4531  -3.67684     1.65404
+b^1           0.214424   0.136868    1.57    0.1205  -0.0572944   0.486142
+b^2           3.15133    0.0811794  38.82    &lt;1e-59   2.99016     3.31249
+──────────────────────────────────────────────────────────────────────────</code></pre><h3 id="extend-runtime"><a class="docs-heading-anchor" href="#extend-runtime">Making special syntax &quot;runtime friendly&quot;</a><a id="extend-runtime-1"></a><a class="docs-heading-anchor-permalink" href="#extend-runtime" title="Permalink"></a></h3><p>When used from the <code>@formula</code> macro, special syntax relies on dispatching on the <code>FunctionTerm{MyFunction}</code> type.  But when creating a formula at runtime without the <code>@formula</code> macro, <code>FunctionTerm</code>s aren&#39;t available, and so care must be taken to make sure you provide a runtime replacement.  The example for <code>poly</code> above shows how to do this, but we spell it out here in more detail.</p><p>The first step is to make sure you can create a schema-less instance of the <code>AbstractTerm</code> that implements your special syntax behavior.  For the <code>poly</code> example, that means we need to be able to create a <code>PolyTerm(term(column_name), term(poly_degree))</code>.  In order to do this, the types of the <code>term</code> and <code>deg</code> fields aren&#39;t specified but are parameters of the <code>PolyTerm</code> type.</p><p>The second step is to provide a runtime method for the special syntax function (<code>poly</code>), which accepts arguments in form that&#39;s convenient at runtime.  For this example, we&#39;ve defined <code>poly(s::Symbol, i::Int) = PolyTerm(term(s), term(i))</code>:</p><pre><code class="language-julia-repl hljs">julia&gt; pt = poly(:a, 3)
+poly(a, 3)
+
+julia&gt; typeof(pt) # contains schema-less `Term`
+PolyTerm{Term, ConstantTerm{Int64}}</code></pre><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>The functions like <code>poly</code> should be exported by the package that provides the special syntax for two reasons.  First, it makes run-time term  construction more convenient.  Second, because of how the <code>@formula</code> macro generates code, the function that represents special syntax must be available in the namespace where <code>@formula</code> is <em>called</em>.  This is because calls to arbitrary functions <code>f</code> are lowered to <code>FunctionTerm{typeof(f)}</code>.</p></div></div><p>Now we can programmatically construct <code>PolyTerm</code>s at run-time:</p><pre><code class="language-julia-repl hljs">julia&gt; my_col = :a; my_degree = 3;
+
+julia&gt; poly(my_col, my_degree)
+poly(a, 3)
+
+julia&gt; poly.([:a, :b], my_degree)
+2-element Vector{PolyTerm{Term, ConstantTerm{Int64}}}:
+ poly(a, 3)
+ poly(b, 3)</code></pre><p>These run-time <code>PolyTerm</code>s are &quot;schema-less&quot; though, and to be able to construct a model matrix from them we need to have a way to apply a schema.  Thus, the third and final step is to provide an <code>apply_schema</code> method that upgrades a schema-less instance to one with a schema (i.e., one that can be used with <code>modelcols</code>).  For example, we&#39;ve specified <code>apply_schema(pt::PolyTerm, ...)</code> which calls <code>apply_schema</code> on the wrapped <code>pt.term</code>, returning a new <code>PolyTerm</code> with the instantiated result:</p><pre><code class="language-julia-repl hljs">julia&gt; pt = apply_schema(PolyTerm(term(:b), term(2)),
+                         schema(data),
+                         StatisticalModel)
+poly(b, 2)
+
+julia&gt; typeof(pt) # now holds a `ContinuousTerm`
+PolyTerm{ContinuousTerm{Float64}, Int64}
+
+julia&gt; modelcols(pt, data)
+4×2 Matrix{Int64}:
+ 1   1
+ 2   4
+ 3   9
+ 4  16</code></pre><p>Now with these methods in place, we can run exactly the same polynomial regression as above (which used <code>@formula(y ~ 1 + poly(a, 2) + poly(b, 2)</code>), but with the predictor names and the polynomial degree stored in variables:</p><pre><code class="language-julia-repl hljs">julia&gt; poly_vars = (:a, :b); poly_deg = 2;
+
+julia&gt; poly_formula = term(:y) ~ term(1) + poly.(poly_vars, poly_deg)
+FormulaTerm
+Response:
+  y(unknown)
+Predictors:
+  1
+  poly(a, 2)
+  poly(b, 2)
+
+julia&gt; fit(LinearModel, poly_formula, sim_dat)
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
+
+y ~ 1 + poly(a, 2) + poly(b, 2)
+
+Coefficients:
+──────────────────────────────────────────────────────────────────────────
+                 Coef.  Std. Error      t  Pr(&gt;|t|)   Lower 95%  Upper 95%
+──────────────────────────────────────────────────────────────────────────
+(Intercept)   0.89288    0.181485    4.92    &lt;1e-05   0.532586    1.25317
+a^1           2.73324    0.349194    7.83    &lt;1e-11   2.04001     3.42648
+a^2          -1.0114     1.34262    -0.75    0.4531  -3.67684     1.65404
+b^1           0.214424   0.136868    1.57    0.1205  -0.0572944   0.486142
+b^2           3.15133    0.0811794  38.82    &lt;1e-59   2.99016     3.31249
+──────────────────────────────────────────────────────────────────────────</code></pre><h3 id="Defining-the-context-where-special-syntax-applies"><a class="docs-heading-anchor" href="#Defining-the-context-where-special-syntax-applies">Defining the context where special syntax applies</a><a id="Defining-the-context-where-special-syntax-applies-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-context-where-special-syntax-applies" title="Permalink"></a></h3><p>The third argument to <code>apply_schema</code> determines the contexts in which the special <code>poly</code> syntax applies.</p><p>For instance, it&#39;s possible to <em>block</em> interpretation of the <code>poly</code> syntax as special in certain contexts by adding additional (more specific) methods.  If for some reason we wanted to block <code>PolyTerm</code>s being generated for <code>GLM.LinearModel</code>, then we just need to add the appropriate method:</p><pre><code class="language-julia-repl hljs">julia&gt; StatsModels.apply_schema(t::FunctionTerm{typeof(poly)},
+                                sch::StatsModels.Schema,
+                                Mod::Type{GLM.LinearModel}) = t</code></pre><p>Now in the context of a <code>LinearModel</code>, the <code>poly</code> is interpreted as a call to the &quot;vanilla&quot; function defined first, which just raises its first argument to the designated power:</p><pre><code class="language-julia-repl hljs">julia&gt; f = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
+                        schema(data),
+                        GLM.LinearModel)
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  (b)-&gt;poly(b, 2)
+  a(continuous)
+  (b)-&gt;poly(b, 2) &amp; a(continuous)
+
+julia&gt; modelcols(f.rhs, data)
+4×4 Matrix{Float64}:
+ 1.0   1.0  0.757746  0.757746
+ 1.0   4.0  0.419294  1.67717
+ 1.0   9.0  0.412607  3.71347
+ 1.0  16.0  0.454589  7.27343
+
+julia&gt; coefnames(f.rhs)
+4-element Vector{String}:
+ &quot;(Intercept)&quot;
+ &quot;poly(b, 2)&quot;
+ &quot;a&quot;
+ &quot;poly(b, 2) &amp; a&quot;
+</code></pre><p>But by using a different context (e.g., the related but more general <code>GLM.GeneralizedLinearModel</code>) we get the custom interpretation:</p><pre><code class="language-julia-repl hljs">julia&gt; f2 = apply_schema(@formula(y ~ 1 + poly(b,2) * a),
+                         schema(data),
+                         GLM.GeneralizedLinearModel)
+FormulaTerm
+Response:
+  y(continuous)
+Predictors:
+  1
+  poly(b, 2)
+  a(continuous)
+  poly(b, 2) &amp; a(continuous)
+
+julia&gt; modelcols(f2.rhs, data)
+4×6 Matrix{Float64}:
+ 1.0  1.0   1.0  0.757746  0.757746  0.757746
+ 1.0  2.0   4.0  0.419294  0.838587  1.67717
+ 1.0  3.0   9.0  0.412607  1.23782   3.71347
+ 1.0  4.0  16.0  0.454589  1.81836   7.27343
+
+julia&gt; coefnames(f2.rhs)
+6-element Vector{String}:
+ &quot;(Intercept)&quot;
+ &quot;b^1&quot;
+ &quot;b^2&quot;
+ &quot;a&quot;
+ &quot;b^1 &amp; a&quot;
+ &quot;b^2 &amp; a&quot;</code></pre><p>The definitions of these methods control how models of each type are <em>fit</em> from a formula with a call to <code>poly</code>:</p><pre><code class="language-julia-repl hljs">julia&gt; sim_dat = DataFrame(b=randn(rng, 100));
+
+julia&gt; sim_dat.y = randn(rng, 100) .+ 1 .+ 2*sim_dat.b .+ 3*sim_dat.b.^2;
+
+julia&gt; fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
+
+y ~ 1 + :(poly(b, 2))
+
+Coefficients:
+───────────────────────────────────────────────────────────────────────
+               Coef.  Std. Error      t  Pr(&gt;|t|)  Lower 95%  Upper 95%
+───────────────────────────────────────────────────────────────────────
+(Intercept)  1.28118    0.324615   3.95    0.0001   0.636991    1.92537
+poly(b, 2)   2.95861    0.174347  16.97    &lt;1e-30   2.61262     3.30459
+───────────────────────────────────────────────────────────────────────
+
+julia&gt; fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
+StatsModels.TableRegressionModel{GeneralizedLinearModel{GLM.GlmResp{Vector{Float64}, Normal{Float64}, IdentityLink}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
+
+y ~ 1 + poly(b, 2)
+
+Coefficients:
+────────────────────────────────────────────────────────────────────────
+                Coef.  Std. Error      z  Pr(&gt;|z|)  Lower 95%  Upper 95%
+────────────────────────────────────────────────────────────────────────
+(Intercept)  0.906356   0.132613    6.83    &lt;1e-11    0.64644    1.16627
+b^1          2.03194    0.0908937  22.36    &lt;1e-99    1.85379    2.21008
+b^2          3.02886    0.0707228  42.83    &lt;1e-99    2.89025    3.16748
+────────────────────────────────────────────────────────────────────────
+</code></pre><p>(a <code>GeneralizeLinearModel</code> with a <code>Normal</code> distribution is equivalent to a <code>LinearModel</code>)</p><h3 id="Summary"><a class="docs-heading-anchor" href="#Summary">Summary</a><a id="Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Summary" title="Permalink"></a></h3><p>&quot;Custom syntax&quot; means that calls to a particular function in a formula are not interpreted as normal Julia code, but rather as a particular (possibly special) kind of term.</p><p>Custom syntax is a combination of <strong>syntax</strong> (Julia function) and <strong>term</strong> (subtype of <code>AbstractTerm</code>).  This syntax applies in a particular <strong>context</strong> (schema plus model type, designated via a method of <a href="../api/#StatsModels.apply_schema"><code>apply_schema</code></a>), transforming a <code>FunctionTerm{syntax}</code> into another (often custom) term type. This custom term type then specifies special <strong>behavior</strong> at data time (via a method for <a href="../api/#StatsModels.modelcols"><code>modelcols</code></a>).</p><p>Finally, note that it&#39;s easy for a package to intercept the formula terms and manipulate them directly as well, before calling <code>apply_schema</code> or <code>modelcols</code>.  This gives packages great flexibility in how they interpret formula terms.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../formula/">« Modeling tabular data</a><a class="docs-footer-nextpage" href="../contrasts/">Contrast coding categorical variables »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Monday 13 March 2023 22:03">Monday 13 March 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
