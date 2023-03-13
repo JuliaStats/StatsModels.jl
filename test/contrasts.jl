@@ -154,11 +154,13 @@
 
     hypotheses2 = pinv(contrasts2)
     # need labels for hypothesis coding
-    # TODO for a future release, make this an error
-    # @test_throws ArgumentError HypothesisCoding(hypotheses2)
+    @test_throws UndefKeywordError HypothesisCoding(hypotheses2)
+    @test_throws UndefKeywordError HypothesisCoding(hypotheses2; labels=["a", "b"])
+    @test_throws UndefKeywordError HypothesisCoding(hypotheses2; levels=["a", "b"])
 
     hyp_labels = ["2a+b-c", "-a+b+2c"]
-    setcontrasts!(mf, x = HypothesisCoding(hypotheses2, labels=hyp_labels))
+    levs = levels(d.x)
+    setcontrasts!(mf, x = HypothesisCoding(hypotheses2, labels=hyp_labels, levels=levs))
     @test ModelMatrix(mf).m ≈ [1  1  1
                                1  1  0
                                1  0  1
@@ -170,7 +172,7 @@
     hypotheses3 = [1 1 0
                    0 1 1]
     hyp_labels3 = ["a+b", "b+c"]
-    hc3 = HypothesisCoding(hypotheses3, labels=hyp_labels3)
+    hc3 = HypothesisCoding(hypotheses3, labels=hyp_labels3, levels=levs)
     setcontrasts!(mf, x = hc3)
     @test !(ModelMatrix(mf).m ≈ [1  1  1
                                  1  1  0
@@ -181,11 +183,11 @@
 
     # accepts <:AbstractMatrix
     hypotheses4 = hcat([1, 1, 0], [0, 1, 1])'
-    hc4 = HypothesisCoding(hypotheses4, labels=hyp_labels3)
+    hc4 = HypothesisCoding(hypotheses4, labels=hyp_labels3, levels=levs)
     @test hc4.contrasts ≈ hc3.contrasts
 
     # specify labels via Vector{Pair}
-    hc5 = HypothesisCoding(["a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]])
+    hc5 = HypothesisCoding(["a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]]; levels=levs)
     @test hc5.contrasts[:, 1] ≈ hc3.contrasts[:,1]
     @test hc5.contrasts[:, 2] ≈ hc3.contrasts[:,2]
     @test hc5.labels == ["a_and_b", "b_and_c"]
@@ -204,9 +206,11 @@
         effects_hyp = [-1 2 -1
                        -1 -1 2] ./ 3
 
+        levs = levels(d.x)
         @test modelmatrix(setcontrasts!(mf,
                                         x = HypothesisCoding(effects_hyp,
-                                                             labels=levels(d.x)[2:end]))) ≈
+                                                             levels=levs,
+                                                             labels=levs[2:end]))) ≈
             modelmatrix(setcontrasts!(mf, x = EffectsCoding()))
 
         d2 = DataFrame(y = rand(100),
@@ -215,13 +219,14 @@
         sdiff_hyp = HypothesisCoding([-1 1 0 0
                                       0 -1 1 0
                                       0 0 -1 1],
-                                     labels = ["b-a", "c-b", "d-c"])
+                                     labels=["b-a", "c-b", "d-c"],
+                                     levels=[:a, :b, :c, :d])
 
         effects_hyp = HypothesisCoding([-1 3 -1 -1
                                         -1 -1 3 -1
                                         -1 -1 -1 3] ./ 4,
-                                       labels = levels(d2.x)[2:end])
-
+                                       labels = levels(d2.x)[2:end],
+                                       levels=[:a, :b, :c, :d])
         f = apply_schema(@formula(y ~ 1 + x), schema(d2))
 
         f_sdiff = apply_schema(f, schema(d2, Dict(:x => sdiff_hyp)))
@@ -316,17 +321,6 @@
         @test baselevel(c) == levs[1]
         @test levels(c) == levs
 
-        c = @test_logs((:warn,
-                        "`base=` kwarg for `SeqDiffCoding` has no effect and is deprecated. " *
-                        "Specify full order of levels using `levels=` instead"),
-                       SeqDiffCoding(base=base))
-        @test baselevel(c) == nothing
-        @test levels(c) == nothing
-
-        c = SeqDiffCoding(base=base, levels=levs)
-        @test baselevel(c) == levs[1]
-        @test levels(c) == levs
-
         c = FullDummyCoding()
         @test baselevel(c) == nothing
         @test levels(c) == nothing
@@ -334,13 +328,14 @@
         @test_throws MethodError FullDummyCoding(levels=levs)
         @test_throws MethodError FullDummyCoding(base=base)
 
-        c = HypothesisCoding(rand(3,4))
-        @test baselevel(c) == levels(c) == nothing
-        c = HypothesisCoding(rand(3,4), levels=levs)
+        @test_throws UndefKeywordError HypothesisCoding(rand(3,4))
+        @test_throws UndefKeywordError HypothesisCoding(rand(3,4), levels=levs)
+        @test_throws UndefKeywordError HypothesisCoding(rand(3,4), labels=levs[1:3])
+        c = HypothesisCoding(rand(3,4), levels=levs, labels=levs[1:3])
         @test baselevel(c) == nothing
         @test levels(c) == levs
         # no notion of base level for HypothesisCoding
-        @test_throws MethodError HypothesisCoding(rand(3,4), base=base)
+        @test_throws UndefKeywordError HypothesisCoding(rand(3,4), base=base)
 
         c = ContrastsCoding(rand(4,3))
         @test baselevel(c) == levels(c) == nothing
@@ -374,6 +369,31 @@
         @test eltype(c.levels) == eltype(c1.levels)
 
         @test_throws ArgumentError ContrastsMatrix(DummyCoding(levels=[1, 2, 3]), x1_levs)
+    end
+
+    @testset "other matrix types" begin
+        using SparseArrays
+        contrasts = DummyCoding()
+        mat = StatsModels.contrasts_matrix(contrasts, 1, 4)
+
+        cmat = StatsModels.ContrastsMatrix(contrasts, 'a':'d')
+        spcmat = StatsModels.ContrastsMatrix(sparse(cmat.matrix),
+                                             cmat.termnames,
+                                             cmat.levels,
+                                             cmat.contrasts)
+
+        @test spcmat.matrix isa SparseMatrixCSC
+        @test cmat.matrix == spcmat.matrix
+
+        term = CategoricalTerm(:x, cmat)
+        spterm = CategoricalTerm(:x, spcmat)
+
+        mm = modelcols(term, (; x=repeat('a':'d'; inner=2)))
+        smm = modelcols(spterm, (; x=repeat('a':'d'; inner=2)))
+        
+        @test mm isa Matrix
+        @test smm isa SparseMatrixCSC
+        @test mm == smm
     end
     
 end

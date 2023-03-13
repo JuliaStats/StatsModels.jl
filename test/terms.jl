@@ -161,6 +161,7 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         no_responses = [term(0), InterceptTerm{false}()]
 
         has_intercepts = [term(1), InterceptTerm{true}()]
+        no_intercepts = [term(:x), FunctionTerm(log, [term(1), term(:x)], :(log(1+x)))]
         omits_intercepts = [term(0), term(-1), InterceptTerm{false}()]
 
         using StatsModels: hasresponse, hasintercept, omitsintercept
@@ -206,6 +207,26 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
             @test !hasresponse(lhs ~ rhs + a)
             @test !hasintercept(lhs ~ rhs + a)
             @test omitsintercept(lhs ~ rhs + a)
+        end
+
+        for lhs in has_responses, rhs in no_intercepts
+            @test hasresponse(lhs ~ rhs)
+            @test !hasintercept(lhs ~ rhs)
+            @test !omitsintercept(lhs ~ rhs)
+
+            @test hasresponse(lhs ~ rhs + a)
+            @test !hasintercept(lhs ~ rhs + a)
+            @test !omitsintercept(lhs ~ rhs + a)
+        end
+
+        for lhs in no_responses, rhs in no_intercepts
+            @test !hasresponse(lhs ~ rhs)
+            @test !hasintercept(lhs ~ rhs)
+            @test !omitsintercept(lhs ~ rhs)
+
+            @test !hasresponse(lhs ~ rhs + a)
+            @test !hasintercept(lhs ~ rhs + a)
+            @test !omitsintercept(lhs ~ rhs + a)
         end
 
     end
