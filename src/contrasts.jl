@@ -507,7 +507,11 @@ The above matrix is what is produced by constructing a [`ContrastsMatrix`](@ref)
 `HypothesisCoding` instance:
 
 ```jldoctest hyp
-julia> StatsModels.ContrastsMatrix(HypothesisCoding(sdiff_hypothesis), ["a", "b", "c", "d"]).matrix
+julia> seqdiff_hyp = HypothesisCoding(sdiff_hypothesis;
+                                      levels=["a", "b", "c", "d"],
+                                      labels=["b-a", "c-b", "d-c"]);
+
+julia> StatsModels.ContrastsMatrix(seqdiff_hyp, ["a", "b", "c", "d"]).matrix
 4×3 Matrix{Float64}:
  -0.75  -0.5  -0.25
   0.25  -0.5  -0.25
