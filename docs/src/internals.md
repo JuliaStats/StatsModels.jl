@@ -288,7 +288,7 @@ Predictors:
   b(continuous) & c(DummyCoding:3→2)
 
 julia> typeof(f)
-FormulaTerm{ContinuousTerm{Float64}, MatrixTerm{Tuple{InterceptTerm{true}, ContinuousTerm{Float64}, ContinuousTerm{Float64}, CategoricalTerm{DummyCoding, String, 2}, InteractionTerm{Tuple{ContinuousTerm{Float64}, CategoricalTerm{DummyCoding, String, 2}}}}}}
+FormulaTerm{ContinuousTerm{Float64}, MatrixTerm{Tuple{InterceptTerm{true}, ContinuousTerm{Float64}, ContinuousTerm{Float64}, CategoricalTerm{DummyCoding, Matrix{Float64}, 2}, InteractionTerm{Tuple{ContinuousTerm{Float64}, CategoricalTerm{DummyCoding, Matrix{Float64}, 2}}}}}}
 ```
 
 This transformation is done by calling `apply_schema(term, schema, modeltype)`
