@@ -32,7 +32,6 @@ export
     HelmertCoding,
     SeqDiffCoding,
     HypothesisCoding,
-    ContrastsCoding,
     
     coefnames,
     setcontrasts!,
