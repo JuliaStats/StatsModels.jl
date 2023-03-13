@@ -27,7 +27,7 @@
     non-special call).  The above recommendation may still Just Work™ but some
     thorough testing is recommended.
 
-  - It is not possible (although not exactly _convenient_) to construct
+  - It is now possible (although not exactly _convenient_) to construct
     `FunctionTerm`s at run-time (i.e., outside of a `@formula` macro).  See [the
     tests](https://github.com/JuliaStats/StatsModels.jl/blob/623906fa27ce84a1a2a5e62014d6b9f58d2ccd47/test/protect.jl#L23-L24)
     for an example of how this might be accomplished in practice.
