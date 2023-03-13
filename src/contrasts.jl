@@ -564,7 +564,8 @@ of the levels for each entry in the hypothesis vectors.  If omitted, the
 # Example
 
 ```jldoctest
-julia> hc = HypothesisCoding(["a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]]);
+julia> hc = HypothesisCoding(["a_and_b" => [1, 1, 0], "b_and_c" => [0, 1, 1]];
+                             levels=["a", "b", "c"]);
 
 julia> hc.hypotheses
 2×3 Matrix{Int64}:
@@ -578,7 +579,7 @@ julia> hc.labels
 ```
 """
 function HypothesisCoding(hypotheses::Vector{<:Pair{<:Any,<:AbstractVector}};
-                          levels::Union{AbstractVector,Nothing}=nothing)
+                          levels::AbstractVector)
     labels = first.(hypotheses)
     mat = reduce(vcat, adjoint.(last.(hypotheses)))
     HypothesisCoding(mat; labels=labels, levels=levels)
