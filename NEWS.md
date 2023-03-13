@@ -44,7 +44,7 @@
     contrasts matrix.
 
   - The number and order of type parameters on `ContrastsMatrix{C,M,T,U}` have
-    changed (from `ContrastsMatrix{C,T,U}`, with the addition of the second type
+    changed (from `ContrastsMatrix{C,T,U}`), with the addition of the second type
     parameter `M` capturing the type of the contrasts matrix.  This is unlikely
     to affect users but package developers must update anywhere they are
     specializing on `T` or `U` (which capture the `eltype` of the term names and
