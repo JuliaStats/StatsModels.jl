@@ -1,7 +1,5 @@
 @testset "formula" begin
 
-    using StatsModels: hasresponse, hasintercept, omitsintercept
-
     y, x1, x2, x3, a, b, c, onet = term.((:y, :x1, :x2, :x3, :a, :b, :c, 1))
 
     ## totally empty
