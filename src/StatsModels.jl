@@ -63,6 +63,10 @@ export
     protect,
     unprotect,
 
+    hasintercept,
+    omitsintercept,
+    hasresponse,
+
     lrtest
 
 const SPECIALS = (:+, :&, :*, :~)

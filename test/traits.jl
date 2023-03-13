@@ -1,4 +1,3 @@
-using StatsModels: hasintercept, omitsintercept
 import StatsModels: drop_intercept, implicit_intercept
 
 struct DroppyMod <: StatisticalModel end
