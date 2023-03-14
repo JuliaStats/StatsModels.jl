@@ -118,8 +118,9 @@
         @formula(foo ~ bar + baz)
 
     # drop_term no longer checks for whether term is found...
-    @test_broken drop_term(@formula(foo ~ bar + baz), term(0))
-    @test_broken drop_term(@formula(foo ~ bar + baz), term(:boz))
+    f = @formula(foo ~ bar + baz)
+    @test drop_term(f, term(0)) == f
+    @test drop_term(f, term(:boz)) == f
 
     form = @formula(foo ~ 1 + bar + baz)
     @test form == @formula(foo ~ 1 + bar + baz)
