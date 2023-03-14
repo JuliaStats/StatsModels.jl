@@ -198,7 +198,7 @@
 
     # contrasts types must be instantiated (should throw ArgumentError, currently
     # MethodError on apply_schema)
-    @test_broken setcontrasts!(mf, x = DummyCoding)
+    @test_throws ArgumentError setcontrasts!(mf, x = DummyCoding)
 
     @testset "hypothesis coding" begin
 

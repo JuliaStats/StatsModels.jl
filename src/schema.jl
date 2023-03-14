@@ -215,6 +215,11 @@ function concrete_term(t::Term, xs::AbstractArray, contrasts::AbstractContrasts)
     CategoricalTerm(t.sym, contrmat)
 end
 
+# this catches early when someone provides `:x => DummyCoding` as a hint
+function concrete_term(t::Term, xs::AbstractArray, ::Type{T}) where {T<:AbstractContrasts}
+    throw(ArgumentError("contrast types must be instantiated (use $T() instead of $T)"))
+end
+
 """
     apply_schema(t, schema::StatsModels.Schema[, Mod::Type = Nothing])
 
