@@ -1,4 +1,5 @@
 using Test
+using Aqua
 using LinearAlgebra
 using SparseArrays
 
@@ -23,6 +24,10 @@ my_tests = ["ambiguity.jl",
             "protect.jl"]
 
 @testset "StatsModels" begin
+    @testset "aqua" begin
+        Aqua.test_all(StatsModels; ambiguities=false)
+    end
+
     for tf in my_tests
         include(tf)
     end
