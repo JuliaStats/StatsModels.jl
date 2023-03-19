@@ -18,7 +18,7 @@ using Tables: ColumnTable
 using REPL: levenshtein
 
 export
-    #re-export from StatsBase:
+    #reexport from StatsBase:
     StatisticalModel,
     RegressionModel,
 
@@ -48,7 +48,7 @@ export
     FunctionTerm,
     MatrixTerm,
 
-    lag, lead, # Rexported from ShiftedArrays
+    lag, lead, # Reexported from ShiftedArrays
 
     term,
     terms,
