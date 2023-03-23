@@ -39,7 +39,7 @@ implicit_intercept(::Type{YesImplicit}) = true
 
         @testset "categorical promotion" begin 
             # drop_intercept == true means that model should always ACT like
-            # intercept is present even if it's not specified or even ommitted.
+            # intercept is present even if it's not specified or even omitted.
             # (pushes intercept term to the FullRank already seen terms list).
 
             # full dummy coding
