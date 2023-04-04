@@ -274,4 +274,14 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test_throws ArgumentError concrete_term(term(:not_there), t )
     end
 
+    @testset "sort by degree in ~" begin
+        one, a, b = term.([1, :a, :b])
+
+        @test a + one == (a, one)
+        @test (a ~ a + one) == (a ~ one + a)
+
+        @test a & b + one + a == (a & b, one, a)
+        @test (a ~ a & b + one + a) == (a ~ one + a + a & b)
+    end
+
 end
