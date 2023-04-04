@@ -414,6 +414,8 @@ Base.:*(a::TermOrTerms, b::TermOrTerms) = a + b + a&b
 cleanup(terms::TupleTerm) = Tuple(sort!(unique!(collect(terms)), by=degree))
 cleanup(x) = x
 
+degree(::ConstantTerm) = 0
+degree(::InterceptTerm) = 0
 degree(::AbstractTerm) = 1
 degree(t::InteractionTerm) = mapreduce(degree, +, t.terms)
 # dirty hack, move to MixedModels.jl
