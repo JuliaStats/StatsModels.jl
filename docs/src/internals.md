@@ -513,7 +513,7 @@ julia> sim_dat = DataFrame(a=rand(rng, 100).-0.5, b=randn(rng, 100).-0.5);
 julia> sim_dat.y = randn(rng, 100) .+ 1 .+ 2*sim_dat.a .+ 3*sim_dat.b.^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(a,2) + poly(b,2)), sim_dat)
-LinearModel
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 y ~ 1 + poly(a, 2) + poly(b, 2)
 
@@ -622,7 +622,7 @@ Predictors:
   poly(b, 2)
 
 julia> fit(LinearModel, poly_formula, sim_dat)
-LinearModel
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 y ~ 1 + poly(a, 2) + poly(b, 2)
 
@@ -729,7 +729,7 @@ julia> sim_dat = DataFrame(b=randn(rng, 100));
 julia> sim_dat.y = randn(rng, 100) .+ 1 .+ 2*sim_dat.b .+ 3*sim_dat.b.^2;
 
 julia> fit(LinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat)
-LinearModel
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 y ~ 1 + :(poly(b, 2))
 
@@ -742,7 +742,7 @@ poly(b, 2)   2.95861    0.174347  16.97    <1e-30   2.61262     3.30459
 ───────────────────────────────────────────────────────────────────────
 
 julia> fit(GeneralizedLinearModel, @formula(y ~ 1 + poly(b,2)), sim_dat, Normal())
-GeneralizedLinearModel
+StatsModels.TableRegressionModel{GeneralizedLinearModel{GLM.GlmResp{Vector{Float64}, Normal{Float64}, IdentityLink}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 y ~ 1 + poly(b, 2)
 

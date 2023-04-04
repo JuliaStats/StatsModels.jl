@@ -220,7 +220,7 @@ julia> using GLM
 
 
 julia> lm(@formula(log(y) ~ 1 + a + b), df)
-LinearModel
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 :(log(y)) ~ 1 + a + b
 
@@ -236,7 +236,7 @@ b            -1.63199      1.12678   -1.45    0.1977  -4.38911    1.12513
 julia> df.log_y = log.(df.y);
 
 julia> lm(@formula(log_y ~ 1 + a + b), df)            # equivalent
-LinearModel
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 log_y ~ 1 + a + b
 
@@ -368,7 +368,7 @@ julia> response(f, df)
  -2.980055366491228
  
 julia> lm(f, df)
-LinearModel
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 :(log(y)) ~ 1 + a + b
 
@@ -412,7 +412,7 @@ julia> ϵ = randn(rng, 100)*0.1;
 julia> data.y = X*β_true .+ ϵ;
 
 julia> mod = fit(LinearModel, @formula(y ~ 1 + a*b), data)
-LinearModel
+StatsModels.TableRegressionModel{LinearModel{GLM.LmResp{Vector{Float64}}, GLM.DensePredChol{Float64, LinearAlgebra.CholeskyPivoted{Float64, Matrix{Float64}, Vector{Int64}}}}, Matrix{Float64}}
 
 y ~ 1 + a + b + a & b
 
