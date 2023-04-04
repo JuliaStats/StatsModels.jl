@@ -15,7 +15,6 @@ jobs:
       - uses: julia-actions/setup-julia@v1
         with:
           version: '1.8'
-      - run: julia --project=docs -e 'using Pkg; pkg"add GLM#dfk/statsmodels-7"'
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-docdeploy@latest
         env:
