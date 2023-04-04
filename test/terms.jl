@@ -276,12 +276,13 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
 
     @testset "sort by degree in ~" begin
         one, a, b = term.([1, :a, :b])
+        for zero_deg in [one, InterceptTerm{true}(), InterceptTerm{false}()]
+            @test a + zero_deg == (a, zero_deg)
+            @test (a ~ a + zero_deg) == (a ~ zero_deg + a)
 
-        @test a + one == (a, one)
-        @test (a ~ a + one) == (a ~ one + a)
-
-        @test a & b + one + a == (a & b, one, a)
-        @test (a ~ a & b + one + a) == (a ~ one + a + a & b)
+            @test a & b + zero_deg + a == (a & b, zero_deg, a)
+            @test (a ~ a & b + zero_deg + a) == (a ~ zero_deg + a + a & b)
+        end
     end
 
 end
