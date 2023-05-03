@@ -53,22 +53,26 @@ end
 _missing_omit(x::AbstractVector{T}) where T = copyto!(similar(x, nonmissingtype(T)), x)
 _missing_omit(x::AbstractVector, rows) = _missing_omit(view(x, rows))
     
-function missing_omit(d::T) where T<:ColumnTable
+function _maybe_missing_omit(d::T) where T<:ColumnTable
     nonmissings = trues(length(first(d)))
-    for col in d
-        _nonmissing!(nonmissings, col)
-    end
-    d_nonmissing = if all(nonmissings)
-        map(_missing_omit, d)
+    if any(eltype(col) >: Missing for col in d) 
+        for col in d
+            _nonmissing!(nonmissings, col)
+        end
+        d_nonmissing = if all(nonmissings)
+            map(_missing_omit, d)
+        else
+            rows = findall(nonmissings)
+            map(Base.Fix2(_missing_omit, rows), d)
+        end
+        return d_nonmissing, nonmissings
     else
-        rows = findall(nonmissings)
-        map(Base.Fix2(_missing_omit, rows), d)
+        return d, nonmissings
     end
-    d_nonmissing, nonmissings
 end
 
-missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
-    missing_omit(NamedTuple{tuple(termvars(formula)...)}(data))
+_maybe_missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
+    _maybe_missing_omit(NamedTuple{tuple(termvars(formula)...)}(data))
 
 function ModelFrame(f::FormulaTerm, data::ColumnTable;
                     model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
@@ -78,7 +82,7 @@ function ModelFrame(f::FormulaTerm, data::ColumnTable;
         throw(ArgumentError(msg))
     end
 
-    data, _ = missing_omit(data, f)
+    data, _ = _maybe_missing_omit(data, f)
 
     sch = schema(f, data, contrasts)
     f = apply_schema(f, sch, M)
