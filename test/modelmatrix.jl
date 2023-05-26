@@ -413,6 +413,10 @@
         y, x = modelcols(apply_schema(f0, schema(d)), d)
         @test eltype(y) == eltype(x) == Float32
 
+        fint = @formula(y ~ 1 + z)
+        y, x = modelcols(apply_schema(fint, schema(d)), d)
+        @test eltype(x) == Int
+
         contr = DummyCoding(; base=4, levels=1:4)
         d = (; y=rand(Float32, 4), x=rand(Float32, 4), z=[1:4; ])
 
