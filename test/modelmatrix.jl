@@ -417,9 +417,6 @@
         y, x = modelcols(apply_schema(fint, schema(d)), d)
         @test eltype(x) == Int
 
-        contr = DummyCoding(; base=4, levels=1:4)
-        d = (; y=rand(Float32, 4), x=rand(Float32, 4), z=[1:4; ])
-
         # currently this is the best way to construct contrasts with Float32s...
         dummy_cmat = Float32[1 0 0
                              0 1 0
