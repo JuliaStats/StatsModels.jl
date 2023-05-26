@@ -547,8 +547,10 @@ function modelcols(t::InteractionTerm, d::ColumnTable)
     row_kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
 end
 
-modelcols(t::InterceptTerm{true}, d::NamedTuple) = ones(size(first(d)))
-modelcols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1), 0)
+# use Bool as the eltype here to avoid promoting e.g. Float32s in other columns
+# to Float64 unless it's really necessary
+modelcols(t::InterceptTerm{true}, d::NamedTuple) = ones(Bool, size(first(d)))
+modelcols(t::InterceptTerm{false}, d) = Matrix{Bool}(undef, size(first(d),1), 0)
 
 modelcols(t::FormulaTerm, d::NamedTuple) = (modelcols(t.lhs,d), modelcols(t.rhs, d))
 
