@@ -506,6 +506,13 @@ lazy_modelcols(x, d) = modelcols(x, d)
 
                 
 
+# this is weird, but using import Base: copy leads to exporting type piracy
+# for non missing values, the compiler should hopefully optimize down the extra
+# layer of indirection
+function copy end
+copy(x::Any) = Base.copy(x)
+copy(m::Missing) = m
+
 modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
 
 modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
