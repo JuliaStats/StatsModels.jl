@@ -87,7 +87,7 @@ mutable struct MyCoding <: AbstractContrasts
 end
 
 contrasts_matrix(C::MyCoding, baseind, n) = ...
-termnames(C::MyCoding, levels, baseind) = ...
+_termnames(C::MyCoding, levels, baseind) = ...
 ```
 
 # References
@@ -198,7 +198,7 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
                             "$c_levels."))
     end
 
-    tnames = termnames(contrasts, c_levels, baseind)
+    tnames = _termnames(contrasts, c_levels, baseind)
 
     mat = contrasts_matrix(contrasts, baseind, n)
 
@@ -224,7 +224,7 @@ function ContrastsMatrix(c::ContrastsMatrix, levels::AbstractVector)
     return c
 end
 
-function termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Integer)
+function _termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Integer)
     not_base = [1:(baseind-1); (baseind+1):length(levels)]
     levels[not_base]
 end
@@ -233,7 +233,7 @@ Base.getindex(contrasts::ContrastsMatrix, rowinds, colinds) =
     getindex(contrasts.matrix, getindex.(Ref(contrasts.invindex), rowinds), colinds)
 
 # Making a contrast type T only requires that there be a method for
-# contrasts_matrix(T,  baseind, n) and optionally termnames(T, levels, baseind)
+# contrasts_matrix(T,  baseind, n) and optionally _termnames(T, levels, baseind)
 # The rest is boilerplate.
 for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
     @eval begin
@@ -462,7 +462,7 @@ function contrasts_matrix(C::SeqDiffCoding, _, n)
 end
 
 # TODO: consider customizing term names:
-# termnames(C::SeqDiffCoding, levels::AbstractVector, baseind::Integer) =
+# _termnames(C::SeqDiffCoding, levels::AbstractVector, baseind::Integer) =
 #     ["$(levels[i])-$(levels[i-1])" for i in 2:length(levels)]
 
 """
@@ -591,7 +591,7 @@ function contrasts_matrix(C::HypothesisCoding, baseind, n)
     C.contrasts
 end
 
-termnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
+_termnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
     something(C.labels, levels[1:length(levels) .!= baseind])
 
 DataAPI.levels(c::HypothesisCoding) = c.levels

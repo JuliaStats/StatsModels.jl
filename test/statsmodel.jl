@@ -161,6 +161,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     ## test copying of names from Terms to CoefTable
     ct = coeftable(m)
     @test ct.rownms == ["(Intercept)", "x1", "x2", "x1 & x2"]
+    @test termnames(m) == ("y", ["(Intercept)", "x1", "x2", "x1 & x2"])
 
     ## show with coeftable defined
     io = IOBuffer()
@@ -171,6 +172,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     m2 = fit(DummyMod, f2, d)
 
     @test coeftable(m2).rownms == ["(Intercept)", "x1p: 6", "x1p: 7", "x1p: 8"]
+    @test termnames(m2) == ("y", ["(Intercept)", "x1p"])
 
     ## predict w/ new data missing levels
     @test predict(m2, d[2:4, :]) == predict(m2)[2:4]
@@ -233,6 +235,13 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     m2 = fit(DummyModTwo, f, d)
     # make sure show() still works when there is no coeftable method
     show(io, m2)
+
+    # one final termnames check
+    # note that `1` is still a ConstantTerm and not yet InterceptTerm
+    # because apply_schema hasn't been called
+    @test termnames(@formula(y ~ 1 + log(x) * y + (1+x|g)))[2] == 
+          ["1", "log(x)", "y", "log(x) & y", "(1 + x) | g"]
+          
 end
 
 @testset "lrtest" begin
