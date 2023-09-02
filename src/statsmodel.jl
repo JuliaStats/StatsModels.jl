@@ -108,15 +108,14 @@ formula(m::TableRegressionModel) = m.mf.f
 
 """
     termnames(model::StatisticalModel)
-    termnames(term::AbstractTerm)
 
-Return the names associated with terms associated with a model.
+Return the names of terms used in the formula of `model`.
 
-For models with only continuous predictors, this is the same as
+For regression models with only continuous predictors, this is the same as
 `(responsename(model), coefnames(model))`.
 
 For models with categorical predictors, the returned names reflect
-the categorical predictor and not the coefficients resulting from
+the variable name and not the coefficients resulting from
 the choice of contrast coding.
 
 ```jldoctest
@@ -139,7 +138,7 @@ termnames(t::CategoricalTerm) = string(t.sym)
 termnames(t::Term) = string(t.sym)
 termnames(t::ConstantTerm) = string(t.n)
 termnames(t::FunctionTerm) = string(t.exorig)
-termnames(ts::TupleTerm) = reduce(vcat, termnames.(ts))
+termnames(ts::TupleTerm) = mapreduce(termnames, vcat, ts)
 termnames(t::MatrixTerm) = mapreduce(termnames, vcat, t.terms)
 termnames(t::InteractionTerm) =
     kron_insideout((args...) -> join(args, " & "), vectorize.(termnames.(t.terms))...)
@@ -149,7 +148,7 @@ termnames(t::InteractionTerm) =
         contrasts::Dict{Symbol}, kwargs...)
 
 Convert tabular data into a numeric response vector and predictor matrix using
-the formula `f`, and then `fit` the specified model type, wrapping Stthe result in
+the formula `f`, and then `fit` the specified model type, wrapping the result in
 a [`TableRegressionModel`](@ref) or [`TableStatisticalModel`](@ref) (as
 appropriate).
 
