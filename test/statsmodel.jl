@@ -234,14 +234,30 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     m2 = fit(DummyModTwo, f, d)
     # make sure show() still works when there is no coeftable method
-    show(io, m2)
+    show(io, m2)          
+end
 
+@testset "termnames" begin
     # one final termnames check
     # note that `1` is still a ConstantTerm and not yet InterceptTerm
     # because apply_schema hasn't been called
     @test termnames(@formula(y ~ 1 + log(x) * y + (1+x|g)))[2] == 
           ["1", "log(x)", "y", "log(x) & y", "(1 + x) | g"]
-          
+    @test termnames(ConstantTerm(1)) == "1"
+    @test termnames(Term(:x)) == "x"
+    @test termnames(InterceptTerm{true}()) == "(Intercept)"
+    @test termnames(InterceptTerm{false}()) === nothing
+    @test termnames(ContinuousTerm(:x, 1, 0, 0, 0)) == "x"
+    cm = StatsModels.ContrastsMatrix([1 0; 0 1], ["b", "c"], ["a", "b", "c"], DummyCoding())
+    @test termnames(CategoricalTerm(:x, cm)) =="x"
+    @test termnames(FunctionTerm(log, [Term(:x)], :(log(x)))) == "log(x)"
+    # these next few seem a little weird but they're consistent with the 
+    # definition of coefnames
+    @test termnames(InteractionTerm(term.((:a, :b, :c)))) == ["a & b & c"]
+    @test termnames(MatrixTerm(term(:a))) == "a"
+    @test termnames(MatrixTerm((term(:a), term(:b)))) == ["a", "b"]
+    @test termnames((term(:a), term(:b))) == ["a", "b"]
+    @test termnames((term(:a),)) == "a"
 end
 
 @testset "lrtest" begin
