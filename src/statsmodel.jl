@@ -120,9 +120,8 @@ the categorical predictor and not the coefficients resulting from
 the choice of contrast coding.
 
 ```jldoctest
- julia> termnames(@formula(y ~ 1 + x * y + (1+x|g)))
- termnames( @formula(y ~ 1 + log(x) * log(y) + (1+x|g)))
- ("y", ["1", "log(x)", "log(y)", "log(x) & log(y)", "(1 + x) | g"])
+julia> termnames(@formula(y ~ 1 + x * y + (1+x|g)))
+("y", ["1", "x", "y", "x & y", "(1 + x) | g"])
 ```
 """
 termnames(model::StatisticalModel) = termnames(formula(model))
