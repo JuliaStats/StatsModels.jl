@@ -121,6 +121,7 @@ the variable name and not the coefficients resulting from
 the choice of contrast coding.
 """
 termnames(model::StatisticalModel) = termnames(formula(model))
+
 """
     termnames(t::FormulaTerm)
 
