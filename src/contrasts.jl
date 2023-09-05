@@ -224,7 +224,6 @@ function ContrastsMatrix(c::ContrastsMatrix, levels::AbstractVector)
     return c
 end
 
-
 function StatsAPI.coefnames(C::AbstractContrasts, levels::AbstractVector, baseind::Integer)
     not_base = [1:(baseind-1); (baseind+1):length(levels)]
     levels[not_base]
