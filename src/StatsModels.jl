@@ -38,7 +38,7 @@ export
     coefnames,
     setcontrasts!,
     formula,
-    termnames,
+    variablenames,
 
     AbstractTerm,
     ConstantTerm,

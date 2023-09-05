@@ -107,12 +107,12 @@ formula(m::TableStatisticalModel) = m.mf.f
 formula(m::TableRegressionModel) = m.mf.f
 
 """
-    termnames(model::StatisticalModel)
+    variablenames(model::StatisticalModel)
 
 Return the names of terms used in the formula of `model`.
 
-This is a convenience method for `termnames(formula(model))`, which returns a
-two-tuple of `termnames` applied to the left and right hand sides of the formula.
+This is a convenience method for `variablenames(formula(model))`, which returns a
+two-tuple of `variablenames` applied to the left and right hand sides of the formula.
 
 For `RegressionModel`s with only continuous predictors, this is the same as
 `(responsename(model), coefnames(model))`.
@@ -120,13 +120,15 @@ For `RegressionModel`s with only continuous predictors, this is the same as
 For models with categorical predictors, the returned names reflect
 the variable name and not the coefficients resulting from
 the choice of contrast coding.
+
+See also [`coefnames`](@ref).
 """
-termnames(model::StatisticalModel) = termnames(formula(model))
+variablenames(model::StatisticalModel) = variablenamesames(formula(model))
 
 """
-    termnames(t::FormulaTerm)
+    variablenames(t::FormulaTerm)
 
-Return a two-tuple of `termnames` applied to the left and
+Return a two-tuple of `variablenames` applied to the left and
 right hand sides of the formula.
 
 !!! note
@@ -135,7 +137,7 @@ right hand sides of the formula.
     returned term names.
 
 ```jldoctest
-julia> termnames(@formula(y ~ 1 + x * y + (1+x|g)))
+julia> variablenames(@formula(y ~ 1 + x * y + (1+x|g)))
 ("y", ["1", "x", "y", "x & y", "(1 + x) | g"])
 ```
 
@@ -144,34 +146,34 @@ in their term names, because the implicit intercept does not exist until
 `apply_schema` is called (and may not exist for certain model contexts).
 
 ```jldoctest
-julia> termnames(@formula(y ~ x * y + (1+x|g)))
+julia> variablenames(@formula(y ~ x * y + (1+x|g)))
 ("y", ["x", "y", "x & y", "(1 + x) | g"])
 ```
 """
-termnames(t::FormulaTerm) = (termnames(t.lhs), termnames(t.rhs))
+variablenames(t::FormulaTerm) = (variablenames(t.lhs), variablenames(t.rhs))
 
 """
-    termnames(term::AbstractTerm)
+    variablenames(term::AbstractTerm)
 
 Return the name of a term.
 
 Return value is either a `String`, an iterable of `String`s or nothing if there
-no associated name (e.g. `termnames(InterceptTerm{false}())`).
+no associated name (e.g. `variablenames(InterceptTerm{false}())`).
 """
-termnames(::InterceptTerm{H}) where {H} = H ? "(Intercept)" : nothing
-termnames(t::ContinuousTerm) = string(t.sym)
-termnames(t::CategoricalTerm) = string(t.sym)
-termnames(t::Term) = string(t.sym)
-termnames(t::ConstantTerm) = string(t.n)
-termnames(t::FunctionTerm) = string(t.exorig)
-# termnames(TupleTerm)) always returns a vector, even if it's just one element, e.g.,
-# termnames((term(:a),))
-termnames(ts::TupleTerm) = mapreduce(termnames, vcat, ts; init=String[])
-# termnames(MatrixTerm)) always returns a vector, even if it's just one element, e.g.,
-# termnames(MatrixTerm(term(:a)))
-termnames(t::MatrixTerm) = mapreduce(termnames, vcat, t.terms; init=String[])
-termnames(t::InteractionTerm) =
-    only(kron_insideout((args...) -> join(args, " & "), vectorize.(termnames.(t.terms))...))
+variablenames(::InterceptTerm{H}) where {H} = H ? "(Intercept)" : nothing
+variablenames(t::ContinuousTerm) = string(t.sym)
+variablenames(t::CategoricalTerm) = string(t.sym)
+variablenames(t::Term) = string(t.sym)
+variablenames(t::ConstantTerm) = string(t.n)
+variablenames(t::FunctionTerm) = string(t.exorig)
+# variablenames(TupleTerm)) always returns a vector, even if it's just one element, e.g.,
+# variablenames((term(:a),))
+variablenames(ts::TupleTerm) = mapreduce(variablenames, vcat, ts; init=String[])
+# variablenames(MatrixTerm)) always returns a vector, even if it's just one element, e.g.,
+# variablenames(MatrixTerm(term(:a)))
+variablenames(t::MatrixTerm) = mapreduce(variablenames, vcat, t.terms; init=String[])
+variablenames(t::InteractionTerm) =
+    only(kron_insideout((args...) -> join(args, " & "), vectorize.(variablenames.(t.terms))...))
 
 @doc """
     fit(Mod::Type{<:StatisticalModel}, f::FormulaTerm, data, args...;

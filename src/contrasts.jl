@@ -108,16 +108,16 @@ struct ContrastsMatrix{C <: AbstractContrasts, M <: AbstractMatrix, T, U}
     contrasts::C
     invindex::Dict{T,Int}
     function ContrastsMatrix(matrix::M,
-                             termnames::Vector{U},
+                             coefnames::Vector{U},
                              levels::Vector{T},
                              contrasts::C) where {U, T, C <: AbstractContrasts, M <: AbstractMatrix}
         allunique(levels) || throw(ArgumentError("levels must be all unique, got $(levels)"))
         invindex = Dict{T,Int}(x=>i for (i,x) in enumerate(levels))
-        new{C,M,T,U}(matrix, termnames, levels, contrasts, invindex)
+        new{C,M,T,U}(matrix, coefnames, levels, contrasts, invindex)
     end
 end
 
-# only check equality of matrix, termnames, and levels, and that the type is the
+# only check equality of matrix, coefnames, and levels, and that the type is the
 # same for the contrasts (values are irrelevant).  This ensures that the two
 # will behave identically in creating modelmatrix columns
 Base.:(==)(a::ContrastsMatrix{C}, b::ContrastsMatrix{C}) where {C<:AbstractContrasts} =
