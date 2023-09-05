@@ -166,10 +166,10 @@ termnames(t::ConstantTerm) = string(t.n)
 termnames(t::FunctionTerm) = string(t.exorig)
 # termnames(TupleTerm)) alwyas returns a vector, even if it's just one element, e.g.,
 # termnames((term(:a),))
-termnames(ts::TupleTerm) = mapreduce(termnames, vcat, ts; init=[])
+termnames(ts::TupleTerm) = mapreduce(termnames, vcat, ts; init=String[])
 # termnames(MatrixTerm)) alwyas returns a vector, even if it's just one element, e.g.,
 # termnames(MatrixTerm(term(:a)))
-termnames(t::MatrixTerm) = mapreduce(termnames, vcat, t.terms; init=[])
+termnames(t::MatrixTerm) = mapreduce(termnames, vcat, t.terms; init=String[])
 function termnames(t::InteractionTerm)
     only(kron_insideout((args...) -> join(args, " & "), vectorize.(termnames.(t.terms))...))
 end
