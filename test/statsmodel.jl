@@ -246,10 +246,10 @@ end
     @test variablenames(ConstantTerm(1)) == "1"
     @test variablenames(Term(:x)) == "x"
     @test variablenames(InterceptTerm{true}()) == "(Intercept)"
-    @test variablenames(InterceptTerm{false}()) === nothing
+    @test variablenames(InterceptTerm{false}()) == String[]
     @test variablenames(ContinuousTerm(:x, 1, 0, 0, 0)) == "x"
     cm = StatsModels.ContrastsMatrix([1 0; 0 1], ["b", "c"], ["a", "b", "c"], DummyCoding())
-    @test variablenames(CategoricalTerm(:x, cm)) =="x"
+    @test variablenames(CategoricalTerm(:x, cm)) == "x"
     @test variablenames(FunctionTerm(log, [Term(:x)], :(log(x)))) == "log(x)"
     @test variablenames(InteractionTerm(term.((:a, :b, :c)))) == "a & b & c"
     @test variablenames(MatrixTerm(term(:a))) == ["a"]

@@ -123,7 +123,7 @@ the choice of contrast coding.
 
 See also [`coefnames`](@ref).
 """
-variablenames(model::StatisticalModel) = variablenamesames(formula(model))
+variablenames(model::StatisticalModel) = variablenames(formula(model))
 
 """
     variablenames(t::FormulaTerm)
@@ -160,7 +160,7 @@ Return the name of a term.
 Return value is either a `String`, an iterable of `String`s or nothing if there
 no associated name (e.g. `variablenames(InterceptTerm{false}())`).
 """
-variablenames(::InterceptTerm{H}) where {H} = H ? "(Intercept)" : nothing
+variablenames(::InterceptTerm{H}) where {H} = H ? "(Intercept)" : String[]
 variablenames(t::ContinuousTerm) = string(t.sym)
 variablenames(t::CategoricalTerm) = string(t.sym)
 variablenames(t::Term) = string(t.sym)
