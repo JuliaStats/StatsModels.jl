@@ -9,7 +9,7 @@ using DataStructures
 using DataAPI
 using DataAPI: levels
 using Printf: @sprintf
-using StatsAPI: coefnames, fit, predict, predict!
+using StatsAPI: coefnames, fit, predict, dof
 using StatsFuns: chisqccdf
 
 using SparseArrays
