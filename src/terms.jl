@@ -619,7 +619,7 @@ julia> variablenames(@formula(y ~ 1 + x * y + (1+x|g)))
 ```
 
 Similarly, formulae with an implicit intercept will not have a `"1"`
-in their term names, because the implicit intercept does not exist until
+in their variable names, because the implicit intercept does not exist until
 `apply_schema` is called (and may not exist for certain model contexts).
 
 ```jldoctest
@@ -634,8 +634,8 @@ variablenames(t::FormulaTerm) = (variablenames(t.lhs), variablenames(t.rhs))
 
 Return the name of the statistical variable associated with a term.
 
-Return value is either a `String`, an iterable of `String`s or nothing if there
-no associated name (e.g. `variablenames(InterceptTerm{false}())`).
+Return value is either a `String`, an iterable of `String`s or the empty vector 
+if there is no associated variable (e.g. `variablenames(InterceptTerm{false}())`).
 """
 variablenames(::InterceptTerm{H}) where {H} = H ? "(Intercept)" : String[]
 variablenames(t::ContinuousTerm) = string(t.sym)
