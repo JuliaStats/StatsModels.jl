@@ -131,8 +131,8 @@ right hand sides of the formula.
 
 !!! note
     Until `apply_schema` has been called, literal `1` in formulae
-is interpreted as `ConstantTerm(1)` and will thus appear as `"1"` in the
-returned term names.
+    is interpreted as `ConstantTerm(1)` and will thus appear as `"1"` in the
+    returned term names.
 
 ```jldoctest
 julia> termnames(@formula(y ~ 1 + x * y + (1+x|g)))
