@@ -251,13 +251,11 @@ end
     cm = StatsModels.ContrastsMatrix([1 0; 0 1], ["b", "c"], ["a", "b", "c"], DummyCoding())
     @test termnames(CategoricalTerm(:x, cm)) =="x"
     @test termnames(FunctionTerm(log, [Term(:x)], :(log(x)))) == "log(x)"
-    # these next few seem a little weird but they're consistent with the
-    # definition of coefnames
-    @test termnames(InteractionTerm(term.((:a, :b, :c)))) == ["a & b & c"]
-    @test termnames(MatrixTerm(term(:a))) == "a"
+    @test termnames(InteractionTerm(term.((:a, :b, :c)))) == "a & b & c"
+    @test termnames(MatrixTerm(term(:a))) == ["a"]
     @test termnames(MatrixTerm((term(:a), term(:b)))) == ["a", "b"]
     @test termnames((term(:a), term(:b))) == ["a", "b"]
-    @test termnames((term(:a),)) == "a"
+    @test termnames((term(:a),)) == ["a"]
 end
 
 @testset "lrtest" begin
