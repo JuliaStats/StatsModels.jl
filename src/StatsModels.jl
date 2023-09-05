@@ -84,5 +84,6 @@ include("formula.jl")
 include("modelframe.jl")
 include("statsmodel.jl")
 include("lrtest.jl")
+include("deprecated.jl")
 
 end # module StatsModels

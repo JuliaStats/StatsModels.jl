@@ -226,7 +226,7 @@ width(::CategoricalTerm{C,T,N}) where {C,T,N} = N
 
 # constructor that computes the width based on the contrasts matrix
 CategoricalTerm(sym::Symbol, contrasts::ContrastsMatrix{C,T}) where {C,T} =
-    CategoricalTerm{C,T,length(contrasts.termnames)}(sym, contrasts)
+    CategoricalTerm{C,T,length(contrasts.coefnames)}(sym, contrasts)
 
 """
     MatrixTerm{Ts} <: AbstractTerm
@@ -574,7 +574,7 @@ StatsAPI.coefnames(t::FormulaTerm) = (coefnames(t.lhs), coefnames(t.rhs))
 StatsAPI.coefnames(::InterceptTerm{H}) where {H} = H ? "(Intercept)" : []
 StatsAPI.coefnames(t::ContinuousTerm) = string(t.sym)
 StatsAPI.coefnames(t::CategoricalTerm) =
-    ["$(t.sym): $name" for name in t.contrasts.termnames]
+    ["$(t.sym): $name" for name in t.contrasts.coefnames]
 StatsAPI.coefnames(t::FunctionTerm) = string(t.exorig)
 StatsAPI.coefnames(ts::TupleTerm) = reduce(vcat, coefnames.(ts))
 StatsAPI.coefnames(t::MatrixTerm) = mapreduce(coefnames, vcat, t.terms)

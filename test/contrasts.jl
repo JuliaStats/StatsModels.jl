@@ -1,5 +1,9 @@
 @testset "contrasts" begin
 
+    cm = StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b"])
+    @test_logs (:warn, "The `termnames` field has been renamed `coefnames`.") cm.termnames
+    @test cm.termnames == cm.coefnames
+
     d = DataFrame(y = rand(6),
                   x = [:b, :a, :c, :a, :a, :b])
 
@@ -378,7 +382,7 @@
 
         cmat = StatsModels.ContrastsMatrix(contrasts, 'a':'d')
         spcmat = StatsModels.ContrastsMatrix(sparse(cmat.matrix),
-                                             cmat.termnames,
+                                             cmat.coefnames,
                                              cmat.levels,
                                              cmat.contrasts)
 

@@ -103,7 +103,7 @@ abstract type AbstractContrasts end
 # Contrasts + Levels (usually from data) = ContrastsMatrix
 struct ContrastsMatrix{C <: AbstractContrasts, M <: AbstractMatrix, T, U}
     matrix::M
-    termnames::Vector{U} # XXX this is somewhat of a misnomer, this should be coefnames...
+    coefnames::Vector{U}
     levels::Vector{T}
     contrasts::C
     invindex::Dict{T,Int}
@@ -122,11 +122,11 @@ end
 # will behave identically in creating modelmatrix columns
 Base.:(==)(a::ContrastsMatrix{C}, b::ContrastsMatrix{C}) where {C<:AbstractContrasts} =
     a.matrix == b.matrix &&
-    a.termnames == b.termnames &&
+    a.coefnames == b.coefnames &&
     a.levels == b.levels
 
 Base.hash(a::ContrastsMatrix{C}, h::UInt) where {C} =
-    hash(C, hash(a.matrix, hash(a.termnames, hash(a.levels, h))))
+    hash(C, hash(a.matrix, hash(a.coefnames, hash(a.levels, h))))
 
 """
 An instantiation of a contrast coding system for particular levels
@@ -224,9 +224,6 @@ function ContrastsMatrix(c::ContrastsMatrix, levels::AbstractVector)
     return c
 end
 
-@deprecate(termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Integer),
-           coefnames(C::AbstractContrasts, levels::AbstractVector, baseind::Integer),
-           false)
 
 function StatsAPI.coefnames(C::AbstractContrasts, levels::AbstractVector, baseind::Integer)
     not_base = [1:(baseind-1); (baseind+1):length(levels)]
