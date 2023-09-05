@@ -19,7 +19,7 @@ StatsAPI.coeftable(mod::DummyMod) =
               0)
 # dumb predict: return values predicted by "beta" and dummy confidence bounds
 function StatsAPI.predict(mod::DummyMod;
-                           interval::Union{Nothing,Symbol}=nothing)
+                          interval::Union{Nothing,Symbol}=nothing)
     pred = mod.x * mod.beta
     if interval === nothing
         return pred
@@ -30,7 +30,7 @@ function StatsAPI.predict(mod::DummyMod;
     end
 end
 function StatsAPI.predict(mod::DummyMod, newX::Matrix;
-                           interval::Union{Nothing,Symbol}=nothing)
+                          interval::Union{Nothing,Symbol}=nothing)
     pred = newX * mod.beta
     if interval === nothing
         return pred

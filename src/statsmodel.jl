@@ -76,8 +76,8 @@ for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
                                  (:RegressionModel, TableRegressionModel))
     @eval begin
         function StatsAPI.fit(::Type{T}, f::FormulaTerm, data, args...;
-                               contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(),
-                               kwargs...) where T<:$modeltype
+                              contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(),
+                              kwargs...) where T<:$modeltype
 
             Tables.istable(data) || throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
             cols = columntable(data)
@@ -164,15 +164,14 @@ termnames(t::CategoricalTerm) = string(t.sym)
 termnames(t::Term) = string(t.sym)
 termnames(t::ConstantTerm) = string(t.n)
 termnames(t::FunctionTerm) = string(t.exorig)
-# termnames(TupleTerm)) alwyas returns a vector, even if it's just one element, e.g.,
+# termnames(TupleTerm)) always returns a vector, even if it's just one element, e.g.,
 # termnames((term(:a),))
 termnames(ts::TupleTerm) = mapreduce(termnames, vcat, ts; init=String[])
-# termnames(MatrixTerm)) alwyas returns a vector, even if it's just one element, e.g.,
+# termnames(MatrixTerm)) always returns a vector, even if it's just one element, e.g.,
 # termnames(MatrixTerm(term(:a)))
 termnames(t::MatrixTerm) = mapreduce(termnames, vcat, t.terms; init=String[])
-function termnames(t::InteractionTerm)
+termnames(t::InteractionTerm) =
     only(kron_insideout((args...) -> join(args, " & "), vectorize.(termnames.(t.terms))...))
-end
 
 @doc """
     fit(Mod::Type{<:StatisticalModel}, f::FormulaTerm, data, args...;
