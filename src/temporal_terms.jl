@@ -64,7 +64,7 @@ function Base.show(io::IO, ll::LeadLagTerm{<:Any, F}) where F
     opname = string(nameof(F.instance))
     print(io, "$opname($(ll.term), $(ll.nsteps))")
 end
-function StatsBase.coefnames(ll::LeadLagTerm{<:Any, F}) where F
+function StatsAPI.coefnames(ll::LeadLagTerm{<:Any, F}) where F
     opname = string(nameof(F.instance))
     coefnames(ll.term) .* "_$opname$(ll.nsteps)"
 end

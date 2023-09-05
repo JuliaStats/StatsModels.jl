@@ -8,17 +8,17 @@ struct DummyMod <: RegressionModel
 end
 
 ## dumb fit method: just copy the x and y input over
-StatsBase.fit(::Type{DummyMod}, x::Matrix, y::Vector) =
+StatsAPI.fit(::Type{DummyMod}, x::Matrix, y::Vector) =
     DummyMod(collect(1:size(x, 2)), x, y)
-StatsBase.response(mod::DummyMod) = mod.y
+StatsAPI.response(mod::DummyMod) = mod.y
 ## dumb coeftable: just prints the "beta" values
-StatsBase.coeftable(mod::DummyMod) =
+StatsAPI.coeftable(mod::DummyMod) =
     CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
               ["'beta' value"],
               ["" for n in 1:size(mod.x,2)],
               0)
 # dumb predict: return values predicted by "beta" and dummy confidence bounds
-function StatsBase.predict(mod::DummyMod;
+function StatsAPI.predict(mod::DummyMod;
                            interval::Union{Nothing,Symbol}=nothing)
     pred = mod.x * mod.beta
     if interval === nothing
@@ -29,7 +29,7 @@ function StatsBase.predict(mod::DummyMod;
         throw(ArgumentError("value not allowed for interval"))
     end
 end
-function StatsBase.predict(mod::DummyMod, newX::Matrix;
+function StatsAPI.predict(mod::DummyMod, newX::Matrix;
                            interval::Union{Nothing,Symbol}=nothing)
     pred = newX * mod.beta
     if interval === nothing
@@ -40,15 +40,15 @@ function StatsBase.predict(mod::DummyMod, newX::Matrix;
         throw(ArgumentError("value not allowed for interval"))
     end
 end
-StatsBase.dof(mod::DummyMod) = length(mod.beta)
-StatsBase.dof_residual(mod::DummyMod) = length(mod.y) - length(mod.beta)
-StatsBase.nobs(mod::DummyMod) = length(mod.y)
-StatsBase.deviance(mod::DummyMod) = sum((response(mod) .- predict(mod)).^2)
+StatsAPI.dof(mod::DummyMod) = length(mod.beta)
+StatsAPI.dof_residual(mod::DummyMod) = length(mod.y) - length(mod.beta)
+StatsAPI.nobs(mod::DummyMod) = length(mod.y)
+StatsAPI.deviance(mod::DummyMod) = sum((response(mod) .- predict(mod)).^2)
 # Incorrect but simple definition
 StatsModels.isnested(mod1::DummyMod, mod2::DummyMod; atol::Real=0.0) =
     dof(mod1) <= dof(mod2)
-StatsBase.loglikelihood(mod::DummyMod) = -sum((response(mod) .- predict(mod)).^2)
-StatsBase.loglikelihood(mod::DummyMod, ::Colon) = -(response(mod) .- predict(mod)).^2
+StatsAPI.loglikelihood(mod::DummyMod) = -sum((response(mod) .- predict(mod)).^2)
+StatsAPI.loglikelihood(mod::DummyMod, ::Colon) = -(response(mod) .- predict(mod)).^2
 
 # A dummy RegressionModel type that does not support intercept
 struct DummyModNoIntercept <: RegressionModel
@@ -60,17 +60,17 @@ end
 StatsModels.drop_intercept(::Type{DummyModNoIntercept}) = true
 
 ## dumb fit method: just copy the x and y input over
-StatsBase.fit(::Type{DummyModNoIntercept}, x::Matrix, y::Vector) =
+StatsAPI.fit(::Type{DummyModNoIntercept}, x::Matrix, y::Vector) =
     DummyModNoIntercept(collect(1:size(x, 2)), x, y)
-StatsBase.response(mod::DummyModNoIntercept) = mod.y
+StatsAPI.response(mod::DummyModNoIntercept) = mod.y
 ## dumb coeftable: just prints the "beta" values
-StatsBase.coeftable(mod::DummyModNoIntercept) =
+StatsAPI.coeftable(mod::DummyModNoIntercept) =
     CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
               ["'beta' value"],
               ["" for n in 1:size(mod.x,2)],
               0)
 # dumb predict: return values predicted by "beta" and dummy confidence bounds
-function StatsBase.predict(mod::DummyModNoIntercept;
+function StatsAPI.predict(mod::DummyModNoIntercept;
                            interval::Union{Nothing,Symbol}=nothing)
     pred = mod.x * mod.beta
     if interval === nothing
@@ -81,7 +81,7 @@ function StatsBase.predict(mod::DummyModNoIntercept;
         throw(ArgumentError("value not allowed for interval"))
     end
 end
-function StatsBase.predict(mod::DummyModNoIntercept, newX::Matrix;
+function StatsAPI.predict(mod::DummyModNoIntercept, newX::Matrix;
                            interval::Union{Nothing,Symbol}=nothing)
     pred = newX * mod.beta
     if interval === nothing
@@ -92,20 +92,20 @@ function StatsBase.predict(mod::DummyModNoIntercept, newX::Matrix;
         throw(ArgumentError("value not allowed for interval"))
     end
 end
-StatsBase.dof(mod::DummyModNoIntercept) = length(mod.beta)
-StatsBase.dof_residual(mod::DummyModNoIntercept) = length(mod.y) - length(mod.beta)
-StatsBase.nobs(mod::DummyModNoIntercept) = length(mod.y)
-StatsBase.deviance(mod::DummyModNoIntercept) = sum((response(mod) .- predict(mod)).^2)
+StatsAPI.dof(mod::DummyModNoIntercept) = length(mod.beta)
+StatsAPI.dof_residual(mod::DummyModNoIntercept) = length(mod.y) - length(mod.beta)
+StatsAPI.nobs(mod::DummyModNoIntercept) = length(mod.y)
+StatsAPI.deviance(mod::DummyModNoIntercept) = sum((response(mod) .- predict(mod)).^2)
 # isnested not implemented to test fallback
-StatsBase.loglikelihood(mod::DummyModNoIntercept) = -sum((response(mod) .- predict(mod)).^2)
-StatsBase.loglikelihood(mod::DummyModNoIntercept, ::Colon) = -(response(mod) .- predict(mod)).^2
+StatsAPI.loglikelihood(mod::DummyModNoIntercept) = -sum((response(mod) .- predict(mod)).^2)
+StatsAPI.loglikelihood(mod::DummyModNoIntercept, ::Colon) = -(response(mod) .- predict(mod)).^2
 
 ## Another dummy model type to test fall-through show method
 struct DummyModTwo <: RegressionModel
     msg::String
 end
 
-StatsBase.fit(::Type{DummyModTwo}, ::Matrix, ::Vector) = DummyModTwo("hello!")
+StatsAPI.fit(::Type{DummyModTwo}, ::Matrix, ::Vector) = DummyModTwo("hello!")
 Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
 @testset "stat model types" begin
@@ -234,14 +234,14 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     m2 = fit(DummyModTwo, f, d)
     # make sure show() still works when there is no coeftable method
-    show(io, m2)          
+    show(io, m2)
 end
 
 @testset "termnames" begin
     # one final termnames check
     # note that `1` is still a ConstantTerm and not yet InterceptTerm
     # because apply_schema hasn't been called
-    @test termnames(@formula(y ~ 1 + log(x) * y + (1+x|g)))[2] == 
+    @test termnames(@formula(y ~ 1 + log(x) * y + (1+x|g)))[2] ==
           ["1", "log(x)", "y", "log(x) & y", "(1 + x) | g"]
     @test termnames(ConstantTerm(1)) == "1"
     @test termnames(Term(:x)) == "x"
@@ -251,7 +251,7 @@ end
     cm = StatsModels.ContrastsMatrix([1 0; 0 1], ["b", "c"], ["a", "b", "c"], DummyCoding())
     @test termnames(CategoricalTerm(:x, cm)) =="x"
     @test termnames(FunctionTerm(log, [Term(:x)], :(log(x)))) == "log(x)"
-    # these next few seem a little weird but they're consistent with the 
+    # these next few seem a little weird but they're consistent with the
     # definition of coefnames
     @test termnames(InteractionTerm(term.((:a, :b, :c)))) == ["a & b & c"]
     @test termnames(MatrixTerm(term(:a))) == "a"
@@ -287,7 +287,7 @@ end
         ──────────────────────────────────────────────────────
              DOF  ΔDOF    LogLik  Deviance    Chisq  p(>Chisq)
         ──────────────────────────────────────────────────────
-        [1]    1        -14.0000   14.0000                    
+        [1]    1        -14.0000   14.0000
         [2]    2     1   -3.2600    3.2600  21.4800     <1e-05
         ──────────────────────────────────────────────────────"""
 
@@ -332,7 +332,7 @@ end
             ──────────────────────────────────────────────────────
                  DOF  ΔDOF    LogLik  Deviance    Chisq  p(>Chisq)
             ──────────────────────────────────────────────────────
-            [1]    0        -30.0000   30.0000                    
+            [1]    0        -30.0000   30.0000
             [2]    1     1  -10.8600   10.8600  38.2800     <1e-09
             ──────────────────────────────────────────────────────"""
     else
@@ -341,7 +341,7 @@ end
             ──────────────────────────────────────────────────────
                  DOF  ΔDOF    LogLik  Deviance    Chisq  p(>Chisq)
             ──────────────────────────────────────────────────────
-            [1]    0        -30.0000   30.0000                    
+            [1]    0        -30.0000   30.0000
             [2]    1     1  -10.8600   10.8600  38.2800      <1e-9
             ──────────────────────────────────────────────────────"""
     end

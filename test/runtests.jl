@@ -6,6 +6,7 @@ using SparseArrays
 using StatsModels
 using DataFrames
 using CategoricalArrays
+using StatsAPI
 using StatsBase
 
 using StatsModels: ContrastsMatrix

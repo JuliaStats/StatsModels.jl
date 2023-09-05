@@ -53,7 +53,7 @@ C(levels = ::Vector{Any}, base = ::Any) # specify levels and base
   mean of the lower levels
 * [`SeqDiffCoding`](@ref) - Code for differences between sequential levels of
   the variable.
-* [`HypothesisCoding`](@ref) - Manually specify contrasts via a hypothesis 
+* [`HypothesisCoding`](@ref) - Manually specify contrasts via a hypothesis
   matrix, which gives the weighting for the average response for each level
 * [`StatsModels.ContrastsCoding`](@ref) - Manually specify contrasts matrix,
   which is directly copied into the model matrix.
@@ -79,7 +79,7 @@ The easiest way to specify custom contrasts is with `HypothesisCoding` or
 contrast coding system, you can subtype `AbstractContrasts`.  This requires a
 constructor, a `contrasts_matrix` method for constructing the actual contrasts
 matrix that maps from levels to `ModelMatrix` column values, and (optionally) a
-`termnames` method:
+`coefnames` method:
 
 ```julia
 mutable struct MyCoding <: AbstractContrasts
@@ -87,7 +87,7 @@ mutable struct MyCoding <: AbstractContrasts
 end
 
 contrasts_matrix(C::MyCoding, baseind, n) = ...
-_termnames(C::MyCoding, levels, baseind) = ...
+coefnames(C::MyCoding, levels, baseind) = ...
 ```
 
 # References
@@ -103,7 +103,7 @@ abstract type AbstractContrasts end
 # Contrasts + Levels (usually from data) = ContrastsMatrix
 struct ContrastsMatrix{C <: AbstractContrasts, M <: AbstractMatrix, T, U}
     matrix::M
-    termnames::Vector{U}
+    termnames::Vector{U} # XXX this is somewhat of a misnomer, this should be coefnames...
     levels::Vector{T}
     contrasts::C
     invindex::Dict{T,Int}
@@ -166,7 +166,7 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
     # 3. contrast levels missing from data: would have empty columns, generate a
     #    rank-deficient model matrix.
     c_levels = something(DataAPI.levels(contrasts), levels)
-    
+
     mismatched_levels = symdiff(c_levels, levels)
     if !isempty(mismatched_levels)
         throw(ArgumentError("contrasts levels not found in data or vice-versa: " *
@@ -198,7 +198,7 @@ function ContrastsMatrix(contrasts::C, levels::AbstractVector{T}) where {C<:Abst
                             "$c_levels."))
     end
 
-    tnames = _termnames(contrasts, c_levels, baseind)
+    tnames = coefnames(contrasts, c_levels, baseind)
 
     mat = contrasts_matrix(contrasts, baseind, n)
 
@@ -224,7 +224,11 @@ function ContrastsMatrix(c::ContrastsMatrix, levels::AbstractVector)
     return c
 end
 
-function _termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Integer)
+@deprecate(termnames(C::AbstractContrasts, levels::AbstractVector, baseind::Integer),
+           coefnames(C::AbstractContrasts, levels::AbstractVector, baseind::Integer),
+           false)
+
+function StatsAPI.coefnames(C::AbstractContrasts, levels::AbstractVector, baseind::Integer)
     not_base = [1:(baseind-1); (baseind+1):length(levels)]
     levels[not_base]
 end
@@ -233,7 +237,7 @@ Base.getindex(contrasts::ContrastsMatrix, rowinds, colinds) =
     getindex(contrasts.matrix, getindex.(Ref(contrasts.invindex), rowinds), colinds)
 
 # Making a contrast type T only requires that there be a method for
-# contrasts_matrix(T,  baseind, n) and optionally _termnames(T, levels, baseind)
+# contrasts_matrix(T,  baseind, n) and optionally coefnames(T, levels, baseind)
 # The rest is boilerplate.
 for contrastType in [:DummyCoding, :EffectsCoding, :HelmertCoding]
     @eval begin
@@ -254,7 +258,7 @@ DataAPI.levels(c::AbstractContrasts) = nothing
     FullDummyCoding()
 
 Full-rank dummy coding generates one indicator (1 or 0) column for each level,
-**including** the base level. This is sometimes known as 
+**including** the base level. This is sometimes known as
 [one-hot encoding](https://en.wikipedia.org/wiki/One-hot).
 
 Not exported but included here for the sake of completeness.
@@ -331,7 +335,7 @@ column is generated with 1 where `variable .== x` and -1 where `variable .== bas
 of 0.
 
 If `levels` are omitted or `nothing`, they are determined from the data
-by calling the `levels` function when constructing `ContrastsMatrix`. 
+by calling the `levels` function when constructing `ContrastsMatrix`.
 If `base` is omitted or `nothing`, the first level is used as the base.
 
 When all levels are equally frequent, effects coding generates model matrix
@@ -373,7 +377,7 @@ Helmert coding codes each level as the difference from the average of the lower
 levels.
 
 If `levels` are omitted or `nothing`, they are determined from the data
-by calling the `levels` function when constructing `Contrastsmatrix`. 
+by calling the `levels` function when constructing `Contrastsmatrix`.
 If `base` is omitted or `nothing`, the first level is used as the base.
 For each non-base level, Helmert coding generates a columns with -1 for each of
 n levels below, n for that level, and 0 above.
@@ -462,7 +466,7 @@ function contrasts_matrix(C::SeqDiffCoding, _, n)
 end
 
 # TODO: consider customizing term names:
-# _termnames(C::SeqDiffCoding, levels::AbstractVector, baseind::Integer) =
+# StatsAPI.coefnames(C::SeqDiffCoding, levels::AbstractVector, baseind::Integer) =
 #     ["$(levels[i])-$(levels[i-1])" for i in 2:length(levels)]
 
 """
@@ -591,7 +595,7 @@ function contrasts_matrix(C::HypothesisCoding, baseind, n)
     C.contrasts
 end
 
-_termnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
+StatsAPI.coefnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
     something(C.labels, levels[1:length(levels) .!= baseind])
 
 DataAPI.levels(c::HypothesisCoding) = c.levels
@@ -602,8 +606,8 @@ DataAPI.levels(c::HypothesisCoding) = c.levels
 
 Coding by manual specification of contrasts matrix. For k levels, the contrasts
 must be a k by k-1 Matrix.  The contrasts in this matrix will be copied directly
-into the model matrix; if you want to specify your contrasts as hypotheses (i.e., 
-weights assigned to each level's cell mean), you should use 
+into the model matrix; if you want to specify your contrasts as hypotheses (i.e.,
+weights assigned to each level's cell mean), you should use
 [`HypothesisCoding`](@ref) instead.
 """
 mutable struct ContrastsCoding{T<:AbstractMatrix} <: AbstractContrasts
@@ -687,9 +691,9 @@ julia> StatsModels.hypothesis_matrix(cmat)
  -1  0  0  1
 ```
 
-For non-centered contrasts like `DummyCoding`, without including the intercept 
-the hypothesis matrix is incorrect.  So while `intercept=true` is the default for 
-non-centered contrasts, you can see the (wrong) hypothesis matrix when ignoring 
+For non-centered contrasts like `DummyCoding`, without including the intercept
+the hypothesis matrix is incorrect.  So while `intercept=true` is the default for
+non-centered contrasts, you can see the (wrong) hypothesis matrix when ignoring
 it by forcing `intercept=false`:
 
 ```jldoctest hypmat
@@ -710,7 +714,7 @@ julia> StatsModels.hypothesis_matrix(cmat, tolerance=0) # ugly
   1.0  -2.23753e-16   6.91749e-18  -1.31485e-16
  -1.0   1.0          -2.42066e-16   9.93754e-17
  -1.0   4.94472e-17   1.0           9.93754e-17
- -1.0   1.04958e-16  -1.31044e-16   1.0        
+ -1.0   1.04958e-16  -1.31044e-16   1.0
 ```
 
 Finally, the hypothesis matrix for a constructed `ContrastsMatrix` (as stored by
