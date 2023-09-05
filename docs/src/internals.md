@@ -395,7 +395,7 @@ possible to use an existing function, the best practice is to define a new
 function to make dispatch less ambiguous.
 
 ```jldoctest 1
-using StatsBase
+using StatsAPI
 # syntax: best practice to define a _new_ function
 poly(x, n) = x^n
 
