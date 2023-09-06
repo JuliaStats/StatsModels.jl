@@ -117,6 +117,8 @@ struct ContrastsMatrix{C <: AbstractContrasts, M <: AbstractMatrix, T, U}
     end
 end
 
+StatsAPI.coefnames(cm::ContrastsMatrix) = cm.coefnames
+
 # only check equality of matrix, coefnames, and levels, and that the type is the
 # same for the contrasts (values are irrelevant).  This ensures that the two
 # will behave identically in creating modelmatrix columns

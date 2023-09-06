@@ -1,7 +1,9 @@
 @testset "contrasts" begin
 
     cm = StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b"])
-    @test_logs (:warn, "The `termnames` field has been renamed `coefnames`.") cm.termnames
+    @test_logs((:warn, 
+                "The `termnames` field of `ConstrastsMatrix` is deprecated; use `coefnames(cm)` instead."),
+               cm.termnames)
     @test cm.termnames == cm.coefnames
 
     d = DataFrame(y = rand(6),

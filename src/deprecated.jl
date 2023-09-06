@@ -4,7 +4,7 @@
 
 function Base.getproperty(cm::ContrastsMatrix, x::Symbol)
     if x === :termnames
-        Base.depwarn("the `termnames` field of `ConstrastsMatrix` is deprecated; use `coefnames(cm)` instead.",
+        Base.depwarn("The `termnames` field of `ConstrastsMatrix` is deprecated; use `coefnames(cm)` instead.",
                      :ContrastsMatrix)
         return coefnames(cm)
     else
