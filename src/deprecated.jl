@@ -3,10 +3,11 @@
            false)
 
 function Base.getproperty(cm::ContrastsMatrix, x::Symbol)
-    if x === :termnames 
-        Base.depwarn("The `termnames` field has been renamed `coefnames`.", :ContrastsMatrix)
-        x = :coefnames
+    if x === :termnames
+        Base.depwarn("the `termnames` field of `ConstrastsMatrix` is deprecated; use `coefnames(cm)` instead.",
+                     :ContrastsMatrix)
+        return coefnames(cm)
+    else
+        return getfield(cm, x)
     end
-
-    return getfield(cm, x)
 end
