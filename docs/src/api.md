@@ -74,10 +74,12 @@ apply_schema
 
 ```@docs
 fit
-response
-modelmatrix
+gvif
 lrtest
 formula
+modelmatrix
+response
+vif
 ```
 
 ### Traits
