@@ -23,7 +23,7 @@ ModelFrame(f::FormulaTerm, data; model::Type{M} = StatisticalModel, contrasts::D
 * `f::FormulaTerm`: Formula whose left hand side is the *response* and right hand
   side are the *predictors*.
 * `schema::Any`: The schema that was applied to generate `f`.
-* `data::D`: The data table being modeled.  The only restriction is that `data` 
+* `data::D`: The data table being modeled.  The only restriction is that `data`
   is a table (`Tables.istable(data) == true`)
 * `model::Type{M}`: The type of the model that will be fit from this model frame.
 
@@ -52,7 +52,7 @@ end
 
 _missing_omit(x::AbstractVector{T}) where T = copyto!(similar(x, nonmissingtype(T)), x)
 _missing_omit(x::AbstractVector, rows) = _missing_omit(view(x, rows))
-    
+
 function missing_omit(d::T) where T<:ColumnTable
     nonmissings = trues(length(first(d)))
     for col in d
@@ -72,7 +72,7 @@ missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
 
 function ModelFrame(f::FormulaTerm, data::ColumnTable;
                     model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
-    
+
     msg = checknamesexist( f, data )
     if msg != ""
         throw(ArgumentError(msg))
@@ -82,14 +82,14 @@ function ModelFrame(f::FormulaTerm, data::ColumnTable;
 
     sch = schema(f, data, contrasts)
     f = apply_schema(f, sch, M)
-    
+
     ModelFrame(f, sch, data, model)
 end
 
 ModelFrame(f::FormulaTerm, data; model=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
     ModelFrame(f, columntable(data); model=model, contrasts=contrasts)
 
-StatsBase.modelmatrix(f::FormulaTerm, data; kwargs...) = modelmatrix(f.rhs, data; kwargs...)
+StatsAPI.modelmatrix(f::FormulaTerm, data; kwargs...) = modelmatrix(f.rhs, data; kwargs...)
 
 """
     modelmatrix(t::AbstractTerm, data; hints=Dict(), mod=StatisticalModel)
@@ -106,14 +106,14 @@ calling [`modelcols`](@ref) if necessary.  The optional `hints` and `mod`
 keyword arguments are passed to [`apply_schema`](@ref).
 
 !!! note
-    
+
     `modelmatrix` is provided as a convenience for interactive use.  For
     modeling packages that wish to support a formula-based interface, it is
     recommended to use the [`schema`](@ref) -- [`apply_schema`](@ref) --
     [`modelcols`](@ref) pipeline directly
 
 """
-function StatsBase.modelmatrix(t::Union{AbstractTerm, TupleTerm}, data;
+function StatsAPI.modelmatrix(t::Union{AbstractTerm, TupleTerm}, data;
                                hints=Dict{Symbol,Any}(), mod::Type{M}=StatisticalModel) where M
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
@@ -134,14 +134,14 @@ before calling [`modelcols`](@ref) if necessary.  The optional `hints` and `mod`
 keyword arguments are passed to [`apply_schema`](@ref).
 
 !!! note
-    
+
     `response` is provided as a convenience for interactive use.  For
     modeling packages that wish to support a formula-based interface, it is
     recommended to use the [`schema`](@ref) -- [`apply_schema`](@ref) --
     [`modelcols`](@ref) pipeline directly
 
 """
-function StatsBase.response(f::FormulaTerm, data;
+function StatsAPI.response(f::FormulaTerm, data;
                             hints=Dict{Symbol,Any}(),
                             mod::Type{M}=StatisticalModel) where M
     Tables.istable(data) ||
@@ -151,10 +151,10 @@ function StatsBase.response(f::FormulaTerm, data;
 end
 
 
-StatsBase.modelmatrix(mf::ModelFrame; data=mf.data) = modelcols(mf.f.rhs, data)
-StatsBase.response(mf::ModelFrame; data=mf.data) = modelcols(mf.f.lhs, data)
+StatsAPI.modelmatrix(mf::ModelFrame; data=mf.data) = modelcols(mf.f.rhs, data)
+StatsAPI.response(mf::ModelFrame; data=mf.data) = modelcols(mf.f.lhs, data)
 
-StatsBase.coefnames(mf::ModelFrame) = vectorize(coefnames(mf.f.rhs))
+StatsAPI.coefnames(mf::ModelFrame) = vectorize(coefnames(mf.f.rhs))
 
 """
     setcontrasts!(mf::ModelFrame; kwargs...)

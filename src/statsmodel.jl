@@ -75,9 +75,9 @@ end
 for (modeltype, dfmodeltype) in ((:StatisticalModel, TableStatisticalModel),
                                  (:RegressionModel, TableRegressionModel))
     @eval begin
-        function StatsBase.fit(::Type{T}, f::FormulaTerm, data, args...;
-                               contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(),
-                               kwargs...) where T<:$modeltype
+        function StatsAPI.fit(::Type{T}, f::FormulaTerm, data, args...;
+                              contrasts::Dict{Symbol,<:Any} = Dict{Symbol,Any}(),
+                              kwargs...) where T<:$modeltype
 
             Tables.istable(data) || throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
             cols = columntable(data)
@@ -116,7 +116,7 @@ a [`TableRegressionModel`](@ref) or [`TableStatisticalModel`](@ref) (as
 appropriate).
 
 This is intended as a backstop for modeling packages that implement model types
-that are subtypes of `StatsBase.StatisticalModel` but do not explicitly support
+that are subtypes of `StatsAPI.StatisticalModel` but do not explicitly support
 the full StatsModels terms-based interface.  Currently this works by creating a
 [`ModelFrame`](@ref) from the formula and data, and then converting this to a
 [`ModelMatrix`](@ref), but this is an internal implementation detail which may
@@ -125,24 +125,24 @@ change in the near future.
 
 # Delegate functions from StatsBase that use our new types
 const TableModels = Union{TableStatisticalModel, TableRegressionModel}
-@delegate TableModels.model [StatsBase.coef, StatsBase.confint,
-                             StatsBase.deviance, StatsBase.nulldeviance,
-                             StatsBase.loglikelihood, StatsBase.nullloglikelihood,
-                             StatsBase.dof, StatsBase.dof_residual, StatsBase.nobs,
-                             StatsBase.stderror, StatsBase.vcov, StatsBase.fitted]
-@delegate TableRegressionModel.model [StatsBase.modelmatrix,
-                                      StatsBase.residuals, StatsBase.response,
-                                      StatsBase.predict, StatsBase.predict!,
-                                      StatsBase.cooksdistance]
-StatsBase.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
+@delegate TableModels.model [StatsAPI.coef, StatsAPI.confint,
+                             StatsAPI.deviance, StatsAPI.nulldeviance,
+                             StatsAPI.loglikelihood, StatsAPI.nullloglikelihood,
+                             StatsAPI.dof, StatsAPI.dof_residual, StatsAPI.nobs,
+                             StatsAPI.stderror, StatsAPI.vcov, StatsAPI.fitted]
+@delegate TableRegressionModel.model [StatsAPI.modelmatrix,
+                                      StatsAPI.residuals, StatsAPI.response,
+                                      StatsAPI.predict, StatsAPI.predict!,
+                                      StatsAPI.cooksdistance]
+StatsAPI.predict(m::TableRegressionModel, new_x::AbstractMatrix; kwargs...) =
     predict(m.model, new_x; kwargs...)
 # Need to define these manually because of ambiguity using @delegate
 
-StatsBase.r2(mm::TableRegressionModel) = r2(mm.model)
-StatsBase.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
-StatsBase.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
-StatsBase.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
-StatsBase.loglikelihood(mm::TableModels, c::Colon) = loglikelihood(mm.model, c)
+StatsAPI.r2(mm::TableRegressionModel) = r2(mm.model)
+StatsAPI.adjr2(mm::TableRegressionModel) = adjr2(mm.model)
+StatsAPI.r2(mm::TableRegressionModel, variant::Symbol) = r2(mm.model, variant)
+StatsAPI.adjr2(mm::TableRegressionModel, variant::Symbol) = adjr2(mm.model, variant)
+StatsAPI.loglikelihood(mm::TableModels, c::Colon) = loglikelihood(mm.model, c)
 
 isnested(m1::TableModels, m2::TableModels; kwargs...) = isnested(m1.model, m2.model; kwargs...)
 
@@ -169,7 +169,7 @@ function _return_predictions(T, yp::NamedTuple, nonmissings, len)
 end
 
 # Predict function that takes data table as predictor instead of matrix
-function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
+function StatsAPI.predict(mm::TableRegressionModel, data; kwargs...)
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
 
@@ -181,10 +181,10 @@ function StatsBase.predict(mm::TableRegressionModel, data; kwargs...)
     _return_predictions(Tables.materializer(data), y_pred, nonmissings, length(nonmissings))
 end
 
-StatsBase.coefnames(model::TableModels) = coefnames(model.mf)
+StatsAPI.coefnames(model::TableModels) = coefnames(model.mf)
 
 # coeftable implementation
-function StatsBase.coeftable(model::TableModels; kwargs...)
+function StatsAPI.coeftable(model::TableModels; kwargs...)
     ct = coeftable(model.model, kwargs...)
     cfnames = coefnames(model.mf)
     if length(ct.rownms) == length(cfnames)

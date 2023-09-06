@@ -1,6 +1,7 @@
 module StatsModels
 
 using Tables
+using StatsAPI
 using StatsBase
 using ShiftedArrays
 using ShiftedArrays: lag, lead
@@ -8,6 +9,7 @@ using DataStructures
 using DataAPI
 using DataAPI: levels
 using Printf: @sprintf
+using StatsAPI: coefnames, fit, predict, dof
 using StatsFuns: chisqccdf
 
 using SparseArrays
@@ -32,10 +34,11 @@ export
     HelmertCoding,
     SeqDiffCoding,
     HypothesisCoding,
-    
+
     coefnames,
     setcontrasts!,
     formula,
+    termnames,
 
     AbstractTerm,
     ConstantTerm,
@@ -81,5 +84,6 @@ include("formula.jl")
 include("modelframe.jl")
 include("statsmodel.jl")
 include("lrtest.jl")
+include("deprecated.jl")
 
 end # module StatsModels

@@ -15,6 +15,7 @@ end
 term
 coefnames
 modelcols
+termnames
 ```
 
 ### Higher-order terms

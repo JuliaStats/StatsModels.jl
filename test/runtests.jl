@@ -6,8 +6,10 @@ using SparseArrays
 using StatsModels
 using DataFrames
 using CategoricalArrays
+using StatsAPI
 using StatsBase
 
+using StatsAPI: dof
 using StatsModels: ContrastsMatrix
 
 my_tests = ["ambiguity.jl",

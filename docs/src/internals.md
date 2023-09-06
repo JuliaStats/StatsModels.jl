@@ -80,7 +80,7 @@ FormulaTerm{Term, Term}
 ```
 
 !!! note
-    
+
     As always, you can introspect which method is called with
 
     ```julia
@@ -395,7 +395,7 @@ possible to use an existing function, the best practice is to define a new
 function to make dispatch less ambiguous.
 
 ```jldoctest 1
-using StatsBase
+using StatsAPI
 # syntax: best practice to define a _new_ function
 poly(x, n) = x^n
 
@@ -444,7 +444,7 @@ StatsModels.termvars(p::PolyTerm) = StatsModels.termvars(p.term)
 # number of columns in the matrix this term produces
 StatsModels.width(p::PolyTerm) = p.deg
 
-StatsBase.coefnames(p::PolyTerm) = coefnames(p.term) .* "^" .* string.(1:p.deg)
+StatsAPI.coefnames(p::PolyTerm) = coefnames(p.term) .* "^" .* string.(1:p.deg)
 
 # output
 
@@ -558,9 +558,9 @@ PolyTerm{Term, ConstantTerm{Int64}}
 ```
 
 !!! note
-    
+
     The functions like `poly` should be exported by the package that provides
-    the special syntax for two reasons.  First, it makes run-time term 
+    the special syntax for two reasons.  First, it makes run-time term
     construction more convenient.  Second, because of how the `@formula` macro
     generates code, the function that represents special syntax must be
     available in the namespace where `@formula` is _called_.  This is because
