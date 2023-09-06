@@ -23,11 +23,15 @@ my_tests = ["ambiguity.jl",
             "contrasts.jl",
             "extension.jl",
             "traits.jl",
-            "protect.jl"]
+            "protect.jl",
+            "vif.jl"]
 
 @testset "StatsModels" begin
     @testset "aqua" begin
-        Aqua.test_all(StatsModels; ambiguities=false)
+        # because VIF and GVIF are defined in StatsAPI for RegressionModel,
+        # which is also defined there, it's flagged as piracy. But
+        # we're the offical implementers so it's privateering.
+        Aqua.test_all(StatsModels; ambiguities=false, piracy=false)
     end
 
     for tf in my_tests
