@@ -117,5 +117,3 @@ function StatsAPI.gvif(model::RegressionModel; scale=false)
     end
     return vals
 end
-
-_terms(model) = collect(formula(model).rhs.terms)
