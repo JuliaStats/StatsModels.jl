@@ -161,7 +161,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     ## test copying of names from Terms to CoefTable
     ct = coeftable(m)
     @test ct.rownms == ["(Intercept)", "x1", "x2", "x1 & x2"]
-    @test variablenames(m) == ("y", ["(Intercept)", "x1", "x2", "x1 & x2"])
+    @test termnames(m) == ("y", ["(Intercept)", "x1", "x2", "x1 & x2"])
 
     ## show with coeftable defined
     io = IOBuffer()
@@ -172,7 +172,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     m2 = fit(DummyMod, f2, d)
 
     @test coeftable(m2).rownms == ["(Intercept)", "x1p: 6", "x1p: 7", "x1p: 8"]
-    @test variablenames(m2) == ("y", ["(Intercept)", "x1p"])
+    @test termnames(m2) == ("y", ["(Intercept)", "x1p"])
 
     ## predict w/ new data missing levels
     @test predict(m2, d[2:4, :]) == predict(m2)[2:4]
@@ -237,25 +237,25 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     show(io, m2)
 end
 
-@testset "variablenames" begin
-    # one final variablenames check
+@testset "termnames" begin
+    # one final termnames check
     # note that `1` is still a ConstantTerm and not yet InterceptTerm
     # because apply_schema hasn't been called
-    @test variablenames(@formula(y ~ 1 + log(x) * y + (1+x|g)))[2] ==
+    @test termnames(@formula(y ~ 1 + log(x) * y + (1+x|g)))[2] ==
           ["1", "log(x)", "y", "log(x) & y", "(1 + x) | g"]
-    @test variablenames(ConstantTerm(1)) == "1"
-    @test variablenames(Term(:x)) == "x"
-    @test variablenames(InterceptTerm{true}()) == "(Intercept)"
-    @test variablenames(InterceptTerm{false}()) == String[]
-    @test variablenames(ContinuousTerm(:x, 1, 0, 0, 0)) == "x"
+    @test termnames(ConstantTerm(1)) == "1"
+    @test termnames(Term(:x)) == "x"
+    @test termnames(InterceptTerm{true}()) == "(Intercept)"
+    @test termnames(InterceptTerm{false}()) == String[]
+    @test termnames(ContinuousTerm(:x, 1, 0, 0, 0)) == "x"
     cm = StatsModels.ContrastsMatrix([1 0; 0 1], ["b", "c"], ["a", "b", "c"], DummyCoding())
-    @test variablenames(CategoricalTerm(:x, cm)) == "x"
-    @test variablenames(FunctionTerm(log, [Term(:x)], :(log(x)))) == "log(x)"
-    @test variablenames(InteractionTerm(term.((:a, :b, :c)))) == "a & b & c"
-    @test variablenames(MatrixTerm(term(:a))) == ["a"]
-    @test variablenames(MatrixTerm((term(:a), term(:b)))) == ["a", "b"]
-    @test variablenames((term(:a), term(:b))) == ["a", "b"]
-    @test variablenames((term(:a),)) == ["a"]
+    @test termnames(CategoricalTerm(:x, cm)) == "x"
+    @test termnames(FunctionTerm(log, [Term(:x)], :(log(x)))) == "log(x)"
+    @test termnames(InteractionTerm(term.((:a, :b, :c)))) == "a & b & c"
+    @test termnames(MatrixTerm(term(:a))) == ["a"]
+    @test termnames(MatrixTerm((term(:a), term(:b)))) == ["a", "b"]
+    @test termnames((term(:a), term(:b))) == ["a", "b"]
+    @test termnames((term(:a),)) == ["a"]
 end
 
 @testset "lrtest" begin
