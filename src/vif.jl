@@ -97,10 +97,11 @@ function StatsAPI.gvif(model::RegressionModel; scale=false)
     size(m, 2) > 1 ||
         throw(ArgumentError("GVIF not meaningful for models with only one non-intercept term"))
 
-    tn = termnames(model)
+    tn = last(termnames(model))
     tn = view(tn, axes(tn, 1) .!= intercept)
-    trms = get_matrix_term(form)
-    trms = view(trms, axes(trms, 1) .!= intercept)
+    trms = get_matrix_term(form.rhs).terms
+    # MatrixTerms.terms is a tuple or vector so always 1-based indexing
+    trms = [trms[i] for i in 1:length(trms) if i != intercept]
 
     df = width.(trms)
     vals = zeros(eltype(m), length(tn))
