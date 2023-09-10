@@ -47,9 +47,10 @@ function StatsAPI.vif(model::RegressionModel)
         throw(ArgumentError("VIF not meaningful for models with only one non-intercept term"))
     # NB: The correlation matrix is positive definite and hence invertible
     #     unless there is perfect rank deficiency, hence the warning in the docstring.
-    return diag(inv(m))
+    # there's no `inv(::SubArray)` method before 1.7
+    # but this matrix is indeed symmetric and the Symmetric wrapper is enough to make this work
+    return diag(inv(Symmetric(m)))
 end
-
 
 """
     gvif(model::RegressionModel; scale=false)
