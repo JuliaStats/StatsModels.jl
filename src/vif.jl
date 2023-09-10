@@ -3,7 +3,7 @@
 function _find_intercept(model::RegressionModel)
     modelmat = modelmatrix(model)
     cols = eachcol(modelmat)
-    # XXX collect is necessary for Julia 1.6
+    # collect is necessary for Julia 1.6
     # but it's :just: an array of references to views, so shouldn't be too
     # expensive
     @static if VERSION < v"1.7"
