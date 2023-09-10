@@ -26,6 +26,7 @@ function get_matrix_term(x)
     x = collect_matrix_terms(x)
     x = x isa MatrixTerm ? x : first(x)
     x isa MatrixTerm || throw(ArgumentError("couldn't extract matrix term from $x"))
+    # this is a work around for some weirdness that happens in MixedModels.jl
     if first(x.terms) isa MatrixTerm
         x = only(x.terms)
     end
