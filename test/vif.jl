@@ -78,3 +78,14 @@ end
     @test gvif(duncan3) ≈ [2.209178, 5.297584, 5.098592] atol=1e-4
     @test gvif(duncan3; scale=true) ≈ [1.486330, 2.301648, 1.502666] atol=1e-5
 end
+
+@testset "utils" begin
+   int = InterceptTerm{true}()
+   noint = InterceptTerm{false}()
+   xterm = term(:x)
+   @test StatsModels._find_intercept(xterm) === nothing
+   @test StatsModels._find_intercept(int) == 1
+   @test StatsModels._find_intercept(noint) === nothing
+   @test StatsModels._find_intercept(MatrixTerm((xterm, int))) == 2
+   @test StatsModels.get_matrix_term(MatrixTerm(MatrixTerm((xterm, int)))) == MatrixTerm((xterm, int))
+end
