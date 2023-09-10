@@ -32,7 +32,6 @@ function get_matrix_term(x)
     return x
 end
 
-"""$(@doc StatsAPI.vif)"""
 function StatsAPI.vif(model::RegressionModel)
     vc = vcov(model)
     Base.require_one_based_indexing(vc)
