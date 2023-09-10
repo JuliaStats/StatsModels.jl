@@ -31,7 +31,7 @@ my_tests = ["ambiguity.jl",
         # because VIF and GVIF are defined in StatsAPI for RegressionModel,
         # which is also defined there, it's flagged as piracy. But
         # we're the offical implementers so it's privateering.
-        Aqua.test_all(StatsModels; ambiguities=false, piracy=false)
+        Aqua.test_all(StatsModels; ambiguities=false, piracy=(treat_as_own=[vif, gvif],))
     end
 
     for tf in my_tests
