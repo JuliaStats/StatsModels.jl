@@ -2,10 +2,14 @@
 # can potentially be freed immediately if it's large and constructed on the fly
 function _find_intercept(model::RegressionModel)
     modelmat = modelmatrix(model)
+    cols = eachcol(modelmat)
     # XXX collect is necessary for Julia 1.6
     # but it's :just: an array of references to views, so shouldn't be too
     # expensive
-    return findfirst(Base.Fix1(all, isone), collect(eachcol(modelmat)))
+    @static if VERSION < v"1.7"
+        cols = collect(cols)
+    end
+    return findfirst(Base.Fix1(all, isone), cols)
 end
 
 _find_intercept(form::FormulaTerm) = _find_intercept(form.rhs)
