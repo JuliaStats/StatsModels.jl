@@ -48,8 +48,6 @@ function StatsAPI.vif(model::RegressionModel)
         throw(ArgumentError("VIF not meaningful for models with only one non-intercept term"))
     # NB: The correlation matrix is positive definite and hence invertible
     #     unless there is perfect rank deficiency, hence the warning in the docstring.
-    # there's no `inv(::SubArray)` method before 1.7
-    # but this matrix is indeed symmetric and the Symmetric wrapper is enough to make this work
     return diag(inv(Symmetric(m)))
 end
 
@@ -80,7 +78,7 @@ See also [`termnames`](@ref), [`vif`](@ref).
     i.e. rank deficiency (in the fixed effects). In that case though, the VIF
     isn't particularly informative anyway.
 
-## References
+# References
 
 Fox, J., & Monette, G. (1992). Generalized Collinearity Diagnostics.
 Journal of the American Statistical Association, 87(417), 178. doi:10.2307/2290467
