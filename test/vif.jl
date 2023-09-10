@@ -57,7 +57,7 @@ end
                      vcov=[18.2495    -0.151845    -0.150706
                            -0.151845   0.0143203   -0.00851855
                            -0.150706  -0.00851855   0.00965358])
-    @test vif(duncan2) ≈ [2.1049, 2.1049]; atol=1e-5
+    @test vif(duncan2) ≈ [2.1049, 2.1049] atol=1e-5
     # two different ways of calculating the same quantity
     @test vif(duncan2) ≈ gvif(duncan2) 
 end
