@@ -101,7 +101,7 @@ function StatsAPI.gvif(model::RegressionModel; scale=false)
     tn = view(tn, axes(tn, 1) .!= intercept)
     trms = get_matrix_term(form.rhs).terms
     # MatrixTerms.terms is a tuple or vector so always 1-based indexing
-    trms = [trms[i] for i in 1:length(trms) if i != intercept]
+    trms = trms[1:length(trms) .!= intercept]
 
     df = width.(trms)
     vals = zeros(eltype(m), length(tn))
