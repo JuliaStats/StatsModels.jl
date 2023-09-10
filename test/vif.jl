@@ -31,7 +31,6 @@ for f in [:coefnames, :coef, :stderror, :modelmatrix, :vcov]
     @eval StatsAPI.$f(model::Duncan) = model.$f
 end 
 
-# StatsModels.termnames(model::Duncan) = model.termnames
 StatsModels.formula(model::Duncan) = model.formula
 
 @testset "VIF input checks" begin
@@ -64,7 +63,7 @@ end
 
 @testset "GVIF" begin
     cm = StatsModels.ContrastsMatrix(DummyCoding("bc", ["bc", "prof", "wc"]), ["bc", "prof", "wc"])
-    duncan3 =  Duncan(; coefnames=["(Intercept)", "Income", "Education",  "Type: prof", "Type: wc"],
+    duncan3 = Duncan(; coefnames=["(Intercept)", "Income", "Education",  "Type: prof", "Type: wc"],
                      formula=term(:Prestige) ~  InterceptTerm{true}() + ContinuousTerm(:Income, 1,1,1,1) + 
                                                 ContinuousTerm(:Education, 1,1,1,1) + CategoricalTerm(:Type, cm),
                      coef=[0.185028, 0.597546, 0.345319, 16.6575, -14.6611], 
