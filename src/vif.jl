@@ -18,7 +18,7 @@ _find_intercept(::AbstractTerm) = nothing
 _find_intercept(::InterceptTerm{true}) = 1
 _find_intercept(m::MatrixTerm) = _find_intercept(m.terms)
 function _find_intercept(t::TupleTerm) 
-    return findfirst(Base.Fix2(isa, InterceptTerm{true}), t)
+    return findfirst(!isnothing ∘ _find_intercept, t)
 end
 
 # borrowed from Effects.jl
