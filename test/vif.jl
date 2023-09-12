@@ -44,6 +44,10 @@ StatsModels.formula(model::Duncan) = model.formula
     @test vif(MyRegressionModel3()) ≈ [1, 1]
 end
 
+# Reference values from
+# https://github.com/palday/MixedModelsExtras.jl/blob/6db061cb856301c04b978101d4c53b90c890715b/test/vif.jl
+# which were computed using car::vif in R
+
 @testset "GVIF and VIF are the same for continuous predictors" begin
     # these are copied from a GLM fit to the car::duncan data 
     duncan2 = Duncan(; coefnames=["(Intercept)", "Income", "Education"],
