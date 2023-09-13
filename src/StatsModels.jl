@@ -9,7 +9,7 @@ using DataStructures
 using DataAPI
 using DataAPI: levels
 using Printf: @sprintf
-using StatsAPI: coefnames, fit, predict, dof
+using StatsAPI: coefnames, dof, fit, gvif, predict, vif
 using StatsFuns: chisqccdf
 
 using SparseArrays
@@ -70,7 +70,10 @@ export
     omitsintercept,
     hasresponse,
 
-    lrtest
+    lrtest,
+
+    vif,
+    gvif
 
 const SPECIALS = (:+, :&, :*, :~)
 
@@ -84,6 +87,7 @@ include("formula.jl")
 include("modelframe.jl")
 include("statsmodel.jl")
 include("lrtest.jl")
+include("vif.jl")
 include("deprecated.jl")
 
 end # module StatsModels

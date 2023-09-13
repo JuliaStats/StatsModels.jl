@@ -1,4 +1,4 @@
-using Documenter, StatsModels
+using Documenter, StatsModels, StatsAPI
 
 DocMeta.setdocmeta!(StatsModels, :DocTestSetup, :(using StatsModels, StatsBase); recursive=true)
 
@@ -15,7 +15,7 @@ makedocs(
         "Temporal variables and Time Series Terms" => "temporal_terms.md",
         "API documentation" => "api.md"
     ],
-    modules = [StatsModels],
+    modules = [StatsModels, StatsAPI],
     doctestfilters = [r"([a-z]*) => \1", r"getfield\(.*##[0-9]+#[0-9]+"],
     strict=Documenter.except(:missing_docs)
 )
