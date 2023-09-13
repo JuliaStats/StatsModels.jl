@@ -44,9 +44,20 @@ StatsModels.formula(model::Duncan) = model.formula
     @test vif(MyRegressionModel3()) ≈ [1, 1]
 end
 
-# Reference values from
-# https://github.com/palday/MixedModelsExtras.jl/blob/6db061cb856301c04b978101d4c53b90c890715b/test/vif.jl
-# which were computed using car::vif in R
+# Reference values from car::vif in R:
+# > library(car)
+# > data(Duncan)
+# > lm1 = lm(prestige ~ 1 + income + education, Duncan)
+# > vif(lm1)
+#    income education 
+#    2.1049    2.1049 
+# > lm2 = lm(prestige ~ 1 + income + education + type, Duncan)
+# > vif(lm2)
+#               GVIF Df GVIF^(1/(2*Df))
+# income    2.209178  1        1.486330
+# education 5.297584  1        2.301648
+# type      5.098592  2        1.502666
+
 
 @testset "GVIF and VIF are the same for continuous predictors" begin
     # these are copied from a GLM fit to the car::duncan data 
