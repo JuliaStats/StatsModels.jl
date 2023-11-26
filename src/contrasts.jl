@@ -599,7 +599,7 @@ StatsAPI.coefnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
 DataAPI.levels(c::HypothesisCoding) = c.levels
 
 """
-    StatsModels.ContrastsCoding(mat::AbstractMatrix[, levels]])
+    StatsModels.ContrastsCoding(mat::AbstractMatrix[, levels])
     StatsModels.ContrastsCoding(mat::AbstractMatrix[; levels=nothing])
 
 Coding by manual specification of contrasts matrix. For k levels, the contrasts
