@@ -344,12 +344,12 @@ end
     unprotect(term)
     unprotect(::Protected{T})
 
-Inside a [`@formula`], removes [`Protected`](@ref) status for the argument
+Inside a [`@formula`](@ref), removes [`Protected`](@ref) status for the argument
 term(s).  This allows the [`@formula`](@ref)-specific interpretation of
 calls to `+`, `&`, `*`, and `~` to be restored inside an otherwise
 [`Protected`](@ref) context.
 
-When called outside a `@formula`, unwraps `Protected{T}` to `T`.
+When called outside a [`@formula`](@ref), unwraps `Protected{T}` to `T`.
 
 # Example
 
