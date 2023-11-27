@@ -282,7 +282,6 @@ everything below the call to `unprotect` is treated as formula-specific syntax.
 
 A `Protected` context is created inside a [`FunctionTerm`](@ref) automatically,
 but can be manually created with a call to [`protect`](@ref).
-```
 """
 struct Protected{Ctx} end
 Base.broadcastable(x::Protected) = Ref(x)
