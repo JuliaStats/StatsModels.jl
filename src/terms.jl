@@ -29,7 +29,7 @@ width(::Term) =
     ConstantTerm{T<:Number} <: AbstractTerm
 
 Represents a literal number in a formula.  By default will be converted to
-[`InterceptTerm`] by [`apply_schema`](@ref).
+[`InterceptTerm`](@ref) by [`apply_schema`](@ref).
 
 # Fields
 
