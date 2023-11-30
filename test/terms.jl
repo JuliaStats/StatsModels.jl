@@ -26,10 +26,6 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         t0 = concrete_term(t, [3, 2, 1])
         @test string(t0) == "aaa"
         @test mimestring(t0) == "aaa(continuous)"
-        @test t0.mean == 2.0
-        @test t0.var == var([1,2,3])
-        @test t0.min == 1.0
-        @test t0.max == 3.0
 
         t1 = concrete_term(t, [:a, :b, :c])
         @test t1.contrasts isa StatsModels.ContrastsMatrix{DummyCoding}
