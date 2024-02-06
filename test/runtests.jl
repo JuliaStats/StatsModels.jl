@@ -2,6 +2,7 @@ using Test
 using Aqua
 using LinearAlgebra
 using SparseArrays
+using TestSetExtensions
 
 using StatsModels
 using DataFrames
@@ -26,7 +27,7 @@ my_tests = ["ambiguity.jl",
             "protect.jl",
             "vif.jl"]
 
-@testset "StatsModels" begin
+@testset ExtendedTestSet "StatsModels" begin
     @testset "aqua" begin
         # because VIF and GVIF are defined in StatsAPI for RegressionModel,
         # which is also defined there, it's flagged as piracy. But
