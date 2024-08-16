@@ -12,7 +12,7 @@ StatsAPI.fit(::Type{DummyMod}, x::Matrix, y::Vector) =
     DummyMod(collect(1:size(x, 2)), x, y)
 StatsAPI.response(mod::DummyMod) = mod.y
 ## dumb coeftable: just prints the "beta" values
-StatsAPI.coeftable(mod::DummyMod) =
+StatsAPI.coeftable(mod::DummyMod; level::Real = 0.95) =
     CoefTable(reshape(mod.beta, (size(mod.beta,1), 1)),
               ["'beta' value"],
               ["" for n in 1:size(mod.x,2)],
@@ -159,7 +159,7 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     @test length(predict(m, d2)) == 4
 
     ## test copying of names from Terms to CoefTable
-    ct = coeftable(m)
+    ct = coeftable(m; level = 0.9)
     @test ct.rownms == ["(Intercept)", "x1", "x2", "x1 & x2"]
     @test termnames(m) == ("y", ["(Intercept)", "x1", "x2", "x1 & x2"])
 
