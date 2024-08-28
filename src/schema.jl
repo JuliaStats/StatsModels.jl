@@ -199,9 +199,7 @@ concrete_term(t, d, hint) = t
 
 concrete_term(t::Term, xs::AbstractVector{<:Number}, ::Nothing) = concrete_term(t, xs, ContinuousTerm)
 function concrete_term(t::Term, xs::AbstractVector, ::Type{ContinuousTerm})
-    μ, σ2 = StatsBase.mean_and_var(xs)
-    min, max = extrema(xs)
-    ContinuousTerm(t.sym, promote(μ, σ2, min, max)...)
+    ContinuousTerm(t.sym)
 end
 # default contrasts: dummy coding
 concrete_term(t::Term, xs::AbstractVector, ::Nothing) = concrete_term(t, xs, CategoricalTerm)
