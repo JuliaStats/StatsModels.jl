@@ -335,9 +335,10 @@ true
 
 It is also possible to create a `FunctionTerm` programmatically, matching the
 behavior of what happens when a call to a function like `log` is encountered
-inside the `@formula` macro, although it takes a bit of care to get right.  In
-the future we may add more convenience methods to "lift" functions into the
-"term domain" but for now they must be constructed manually, like so:
+inside the `@formula` macro. Functions with unambiguous method dispatch (in particular:
+functions with a single input argument) can be constructed manually as follows; functions
+with multiple input arguments, or otherwise more complicated method dispatch,
+require a different approach which is explained in the [extensions section](@ref Internals-and-extending-the-formula-DSL).
 
 ```jldoctest 1
 julia> log_term(t::AbstractTerm) = FunctionTerm(log, [t], :(log($(t))))
