@@ -263,7 +263,7 @@ Not exported but included here for the sake of completeness.
 Needed internally for some situations where a categorical variable with ``k``
 levels needs to be converted into ``k`` model matrix columns instead of the
 standard ``k-1``.  This occurs when there are missing lower-order terms, as in
-discussed below in [Categorical variables in Formulas](@ref).
+discussed below in [Categorical variables in FormulaTerms](@ref).
 
 # Examples
 
