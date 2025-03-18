@@ -63,7 +63,7 @@ ContrastsCoding
 
 ## Further details
 
-### Categorical variables in `Formula`s
+### Categorical variables in `FormulaTerm`s
 
 Generating model matrices from multiple variables, some of which are
 categorical, requires special care.  The reason for this is that rank-$k-1$
@@ -93,7 +93,7 @@ categorical `a`, `b`, and `c`:
     * The `a` in `a&b` is *non-redundant* because it aliases `b`, which is not
       present anywhere else in the formula.
 
-When constructing a `ModelFrame` from a `Formula`, each term is checked for
+When constructing a `ModelFrame` from a `FormulaTerm`, each term is checked for
 non-redundant categorical variables.  Any such non-redundant variables are
 "promoted" to full rank in that term by using [`FullDummyCoding`](@ref) instead
 of the contrasts used elsewhere for that variable.
