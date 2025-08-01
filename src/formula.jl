@@ -23,7 +23,7 @@ catch_dollar(ex::Expr) =
 """
     @formula(ex)
 
-Capture and parse a formula expression as a `Formula` struct.
+Capture and parse a formula expression as a `FormulaTerm` struct.
 
 A formula is an abstract specification of a dependence between _left-hand_ and
 _right-hand_ side variables as in, e.g., a regression model.  Each side
@@ -32,7 +32,7 @@ matrix suitable for modeling.  This specification looks something like Julia
 code, is represented as a Julia `Expr`, but uses special syntax.  The `@formula`
 macro takes an expression like `y ~ 1 + a*b`, transforms it according to the
 formula syntax rules into a lowered form (like `y ~ 1 + a + b + a&b`), and
-constructs a `Formula` struct which captures the original expression, the
+constructs a `FormulaTerm` struct which captures the original expression, the
 lowered expression, and the left- and right-hand-side.
 
 Operators that have special interpretations in this syntax are
