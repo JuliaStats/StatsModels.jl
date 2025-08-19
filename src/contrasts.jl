@@ -233,6 +233,12 @@ function StatsAPI.coefnames(C::AbstractContrasts, levels::AbstractVector, basein
     DataAPI.unwrap.(levels[not_base])
 end
 
+function StatsAPI.coefnames(C::AbstractContrasts, levels::AbstractVector{Bool}, baseind::Integer)
+    not_base = [1:(baseind-1); (baseind+1):length(levels)]
+    # broadcasted DataAPI.unwrap converts Vector{Bool} to BitVector
+    convert(Vector{Bool}, DataAPI.unwrap.(levels[not_base]))
+end
+
 Base.getindex(contrasts::ContrastsMatrix, rowinds, colinds) =
     getindex(contrasts.matrix, getindex.(Ref(contrasts.invindex), rowinds), colinds)
 
