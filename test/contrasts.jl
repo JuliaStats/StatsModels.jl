@@ -1,7 +1,7 @@
 @testset "contrasts" begin
 
     cm = StatsModels.ContrastsMatrix(DummyCoding(), ["a", "b"])
-    @test_logs((:warn, 
+    @test_logs((:warn,
                 "The `termnames` field of `ConstrastsMatrix` is deprecated; use `coefnames(cm)` instead."),
                cm.termnames)
     @test cm.termnames == cm.coefnames
@@ -87,9 +87,9 @@
                                 1 -1 -1
                                 1  0  1]
     @test coefnames(mf) == ["(Intercept)"; "x: c"; "x: b"]
-    
+
     # respect order of levels
-    
+
     data = DataFrame(x = levels!(categorical(['A', 'B', 'C', 'C', 'D']), ['C', 'B', 'A', 'D']))
     f = apply_schema(@formula(x ~ 1), schema(data))
     @test modelcols(f.lhs, data) == [0 1 0; 1 0 0; 0 0 0; 0 0 0; 0 0 1]
@@ -239,7 +239,7 @@
         f_effects = apply_schema(f, schema(d2, Dict(:x => effects_hyp)))
 
         y_means = combine(groupby(d2, :x), :y => mean).y_mean
-        
+
         y, X_sdiff = modelcols(f_sdiff, d2)
         @test X_sdiff \ y ≈ [mean(y_means); diff(y_means)]
 
@@ -271,18 +271,18 @@
             [0 1 0 0
              0 0 1 0
              0 0 0 1]
-        
+
 
         cmat2 = contrasts_matrix(HelmertCoding(), 1, 4)
         @test needs_intercept(cmat2) == false
-        hmat2 = hypothesis_matrix(cmat2) 
+        hmat2 = hypothesis_matrix(cmat2)
         @test hmat2 ≈
             [-1/2   1/2   0    0
              -1/6  -1/6   1/3  0
              -1/12 -1/12 -1/12 1/4]
 
         @test eltype(hmat2) <: Rational
-        
+
         @test hypothesis_matrix(cmat2, intercept=true) ≈
             vcat([1/4 1/4 1/4 1/4], hmat2)
 
@@ -350,7 +350,7 @@
         @test levels(c) == levs
         # no notion of base level for ContrastsCoding
         @test_throws MethodError ContrastsCoding(rand(4,3), base=base)
-        
+
     end
 
     @testset "Non-unique levels" begin
@@ -396,10 +396,26 @@
 
         mm = modelcols(term, (; x=repeat('a':'d'; inner=2)))
         smm = modelcols(spterm, (; x=repeat('a':'d'; inner=2)))
-        
+
         @test mm isa Matrix
         @test smm isa SparseMatrixCSC
         @test mm == smm
     end
-    
+
+    @testset "booleans as categorical" begin
+        cm = ContrastsMatrix(EffectsCoding(), [true, false])
+        @test cm.coefnames == [false]
+        @test issetequal(cm.levels, [true, false])
+
+        hypothesis = [0 1]'
+        cm = ContrastsMatrix(EffectsCoding(), [true, false])
+        @test cm.coefnames == [false]
+        @test issetequal(cm.levels, [true, false])
+
+        hc = HypothesisCoding([1 0]; levels=[true, false], labels=["yes", "no"])
+        cm = ContrastsMatrix(hc, [true, false])
+        @test issetequal(cm.coefnames, ["yes", "no"])
+        @test issetequal(cm.levels, [true, false])
+    end
+
 end

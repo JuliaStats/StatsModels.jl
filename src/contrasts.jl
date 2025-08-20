@@ -233,6 +233,12 @@ function StatsAPI.coefnames(C::AbstractContrasts, levels::AbstractVector, basein
     DataAPI.unwrap.(levels[not_base])
 end
 
+function StatsAPI.coefnames(C::AbstractContrasts, levels::AbstractVector{Bool}, baseind::Integer)
+    not_base = [firstindex(levels):(baseind - 1); (baseind + 1):lastindex(levels)]
+    # broadcasted DataAPI.unwrap converts Vector{Bool} to BitVector
+    convert(Vector{Bool}, DataAPI.unwrap.(levels[not_base]))
+end
+
 Base.getindex(contrasts::ContrastsMatrix, rowinds, colinds) =
     getindex(contrasts.matrix, getindex.(Ref(contrasts.invindex), rowinds), colinds)
 
@@ -596,6 +602,10 @@ function contrasts_matrix(C::HypothesisCoding, baseind, n)
 end
 
 StatsAPI.coefnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
+    something(C.labels, DataAPI.unwrap.(levels[1:length(levels) .!= baseind]))
+
+# We need an explicit method for `AbstractVector{Bool}` to avoid an ambiguity
+StatsAPI.coefnames(C::HypothesisCoding, levels::AbstractVector{Bool}, baseind::Int) =
     something(C.labels, DataAPI.unwrap.(levels[1:length(levels) .!= baseind]))
 
 DataAPI.levels(c::HypothesisCoding) = c.levels
