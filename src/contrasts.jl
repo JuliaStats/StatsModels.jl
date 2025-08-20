@@ -604,6 +604,9 @@ end
 StatsAPI.coefnames(C::HypothesisCoding, levels::AbstractVector, baseind::Int) =
     something(C.labels, DataAPI.unwrap.(levels[1:length(levels) .!= baseind]))
 
+StatsAPI.coefnames(C::HypothesisCoding, levels::AbstractVector{Bool}, baseind::Int) =
+    something(C.labels, DataAPI.unwrap.(levels[1:length(levels) .!= baseind]))
+
 DataAPI.levels(c::HypothesisCoding) = c.levels
 
 """

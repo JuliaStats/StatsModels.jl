@@ -406,6 +406,16 @@
         cm = ContrastsMatrix(EffectsCoding(), [true, false])
         @test cm.coefnames == [false]
         @test issetequal(cm.levels, [true, false])
+
+        hypothesis = [0 1]'
+        cm = ContrastsMatrix(EffectsCoding(), [true, false])
+        @test cm.coefnames == [false]
+        @test issetequal(cm.levels, [true, false])
+
+        hc = HypothesisCoding([1 0]; levels=[true, false], labels=["yes", "no"])
+        cm = ContrastsMatrix(hc, [true, false])
+        @test issetequal(cm.coefnames, ["yes", "no"])
+        @test issetequal(cm.levels, [true, false])
     end
 
 end
