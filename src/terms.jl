@@ -505,7 +505,6 @@ lazy_modelcols(ft::FunctionTerm, d::NamedTuple) =
 lazy_modelcols(x, d) = modelcols(x, d)
 
 
-
 modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
 
 modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]

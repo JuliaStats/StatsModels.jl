@@ -345,8 +345,7 @@
                       z = repeat([:e, :f], inner = 4))
 
         f = apply_schema(@formula(r ~ 1 + w*x*y*z), schema(d))
-        modelmatrix(f, d)
-        @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)
+        @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f, d)
     end
 
     @testset "modelmatrix and response set schema if needed" begin
@@ -400,7 +399,7 @@
     @testset "#185 - interactions of scalar terms for row tables" begin
         t = (a = rand(10), b = rand(10), c = rand(10))
         f = apply_schema(@formula(0 ~ a&b&c), schema(t))
-        @test vec(modelcols(f.rhs, t)) == modelcols.(Ref(f.rhs), Tables.rowtable(t))
+        @test vec(modelcols(f.rhs, t)) == mapreduce(Base.Fix1(modelcols, f.rhs), vcat, Tables.rowtable(t))
     end
 
     @testset "#112. coefnames should return same type for all rhs: $(f)" for f in [
