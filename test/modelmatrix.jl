@@ -402,5 +402,32 @@
         f = apply_schema(@formula(0 ~ a&b&c), schema(t))
         @test vec(modelcols(f.rhs, t)) == modelcols.(Ref(f.rhs), Tables.rowtable(t))
     end
+
+    @testset "#293 conversion of Float32s" begin
+        d = (; y=rand(Float32, 4), x=rand(Float32, 4), z=[1:4; ])
+        f = @formula(y ~ 1 + x + log(x) * z)
+        y, x = modelcols(apply_schema(f, schema(d)), d)
+        @test eltype(y) == eltype(x) == Float32
+
+        f0 = @formula(y ~ 0 + x + log(x) * z)
+        y, x = modelcols(apply_schema(f0, schema(d)), d)
+        @test eltype(y) == eltype(x) == Float32
+
+        fint = @formula(y ~ 1 + z)
+        y, x = modelcols(apply_schema(fint, schema(d)), d)
+        @test eltype(x) == Int
+
+        # currently this is the best way to construct contrasts with Float32s...
+        dummy_cmat = Float32[1 0 0
+                             0 1 0
+                             0 0 1
+                             0 0 0]
+        contr = StatsModels.ContrastsCoding(dummy_cmat, [1:4;])
+
+        sch = schema(f, d, Dict(:z => contr))
+        y, x = modelcols(apply_schema(f, sch), d)
+        @test size(x) == (4, 1 + 1 + 1 + 3 + 3)
+        @test eltype(x) == eltype(y) == Float32
+    end
     
 end
