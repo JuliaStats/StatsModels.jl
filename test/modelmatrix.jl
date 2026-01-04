@@ -1,5 +1,5 @@
 @testset "Model matrix" begin
-    
+
     using StatsBase: StatisticalModel
 
     using SparseArrays, DataFrames, Tables
@@ -14,7 +14,7 @@
     d.x1p = categorical(d.x1)
 
     d_orig = deepcopy(d)
-    
+
     x1 = [5.:8;]
     x2 = [9.:12;]
     x3 = [13.:16;]
@@ -161,8 +161,8 @@
                       z = repeat([:e, :f], inner = 4))
         cs = Dict([Symbol(name) => EffectsCoding() for name in names(d)])
         d.n = 1.:8
-    
-    
+
+
         ## No intercept
         mf = ModelFrame(@formula(n ~ 0 + x), d, contrasts=cs)
         mm = ModelMatrix(mf)
@@ -182,8 +182,8 @@
         mm = ModelMatrix(mf)
         @test all(mm.m .== ifelse.(d.x .== :a, -1, 1))
         @test coefnames(mf) == ["x: b"]
-        
-    
+
+
         ## No first-order term for interaction
         mf = ModelFrame(@formula(n ~ 1 + x + x&y), d, contrasts=cs)
         mm = ModelMatrix(mf)
@@ -197,7 +197,7 @@
                                  1  0  1]
         @test mm.m == ModelMatrix{sparsetype}(mf).m
         @test coefnames(mf) == ["(Intercept)", "x: b", "x: a & y: d", "x: b & y: d"]
-    
+
         ## When both terms of interaction are non-redundant:
         mf = ModelFrame(@formula(n ~ 0 + x&y), d, contrasts=cs)
         mm = ModelMatrix(mf)
@@ -218,7 +218,7 @@
         mm = ModelMatrix(mf)
         @test mm.m == Matrix(1.0I, 8, 8)
         @test mm.m == ModelMatrix{sparsetype}(mf).m
-    
+
         # two two-way interactions, with no lower-order term. both are promoted in
         # first (both x and y), but only the old term (x) in the second (because
         # dropping x gives z which isn't found elsewhere, but dropping z gives x
@@ -237,7 +237,7 @@
         @test coefnames(mf) == ["x: a & y: c", "x: b & y: c",
                                 "x: a & y: d", "x: b & y: d",
                                 "x: a & z: f", "x: b & z: f"]
-    
+
         # ...and adding a three-way interaction, only the shared term (x) is promoted.
         # this is because dropping x gives y&z which isn't present, but dropping y or z
         # gives x&z or x&z respectively, which are both present.
@@ -256,7 +256,7 @@
                                 "x: a & y: d", "x: b & y: d",
                                 "x: a & z: f", "x: b & z: f",
                                 "x: a & y: d & z: f", "x: b & y: d & z: f"]
-    
+
         # two two-way interactions, with common lower-order term. the common term x is
         # promoted in both (along with lower-order term), because in every case, when
         # x is dropped, the remaining terms (1, y, and z) aren't present elsewhere.
@@ -274,8 +274,8 @@
         @test coefnames(mf) == ["x: a", "x: b",
                                 "x: a & y: d", "x: b & y: d",
                                 "x: a & z: f", "x: b & z: f"]
-    
-    
+
+
         ## FAILS: When both terms are non-redundant and intercept is PRESENT
         ## (not fully redundant). Ideally, would drop last column. Might make sense
         ## to warn about this, and suggest recoding x and y into a single variable.
@@ -286,7 +286,7 @@
                                            1 0 0 0]
         @test_broken coefnames(mf) == ["x: a & y: c", "x: b & y: c",
                                        "x: a & y: d", "x: b & y: d"]
-    
+
         ## note that R also does not detect this automatically. it's left to glm et al.
         ## to detect numerically when the model matrix is rank deficient, which is hard
         ## to do correctly.
@@ -343,10 +343,9 @@
                       x = repeat([:a, :b], outer = 4),
                       y = repeat([:c, :d], inner = 2, outer = 2),
                       z = repeat([:e, :f], inner = 4))
-    
+
         f = apply_schema(@formula(r ~ 1 + w*x*y*z), schema(d))
-        modelmatrix(f, d)
-        @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f,d)
+        @test reduce(vcat, last.(modelcols.(Ref(f), Tables.rowtable(d)))') == modelmatrix(f, d)
     end
 
     @testset "modelmatrix and response set schema if needed" begin
@@ -355,7 +354,7 @@
                       x = repeat([:a, :b], outer = 4),
                       y = repeat([:c, :d], inner = 2, outer = 2),
                       z = repeat([:e, :f], inner = 4))
-    
+
         f = @formula(r ~ 1 + w*x*y*z)
 
         mm1 = modelmatrix(f, d)
@@ -375,19 +374,19 @@
                    C=repeat(['L','H'], inner=4))
 
             contrasts = Dict(:A=>HelmertCoding(), :B=>HelmertCoding(), :C=>HelmertCoding())
-                                                  
-                                                  
+
+
 
             mf = ModelFrame(@formula(Y ~ 1 + A*B*C), tbl)
             mf_helm = ModelFrame(@formula(Y ~ 1 + A*B*C), tbl, contrasts = contrasts)
 
             @test size(modelmatrix(mf)) == size(modelmatrix(mf_helm))
-            
+
             mf_helm2 = setcontrasts!(ModelFrame(@formula(Y ~ 1 + A*B*C), tbl), contrasts)
 
             @test size(modelmatrix(mf)) == size(modelmatrix(mf_helm2))
             @test modelmatrix(mf_helm) == modelmatrix(mf_helm2)
-            
+
         end
     end
 
@@ -400,7 +399,17 @@
     @testset "#185 - interactions of scalar terms for row tables" begin
         t = (a = rand(10), b = rand(10), c = rand(10))
         f = apply_schema(@formula(0 ~ a&b&c), schema(t))
-        @test vec(modelcols(f.rhs, t)) == modelcols.(Ref(f.rhs), Tables.rowtable(t))
+        @test vec(modelcols(f.rhs, t)) == mapreduce(Base.Fix1(modelcols, f.rhs), vcat, Tables.rowtable(t))
     end
-    
+
+    @testset "#112. coefnames should return same type for all rhs: $(f)" for f in [
+        @formula(y ~ 1),
+        @formula(y ~ x1 + 0),
+        @formula(y ~ x1),
+        @formula(y ~ x1 + x2),
+    ]
+        df = (y = [1.0, 1.0], x1 = [1, 2], x2 = ["A", "B"])
+        _f = apply_schema(f, schema(f, df))
+        @test coefnames(_f.rhs) isa Vector{String}
+    end
 end
