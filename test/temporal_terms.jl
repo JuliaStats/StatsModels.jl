@@ -26,7 +26,7 @@ using DataStructures
             resp, pred = modelcols(f, df)
 
             @test isequal(pred[:, 1], [missing; 1.0:9])
-            @test coefnames(f)[2] == "x_lag1"
+            @test coefnames(f)[2] == ["x_lag1"]
         end
 
         @testset "Row Table" begin
@@ -53,7 +53,7 @@ using DataStructures
             resp, pred = modelcols(neg_f, df);
 
             @test isequal(pred[:, 1], [3.0:10; missing; missing])
-            @test coefnames(neg_f)[2] == "x_lag-2"
+            @test coefnames(neg_f)[2] == ["x_lag-2"]
         end
 
         @testset "Categorical Term use" begin
@@ -184,7 +184,5 @@ using DataStructures
                 @test coefnames(t1) == coefnames(t2) == coefnames(t3)
             end
         end
-
-        
     end
 end
