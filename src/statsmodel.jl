@@ -194,17 +194,17 @@ function StatsAPI.coeftable(model::TableModels; kwargs...)
 end
 
 # show function that delegates to coeftable
-function Base.show(io::IO, model::TableModels)
+function Base.show(io::IO, ::MIME"text/plain", model::TableModels)
     println(io, typeof(model))
     println(io)
     println(io, model.mf.f)
     println(io)
     try
         println(io,"Coefficients:")
-        show(io, coeftable(model))
+        show(io, MIME"text/plain"(), coeftable(model))
     catch e
         if isa(e, MethodError) || isa(e, ErrorException) && occursin("coeftable is not defined", e.msg)
-            show(io, model.model)
+            show(io, MIME"text/plain"(), model.model)
         else
             rethrow(e)
         end
