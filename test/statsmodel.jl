@@ -106,7 +106,7 @@ struct DummyModTwo <: RegressionModel
 end
 
 StatsAPI.fit(::Type{DummyModTwo}, ::Matrix, ::Vector) = DummyModTwo("hello!")
-Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
+Base.show(io::IO, m::DummyModTwo) = print(io, m.msg)
 
 @testset "stat model types" begin
 
@@ -164,8 +164,20 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
     @test termnames(m) == ("y", ["(Intercept)", "x1", "x2", "x1 & x2"])
 
     ## show with coeftable defined
-    io = IOBuffer()
-    show(io, m)
+    @test repr("text/plain", m) == """
+        StatsModels.TableRegressionModel{DummyMod, Matrix{Float64}}
+
+        y ~ 1 + x1 + x2 + x1 & x2
+
+        Coefficients:
+        ─────────────────────────
+                     'beta' value
+        ─────────────────────────
+        (Intercept)           1.0
+        x1                    2.0
+        x2                    3.0
+        x1 & x2               4.0
+        ─────────────────────────"""
 
     ## with categorical variables
     f2 = @formula(y ~ x1p)
@@ -234,7 +246,13 @@ Base.show(io::IO, m::DummyModTwo) = println(io, m.msg)
 
     m2 = fit(DummyModTwo, f, d)
     # make sure show() still works when there is no coeftable method
-    show(io, m2)
+    @test repr("text/plain", m2) == """
+        StatsModels.TableRegressionModel{DummyModTwo, Matrix{Float64}}
+
+        y ~ 1 + x1 + x2 + x1 & x2
+
+        Coefficients:
+        hello!"""
 end
 
 @testset "termnames" begin
