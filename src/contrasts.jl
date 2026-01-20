@@ -289,7 +289,7 @@ mutable struct FullDummyCoding <: AbstractContrasts
 end
 
 ContrastsMatrix(C::FullDummyCoding, levels::AbstractVector{T}) where {T} =
-    ContrastsMatrix(Matrix(1.0I, length(levels), length(levels)), levels, levels, C)
+    ContrastsMatrix(Matrix(1.0I, length(levels), length(levels)), Vector(levels), Vector(levels), C)
 
 "Promote contrasts matrix to full rank version"
 Base.convert(::Type{ContrastsMatrix{FullDummyCoding}}, C::ContrastsMatrix) =
