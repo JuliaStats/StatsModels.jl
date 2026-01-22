@@ -210,3 +210,36 @@ function Base.show(io::IO, ::MIME"text/plain", model::TableModels)
         end
     end
 end
+
+"""
+    getparams(model::TableModels, t::AbstractTerm)
+
+Returns a named tuple of parameters corresponding to `t`. 
+
+Examples: 
+
+julia> t = (y = rand(100), x = rand(100), b = rand(Bool, 100));
+julia> m = lm(@formula(y ~ x + x & b), t);
+julia> getparams(m, Term(:x))
+
+"""
+function getparams(model::TableModels, t::AbstractTerm)
+    m = model.mf.f.rhs.terms
+    i = 1
+    for x in m
+        @show typeof(x)
+        if t isa InteractionTerm && x isa InteractionTerm
+            xterms = map(s -> s.sym, x.terms)
+            tterms = map(s -> s.sym, t.terms)
+            xterms == tterms && break
+        elseif t isa InterceptTerm{true} && x isa InterceptTerm{true} 
+            break
+        elseif x isa CategoricalTerm || x isa ContinuousTerm
+            x.sym == t.sym && break
+        else 
+            nothing
+        end
+        i += 1
+    end
+    return (coefname = coefnames(model)[i], coef = coef(model)[i], stderror = stderror(model)[i])
+end
