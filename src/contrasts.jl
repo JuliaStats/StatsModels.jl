@@ -108,12 +108,12 @@ struct ContrastsMatrix{C <: AbstractContrasts, M <: AbstractMatrix, T, U}
     contrasts::C
     invindex::Dict{T,Int}
     function ContrastsMatrix(matrix::M,
-                             coefnames::Vector{U},
-                             levels::Vector{T},
+                             coefnames::AbstractVector{U},
+                             levels::AbstractVector{T},
                              contrasts::C) where {U, T, C <: AbstractContrasts, M <: AbstractMatrix}
         allunique(levels) || throw(ArgumentError("levels must be all unique, got $(levels)"))
         invindex = Dict{T,Int}(x=>i for (i,x) in enumerate(levels))
-        new{C,M,T,U}(matrix, coefnames, levels, contrasts, invindex)
+        new{C,M,T,U}(matrix, convert(Vector{U}, coefnames), convert(Vector{T}, levels), contrasts, invindex)
     end
 end
 

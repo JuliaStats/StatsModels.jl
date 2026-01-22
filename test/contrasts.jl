@@ -418,4 +418,18 @@
         @test issetequal(cm.levels, [true, false])
     end
 
+
+    @testset "FullDummy and AbstractVector (#337)" begin
+        cm = ContrastsMatrix(StatsModels.FullDummyCoding(), categorical([1, 2, 3]))
+        @test cm.levels == cm.coefnames == categorical([1, 2, 3])
+        @test cm.levels isa Vector{<:CategoricalValue}
+        @test cm.coefnames isa Vector{<:CategoricalValue}
+        @test cm.matrix == I(3)
+
+        cm = ContrastsMatrix(StatsModels.FullDummyCoding(), view([1 2 3], 1, 1:3))
+        @test cm.levels == cm.coefnames == [1, 2, 3]
+        @test cm.levels isa Vector{Int}
+        @test cm.coefnames isa Vector{Int}
+        @test cm.matrix == I(3)
+    end
 end
