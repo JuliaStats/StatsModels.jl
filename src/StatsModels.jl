@@ -51,6 +51,9 @@ export
     FunctionTerm,
     MatrixTerm,
 
+    kwarg_exprs,
+    has_kwargs,
+
     lag, lead, # Reexported from ShiftedArrays
 
     term,

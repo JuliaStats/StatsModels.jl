@@ -121,6 +121,46 @@ width(::FunctionTerm) = 1
 Base.:(==)(a::FunctionTerm, b::FunctionTerm) = a.f == b.f && a.args == b.args && a.exorig == b.exorig
 
 """
+    kwarg_exprs(ft::FunctionTerm)
+
+Extract keyword argument expressions from a `FunctionTerm`'s original expression.
+Returns a vector of `Expr(:kw, name, value)` nodes, or an empty vector if there
+are no keyword arguments.
+
+This is useful for downstream packages that extend `@formula` syntax with
+keyword arguments in function calls (e.g., `@formula(y ~ s(x; k=10, bs=:cr))`).
+
+# Example
+
+```julia
+f = @formula(y ~ foo(x; a=1, b=2))
+ft = f.rhs
+kwarg_exprs(ft)  # [:(a = 1), :(b = 2)]
+```
+"""
+function kwarg_exprs(ft::FunctionTerm)
+    kws = Expr[]
+    for arg in ft.exorig.args[2:end]
+        if arg isa Expr && Meta.isexpr(arg, :parameters)
+            for kw in arg.args
+                kw isa Expr && Meta.isexpr(kw, :kw) && push!(kws, kw)
+            end
+        elseif arg isa Expr && Meta.isexpr(arg, :kw)
+            push!(kws, arg)
+        end
+    end
+    return kws
+end
+
+"""
+    has_kwargs(ft::FunctionTerm)
+
+Return `true` if the `FunctionTerm` was constructed from an expression containing
+keyword arguments.
+"""
+has_kwargs(ft::FunctionTerm) = !isempty(kwarg_exprs(ft))
+
+"""
     InteractionTerm{Ts} <: AbstractTerm
 
 Represents an _interaction_ between two or more individual terms.
