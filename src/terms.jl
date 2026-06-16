@@ -192,17 +192,9 @@ Represents a continuous variable, with a name and summary statistics.
 # Fields
 
 * `sym::Symbol`: The name of the variable
-* `mean::T`: Mean
-* `var::T`: Variance
-* `min::T`: Minimum value
-* `max::T`: Maximum value
 """
-struct ContinuousTerm{T} <: AbstractTerm
+struct ContinuousTerm <: AbstractTerm
     sym::Symbol
-    mean::T
-    var::T
-    min::T
-    max::T
 end
 width(::ContinuousTerm) = 1
 
