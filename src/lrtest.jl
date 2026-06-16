@@ -1,6 +1,5 @@
 struct LRTestResult{N}
     nobs::Int
-    deviance::NTuple{N, Float64}
     loglikelihood::NTuple{N, Float64}
     dof::NTuple{N, Int}
     pval::NTuple{N, Float64}
@@ -23,10 +22,10 @@ function isnested end
 For each sequential pair of statistical models in `mods...`, perform a likelihood ratio
 test to determine if the first one fits significantly better than the next.
 
-A table is returned containing degrees of freedom (DOF),
-difference in DOF from the preceding model, log-likelihood, deviance, chi-squared
-statistic (i.e. absolute value of twice the difference in log-likelihood)
-and p-value for the comparison between the two models.
+A table is returned containing the log-likelihood, the number of parameters (p),
+the chi-squared statistic (i.e. absolute value of twice the difference in
+log-likelihood), the difference in degrees of freedom from the preceding model (df),
+and the p-value for the comparison between the two models.
 
 Optional keyword argument `atol` controls the numerical tolerance when testing whether
 the models are nested.
@@ -52,23 +51,23 @@ julia> bigmodel = glm(@formula(Result ~ 1 + Treatment + Other), dat, Binomial(),
 
 julia> lrtest(nullmodel, model, bigmodel)
 Likelihood-ratio test: 3 models fitted on 12 observations
-────────────────────────────────────────────────────
-     DOF  ΔDOF   LogLik  Deviance   Chisq  p(>Chisq)
-────────────────────────────────────────────────────
-[1]    1        -8.1503   16.3006
-[2]    2     1  -7.9780   15.9559  0.3447     0.5571
-[3]    4     2  -7.0286   14.0571  1.8988     0.3870
-────────────────────────────────────────────────────
+───────────────────────────────────
+     LogLik   p    χ²    df  p(>χ²)
+───────────────────────────────────
+[1]  -8.1503  1
+[2]  -7.9780  2  0.3447   1  0.5571
+[3]  -7.0286  4  1.8988   2  0.3870
+───────────────────────────────────
 
 julia> lrtest(bigmodel, model, nullmodel)
 Likelihood-ratio test: 3 models fitted on 12 observations
-────────────────────────────────────────────────────
-     DOF  ΔDOF   LogLik  Deviance   Chisq  p(>Chisq)
-────────────────────────────────────────────────────
-[1]    4        -7.0286   14.0571
-[2]    2    -2  -7.9780   15.9559  1.8988     0.3870
-[3]    1    -1  -8.1503   16.3006  0.3447     0.5571
-────────────────────────────────────────────────────
+───────────────────────────────────
+     LogLik   p    χ²    df  p(>χ²)
+───────────────────────────────────
+[1]  -7.0286  4
+[2]  -7.9780  2  1.8988  -2  0.3870
+[3]  -8.1503  1  0.3447  -1  0.5571
+───────────────────────────────────
 ```
 """
 function lrtest(mods::StatisticalModel...; atol::Real=0.0)
@@ -106,10 +105,7 @@ function lrtest(mods::StatisticalModel...; atol::Real=0.0)
             "$(nameof(T)) does not implement isnested: results may not be meaningful"
     end
 
-    dev = deviance.(mods)
-
     Δdf = (NaN, _diff(df)...)
-    dfr = Int.(dof_residual.(mods))
 
     ll = loglikelihood.(mods)
     chisq = (NaN, 2 .* abs.(_diff(ll))...)
@@ -124,31 +120,30 @@ function lrtest(mods::StatisticalModel...; atol::Real=0.0)
     end
 
     pval = chisqccdf.(abs.(Δdf), chisq)
-    return LRTestResult(Int(nobs(mods[1])), dev, ll, df, pval)
+    return LRTestResult(Int(nobs(mods[1])), ll, df, pval)
 end
 
 function Base.show(io::IO, lrr::LRTestResult{N}) where N
     Δdf = _diff(lrr.dof)
-    Δdev = _diff(lrr.deviance)
     chisq = abs.(2 .* _diff(lrr.loglikelihood))
 
-    nc = 7
+    nc = 6
     nr = N
     outrows = Matrix{String}(undef, nr+1, nc)
 
-    outrows[1, :] = ["", "DOF", "ΔDOF", "LogLik", "Deviance", "Chisq", "p(>Chisq)"]
+    outrows[1, :] = ["", "LogLik", "p", "χ²", "df", "p(>χ²)"]
 
-    outrows[2, :] = ["[1]", @sprintf("%.0d", lrr.dof[1]), " ",
+    outrows[2, :] = ["[1]",
                      @sprintf("%.4f", lrr.loglikelihood[1]),
-                     @sprintf("%.4f", lrr.deviance[1]),
-                     " ", " "]
+                     @sprintf("%.0d", lrr.dof[1]),
+                     " ", " ", " "]
 
     for i in 2:nr
-        outrows[i+1, :] = ["[$i]", @sprintf("%.0d", lrr.dof[i]),
-                           @sprintf("%.0d", Δdf[i-1]),
+        outrows[i+1, :] = ["[$i]",
                            @sprintf("%.4f", lrr.loglikelihood[i]),
-                           @sprintf("%.4f", lrr.deviance[i]),
+                           @sprintf("%.0d", lrr.dof[i]),
                            @sprintf("%.4f", chisq[i-1]),
+                           @sprintf("%.0d", Δdf[i-1]),
                            string(StatsBase.PValue(lrr.pval[i]))]
     end
     colwidths = length.(outrows)
@@ -162,14 +157,18 @@ function Base.show(io::IO, lrr::LRTestResult{N}) where N
         for c in 1:nc
             cur_cell = outrows[r, c]
             cur_cell_len = length(cur_cell)
+            total_pad = max_colwidths[c] - cur_cell_len
 
-            padding = " "^(max_colwidths[c]-cur_cell_len)
             if c > 1
-                padding = "  "*padding
+                print(io, "  ")
             end
-
-            print(io, padding)
-            print(io, cur_cell)
+            if r == 1
+                left_pad = total_pad ÷ 2
+                right_pad = total_pad - left_pad
+                print(io, " "^left_pad, cur_cell, " "^right_pad)
+            else
+                print(io, " "^total_pad, cur_cell)
+            end
         end
         print(io, "\n")
         r == 1 && println(io, '─'^totwidth)
