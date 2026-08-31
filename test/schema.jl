@@ -70,6 +70,41 @@
 
     end
 
+    @testset "statistics=false" begin
+        f = @formula(y ~ 1 + a + b + c)
+        d = (y = rand(10), a = rand(10), b = Float32.(1:10),
+             c = repeat(["u","v"], 5))
+
+        sch = schema(f, d, statistics=false)
+        t = sch[term(:a)]
+        @test t isa ContinuousTerm
+        @test isnan(t.mean) && isnan(t.var) && isnan(t.min) && isnan(t.max)
+        # the statistics keep the type they would have had
+        @test sch[term(:b)] isa ContinuousTerm{Float32}
+        # categorical terms are unaffected
+        c1, c2 = sch[term(:c)], schema(f, d)[term(:c)]
+        @test c1 isa CategoricalTerm && c1.sym == c2.sym && c1.contrasts == c2.contrasts
+
+        # skipping statistics changes nothing else downstream
+        ff = apply_schema(f, sch)
+        @test modelmatrix(ff.rhs, d) == modelmatrix(apply_schema(f, schema(f, d)).rhs, d)
+
+        # hints still work, and never see the keyword
+        sch1 = schema(f, d, Dict(:a => CategoricalTerm), statistics=false)
+        @test sch1[term(:a)] isa CategoricalTerm{DummyCoding}
+        sch2 = schema(f, d, Dict(:a => EffectsCoding()), statistics=false)
+        @test sch2[term(:a)] isa CategoricalTerm{EffectsCoding}
+        # a ContinuousTerm hint skips the statistics too
+        sch3 = schema(f, d, Dict(:a => ContinuousTerm), statistics=false)
+        @test isnan(sch3[term(:a)].mean)
+        # an AbstractTerm hint is included as is
+        hint = schema(f, d)[term(:a)]
+        @test schema(f, d, Dict(:a => hint), statistics=false)[term(:a)] === hint
+
+        @test isnan(concrete_term(term(:a), [1, 2, 3], ContinuousTerm, statistics=false).mean)
+        @test concrete_term(term(:a), [1, 2, 3], ContinuousTerm, statistics=true).mean == 2.0
+    end
+
     @testset "nice errors" begin
         d = (yyy = rand(10), aaa = rand(10), bbb = repeat([:a, :b], 5))
         @test_throws ArgumentError("There isn't a variable called 'aa' in your data; the nearest names appear to be: aaa") concrete_term(Term(:aa), d, nothing)

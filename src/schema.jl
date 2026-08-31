@@ -56,8 +56,8 @@ Base.keys(schema::Schema) = keys(schema.schema)
 Base.haskey(schema::Schema, key) = haskey(schema.schema, key)
 
 """
-    schema([terms::AbstractVector{<:AbstractTerm}, ]data, hints::Dict{Symbol})
-    schema(term::AbstractTerm, data, hints::Dict{Symbol})
+    schema([terms::AbstractVector{<:AbstractTerm}, ]data, hints::Dict{Symbol}; statistics=true)
+    schema(term::AbstractTerm, data, hints::Dict{Symbol}; statistics=true)
 
 Compute all the invariants necessary to fit a model with `terms`.  A schema is a dict that
 maps `Term`s to their concrete instantiations (either `CategoricalTerm`s or
@@ -66,6 +66,15 @@ names (as `Symbol`s) to term or contrast types.  If a hint is not provided for a
 the appropriate term type will be guessed based on the data type from the data column: any
 numeric data is assumed to be continuous, and any non-numeric data is assumed to be
 categorical.
+
+By default, creating a `ContinuousTerm` computes the summary statistics (mean, variance,
+and extrema) of the corresponding column, which requires several passes over the data.
+Pass `statistics=false` to skip this computation and fill those fields with `NaN`
+placeholders instead.  Use this only when nothing downstream reads the summary statistics
+(they are needed, e.g., by packages that use them as default centering or scaling values).
+The keyword only affects the terms that StatsModels itself concretizes as continuous
+(numeric columns without a hint, and columns with a `ContinuousTerm` hint); terms with
+other hints are created exactly as they would be otherwise.
 
 Returns a [`StatsModels.Schema`](@ref), which is a wrapper around a `Dict`
 mapping `Term`s to their concrete instantiations (`ContinuousTerm` or
@@ -114,21 +123,39 @@ julia> sch[term(:y)]
 y(continuous)
 ```
 """
-schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
-schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:ColumnTable} =
-    schema(Term.(collect(fieldnames(D))), dt, hints)
-schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
-    schema(ts, columntable(data), hints)
+schema(data, hints=Dict{Symbol,Any}(); kwargs...) = schema(columntable(data), hints; kwargs...)
+schema(dt::D, hints=Dict{Symbol,Any}(); kwargs...) where {D<:ColumnTable} =
+    schema(Term.(collect(fieldnames(D))), dt, hints; kwargs...)
+schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}; kwargs...) =
+    schema(ts, columntable(data), hints; kwargs...)
 
 # handle hints:
-schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
-       hints::Dict{Symbol}=Dict{Symbol,Any}()) =
-    sch = Schema(t=>concrete_term(t, dt, hints) for t in ts)
+function schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
+                hints::Dict{Symbol}=Dict{Symbol,Any}(); statistics::Bool=true)
+    sch = Schema()
+    for t in ts
+        # route `statistics=false` only into the paths where the statistics are
+        # computed by StatsModels itself, so that `concrete_term` methods that
+        # other packages define for their own hint types never see the keyword
+        if !statistics && t isa Term
+            msg = checkcol(dt, t.sym)
+            msg != "" && throw(ArgumentError(msg))
+            col = getproperty(dt, t.sym)
+            hint = get(hints, t.sym, nothing)
+            if hint === ContinuousTerm || (hint === nothing && col isa AbstractVector{<:Number})
+                sch.schema[t] = concrete_term(t, col, ContinuousTerm; statistics=false)
+                continue
+            end
+        end
+        sch.schema[t] = concrete_term(t, dt, hints)
+    end
+    return sch
+end
 
-schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
-    schema(filter(needs_schema, terms(f)), data, hints)
+schema(f::TermOrTerms, data, hints::Dict{Symbol}; kwargs...) =
+    schema(filter(needs_schema, terms(f)), data, hints; kwargs...)
 
-schema(f::TermOrTerms, data) = schema(f, data, Dict{Symbol,Any}())
+schema(f::TermOrTerms, data; kwargs...) = schema(f, data, Dict{Symbol,Any}(); kwargs...)
 
 """
     concrete_term(t::Term, data[, hint])
@@ -145,6 +172,11 @@ those contrasts.
 If no hint is provided (or `hint==nothing`), the `eltype` of the data is used:
 `Number`s are assumed to be continuous, and all others are assumed to be
 categorical.
+
+The `ContinuousTerm`-hint method additionally accepts a `statistics::Bool=true`
+keyword: `concrete_term(t, xs, ContinuousTerm, statistics=false)` skips computing
+the summary statistics (mean, variance, and extrema) stored in the term, filling
+those fields with `NaN` placeholders instead (see [`schema`](@ref)).
 
 # Example
 
@@ -198,10 +230,18 @@ concrete_term(t::Term, x, hint::AbstractTerm) = hint
 concrete_term(t, d, hint) = t
 
 concrete_term(t::Term, xs::AbstractVector{<:Number}, ::Nothing) = concrete_term(t, xs, ContinuousTerm)
-function concrete_term(t::Term, xs::AbstractVector, ::Type{ContinuousTerm})
-    μ, σ2 = StatsBase.mean_and_var(xs)
-    min, max = extrema(xs)
-    ContinuousTerm(t.sym, promote(μ, σ2, min, max)...)
+function concrete_term(t::Term, xs::AbstractVector, ::Type{ContinuousTerm};
+                       statistics::Bool=true)
+    if statistics
+        μ, σ2 = StatsBase.mean_and_var(xs)
+        min, max = extrema(xs)
+        return ContinuousTerm(t.sym, promote(μ, σ2, min, max)...)
+    else
+        # keep the field type the statistics would have had, without the O(n) passes
+        E = eltype(xs)
+        nan = E <: Number ? convert(float(E), NaN) : NaN
+        return ContinuousTerm(t.sym, nan, nan, nan, nan)
+    end
 end
 # default contrasts: dummy coding
 concrete_term(t::Term, xs::AbstractVector, ::Nothing) = concrete_term(t, xs, CategoricalTerm)
