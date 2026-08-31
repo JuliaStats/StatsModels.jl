@@ -196,6 +196,9 @@ Represents a continuous variable, with a name and summary statistics.
 * `var::T`: Variance
 * `min::T`: Minimum value
 * `max::T`: Maximum value
+
+The summary statistics are `NaN` placeholders when the term was created with
+`statistics=false` (see [`schema`](@ref)).
 """
 struct ContinuousTerm{T} <: AbstractTerm
     sym::Symbol
