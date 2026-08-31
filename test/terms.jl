@@ -6,7 +6,7 @@ end
 mimestring(x) = mimestring(MIME"text/plain", x)
 
 struct MultiTerm <: AbstractTerm
-    terms::StatsModels.TupleTerm
+    terms::Vector{AbstractTerm}
 end
 StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
     apply_schema.(mt.terms, Ref(sch), Mod)
@@ -55,8 +55,8 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
     @testset "term operators" begin
         a = term(:a)
         b = term(:b)
-        @test a + b == (a, b)
-        @test (a ~ b) == FormulaTerm(a, b)
+        @test a + b == [a, b]
+        @test (a ~ b) == FormulaTerm(a, [b])
         @test string(a~b) == "$a ~ $b"
         @test mimestring(a~b) ==
             """FormulaTerm
@@ -138,17 +138,15 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
         @test f2.rhs + f2.rhs == f2.rhs
     end
 
-    @testset "expand nested tuples of terms during apply_schema" begin
+    @testset "flatten term vectors during apply_schema" begin
         sch = schema((a=rand(10), b=rand(10), c=rand(10)))
 
-        # nested tuples of terms are expanded by apply_schema
-        terms = (term(:a), (term(:b), term(:c)))
-        terms2 = apply_schema(terms, sch, Nothing)
-        @test terms2 isa NTuple{3, ContinuousTerm}
-        @test terms2 == apply_schema(term.((:a, :b, :c)), sch, Nothing)
+        terms2 = apply_schema(term.([:a, :b, :c]), sch, Nothing)
+        @test terms2 isa Vector{AbstractTerm}
+        @test all(t -> t isa ContinuousTerm, terms2)
 
-        # a term that generates multiple terms after apply_schema
-        mterms = (terms[1], MultiTerm(terms[2]))
+        # a term that generates multiple terms after apply_schema is flattened
+        mterms = AbstractTerm[term(:a), MultiTerm([term(:b), term(:c)])]
         terms3 = apply_schema(mterms, sch, Nothing)
 
         @test terms2 == terms3
@@ -231,41 +229,31 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
 
     end
 
-    @testset "Tuple terms" begin
-        using StatsModels: TermOrTerms, TupleTerm, Term
+    @testset "Term containers" begin
+        using StatsModels: TermOrTerms, Term
         a, b, c = Term.((:a, :b, :c))
 
-        # TermOrTerms - one or more AbstractTerms (if more, a tuple)
-        # empty tuples are never terms
-        @test !(() isa TermOrTerms)
-        @test (a, ) isa TermOrTerms
-        @test (a, b) isa TermOrTerms
-        @test (a, b, a&b) isa TermOrTerms
-        @test !(((), a) isa TermOrTerms)
-        # can't contain further tuples
-        @test !((a, (a,), b) isa TermOrTerms)
+        # TermOrTerms - a term or a vector of terms
+        @test a isa TermOrTerms
+        @test [a] isa TermOrTerms
+        @test [a, b] isa TermOrTerms
+        @test AbstractTerm[a, b, a&b] isa TermOrTerms
+        @test !([1, 2] isa TermOrTerms)
 
-        # a tuple of AbstractTerms OR Tuples of one or more terms
-        # empty tuples are never terms
-        @test !(() isa TupleTerm)
-        @test (a, ) isa TupleTerm
-        @test (a, b) isa TupleTerm
-        @test (a, b, a&b) isa TupleTerm
-        @test !(((), a) isa TupleTerm)
-        @test (((a,), a) isa TupleTerm)
-
-        # no methods for operators on term and empty tuple (=no type piracy)
+        # no methods for operators on term and tuples (=no type piracy)
         @test_throws MethodError a + ()
         @test_throws MethodError () + a
         @test_throws MethodError a & ()
         @test_throws MethodError () & a
         @test_throws MethodError a ~ ()
         @test_throws MethodError () ~ a
+        @test_throws MethodError a + (a, b)
+        @test_throws MethodError (a, b) + a
 
-        # show methods of empty tuples preserved
+        # show methods
         @test "$(())" == "()"
-        @test "$((a,b))" == "a + b"
-        @test "$((a, ()))" == "(a, ())"
+        @test "$([a, b])" == "a + b"
+        @test "$(AbstractTerm[a, a & b])" == "a + a & b"
     end
 
     @testset "concrete_term error messages" begin
@@ -277,10 +265,10 @@ StatsModels.apply_schema(mt::MultiTerm, sch::StatsModels.Schema, Mod::Type) =
     @testset "sort by degree in ~" begin
         one, a, b = term.([1, :a, :b])
         for zero_deg in [one, InterceptTerm{true}(), InterceptTerm{false}()]
-            @test a + zero_deg == (a, zero_deg)
+            @test a + zero_deg == [a, zero_deg]
             @test (a ~ a + zero_deg) == (a ~ zero_deg + a)
 
-            @test a & b + zero_deg + a == (a & b, zero_deg, a)
+            @test a & b + zero_deg + a == [a & b, zero_deg, a]
             @test (a ~ a & b + zero_deg + a) == (a ~ zero_deg + a + a & b)
         end
     end

@@ -271,9 +271,9 @@ end
     @test termnames(FunctionTerm(log, [Term(:x)], :(log(x)))) == "log(x)"
     @test termnames(InteractionTerm(term.((:a, :b, :c)))) == "a & b & c"
     @test termnames(MatrixTerm(term(:a))) == ["a"]
-    @test termnames(MatrixTerm((term(:a), term(:b)))) == ["a", "b"]
-    @test termnames((term(:a), term(:b))) == ["a", "b"]
-    @test termnames((term(:a),)) == ["a"]
+    @test termnames(MatrixTerm([term(:a), term(:b)])) == ["a", "b"]
+    @test termnames([term(:a), term(:b)]) == ["a", "b"]
+    @test termnames([term(:a)]) == ["a"]
 end
 
 @testset "lrtest" begin

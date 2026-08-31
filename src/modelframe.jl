@@ -113,7 +113,7 @@ keyword arguments are passed to [`apply_schema`](@ref).
     [`modelcols`](@ref) pipeline directly
 
 """
-function StatsAPI.modelmatrix(t::Union{AbstractTerm, TupleTerm}, data;
+function StatsAPI.modelmatrix(t::TermOrTerms, data;
                                hints=Dict{Symbol,Any}(), mod::Type{M}=StatisticalModel) where M
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))

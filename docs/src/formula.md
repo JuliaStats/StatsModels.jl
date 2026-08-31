@@ -299,7 +299,7 @@ symbols or strings (`Term`) and numbers (`ConstantTerm`), which makes it easy to
 work with collections of mixed type:
 
 ```jldoctest 1
-julia> ts = term.((1, :a, "b"))
+julia> ts = term.([1, :a, "b"])
 1
 a(unknown)
 b(unknown)

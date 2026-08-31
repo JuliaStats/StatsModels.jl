@@ -57,26 +57,27 @@ expression returned by the `@formula` macro is evaluated.  At this point, the
 julia> using StatsModels;
 
 julia> dump(Term(:a) & Term(:b))
-InteractionTerm{Tuple{Term, Term}}
-  terms: Tuple{Term, Term}
+InteractionTerm
+  terms: Array{AbstractTerm}((2,))
     1: Term
       sym: Symbol a
     2: Term
       sym: Symbol b
 
 julia> dump(Term(:a) + Term(:b))
-Tuple{Term, Term}
+Array{AbstractTerm}((2,))
   1: Term
     sym: Symbol a
   2: Term
     sym: Symbol b
 
 julia> dump(Term(:y) ~ Term(:a))
-FormulaTerm{Term, Term}
+FormulaTerm{Term, Vector{AbstractTerm}}
   lhs: Term
     sym: Symbol y
-  rhs: Term
-    sym: Symbol a
+  rhs: Array{AbstractTerm}((1,))
+    1: Term
+      sym: Symbol a
 ```
 
 !!! note
@@ -254,7 +255,7 @@ terms:
 
 * `Term`s become `ContinuousTerm`s or `CategoricalTerm`s
 * `ConstantTerm`s become `InterceptTerm`s
-* Tuples of terms become [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
+* Vectors of terms become [`MatrixTerm`](@ref)s where appropriate to explicitly indicate
   they should be concatenated into a single model matrix
 * Any model-specific (context-specific) interpretation of the terms is made, including
   transforming calls to functions that have special meaning in particular
@@ -274,7 +275,7 @@ Predictors:
   b(unknown) & c(unknown)
 
 julia> typeof(f)
-FormulaTerm{Term, Tuple{ConstantTerm{Int64}, Term, Term, Term, InteractionTerm{Tuple{Term, Term}}}}
+FormulaTerm{Term, Vector{AbstractTerm}}
 
 julia> f = apply_schema(f, schema(f, df))
 FormulaTerm
@@ -288,7 +289,7 @@ Predictors:
   b(continuous) & c(DummyCoding:3→2)
 
 julia> typeof(f)
-FormulaTerm{ContinuousTerm{Float64}, MatrixTerm{Tuple{InterceptTerm{true}, ContinuousTerm{Float64}, ContinuousTerm{Float64}, CategoricalTerm{DummyCoding, Matrix{Float64}, 2}, InteractionTerm{Tuple{ContinuousTerm{Float64}, CategoricalTerm{DummyCoding, Matrix{Float64}, 2}}}}}}
+FormulaTerm{ContinuousTerm{Float64}, MatrixTerm}
 ```
 
 This transformation is done by calling `apply_schema(term, schema, modeltype)`
@@ -575,9 +576,8 @@ julia> poly(my_col, my_degree)
 poly(a, 3)
 
 julia> poly.([:a, :b], my_degree)
-2-element Vector{PolyTerm{Term, ConstantTerm{Int64}}}:
- poly(a, 3)
- poly(b, 3)
+poly(a, 3)
+poly(b, 3)
 ```
 
 These run-time `PolyTerm`s are "schema-less" though, and to be able to construct
@@ -610,7 +610,7 @@ regression as above (which used `@formula(y ~ 1 + poly(a, 2) + poly(b, 2)`), but
 with the predictor names and the polynomial degree stored in variables:
 
 ```jldoctest 1
-julia> poly_vars = (:a, :b); poly_deg = 2;
+julia> poly_vars = [:a, :b]; poly_deg = 2;
 
 julia> poly_formula = term(:y) ~ term(1) + poly.(poly_vars, poly_deg)
 FormulaTerm
