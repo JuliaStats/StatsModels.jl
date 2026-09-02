@@ -115,15 +115,22 @@ y(continuous)
 ```
 """
 schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
-schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:ColumnTable} =
-    schema(Term.(collect(fieldnames(D))), dt, hints)
+schema(@nospecialize(dt::ColumnTable), hints=Dict{Symbol,Any}()) =
+    schema(Term.(collect(keys(dt))), dt, hints)
 schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
     schema(ts, columntable(data), hints)
 
 # handle hints:
-schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
-       hints::Dict{Symbol}=Dict{Symbol,Any}()) =
-    sch = Schema(t=>concrete_term(t, dt, hints) for t in ts)
+# a loop rather than a generator so that no closure captures the table (see
+# `_modelcols_each` in terms.jl)
+function schema(ts::AbstractVector{<:AbstractTerm}, @nospecialize(dt::ColumnTable),
+                hints::Dict{Symbol}=Dict{Symbol,Any}())
+    sch = Dict{Term,AbstractTerm}()
+    for t in ts
+        sch[t] = concrete_term(t, dt, hints)
+    end
+    return Schema(sch)
+end
 
 schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
     schema(filter(needs_schema, terms(f)), data, hints)
@@ -170,7 +177,7 @@ a(continuous)
 """
 concrete_term(t::Term, d, hints::Dict{Symbol}) = concrete_term(t, d, get(hints, t.sym, nothing))
 
-function concrete_term(t::Term, dt::ColumnTable, hint)
+function concrete_term(t::Term, @nospecialize(dt::ColumnTable), hint)
     msg = checkcol(dt, t.sym)
     if msg != ""
         throw(ArgumentError(msg))
@@ -178,7 +185,7 @@ function concrete_term(t::Term, dt::ColumnTable, hint)
     return concrete_term(t, getproperty(dt, t.sym), hint)
 end
 
-function concrete_term(t::Term, dt::ColumnTable, hints::Dict{Symbol})
+function concrete_term(t::Term, @nospecialize(dt::ColumnTable), hints::Dict{Symbol})
     msg = checkcol(dt, t.sym)
     if msg != ""
         throw(ArgumentError(msg))
@@ -191,7 +198,7 @@ concrete_term(t::Term, d) = concrete_term(t, d, nothing)
 
 # if the "hint" is already an AbstractTerm, use that
 # need this specified to avoid ambiguity
-concrete_term(t::Term, d::ColumnTable, hint::AbstractTerm) = hint
+concrete_term(t::Term, @nospecialize(d::ColumnTable), hint::AbstractTerm) = hint
 concrete_term(t::Term, x, hint::AbstractTerm) = hint
 
 # second possible fix for #97

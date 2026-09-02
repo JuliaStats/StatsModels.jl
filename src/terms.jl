@@ -492,22 +492,44 @@ julia> modelcols(MatrixTerm(ts), d)
  9.0  0.05079    0.0  1.0
 ```
 """
-modelcols(ts::TupleTerm, d::NamedTuple) = modelcols.(ts, Ref(d))
+modelcols(ts::TupleTerm, @nospecialize(d::NamedTuple)) = Tuple(_modelcols_each(ts, d))
 
-modelcols(t::Term, d::NamedTuple) = getproperty(d, t.sym)
-modelcols(t::ConstantTerm, d::NamedTuple) = t.n
+# Data arguments are `@nospecialize`d and term collections are walked with plain
+# loops rather than comprehensions or broadcasts: a closure over `d` (as in
+# `[modelcols(t, d) for t in ts]` or `modelcols.(ts, Ref(d))`) has the table's
+# `NamedTuple` type baked into its own type, so every table with a new set of
+# column names or types would force a fresh round of inference through the
+# whole pipeline. The loop bodies dispatch at run time on the concrete column
+# types instead, which are shared across tables.
+function _modelcols_each(ts, @nospecialize(d))
+    out = Vector{Any}(undef, length(ts))
+    for (i, t) in enumerate(ts)
+        out[i] = modelcols(t, d)
+    end
+    return _narrow(out)
+end
+# same element type as the comprehension would have produced
+_narrow(v::Vector{Any}) = [x for x in v]
 
-modelcols(ft::FunctionTerm, d::NamedTuple) =
+modelcols(t::Term, @nospecialize(d::NamedTuple)) = getproperty(d, t.sym)
+modelcols(t::ConstantTerm, @nospecialize(d::NamedTuple)) = t.n
+
+modelcols(ft::FunctionTerm, @nospecialize(d::NamedTuple)) =
     Base.Broadcast.materialize(lazy_modelcols(ft, d))
 
-lazy_modelcols(ft::FunctionTerm, d::NamedTuple) =
-    Base.Broadcast.broadcasted(ft.f, lazy_modelcols.(ft.args, Ref(d))...)
-lazy_modelcols(x, d) = modelcols(x, d)
+function lazy_modelcols(ft::FunctionTerm, @nospecialize(d::NamedTuple))
+    args = Vector{Any}(undef, length(ft.args))
+    for (i, a) in enumerate(ft.args)
+        args[i] = lazy_modelcols(a, d)
+    end
+    return Base.Broadcast.broadcasted(ft.f, args...)
+end
+lazy_modelcols(x, @nospecialize(d)) = modelcols(x, d)
 
 
-modelcols(t::ContinuousTerm, d::NamedTuple) = copy.(d[t.sym])
+modelcols(t::ContinuousTerm, @nospecialize(d::NamedTuple)) = copy.(d[t.sym])
 
-modelcols(t::CategoricalTerm, d::NamedTuple) = t.contrasts[d[t.sym], :]
+modelcols(t::CategoricalTerm, @nospecialize(d::NamedTuple)) = t.contrasts[d[t.sym], :]
 
 
 """
@@ -539,25 +561,24 @@ end
 
 # two options here: either special-case ColumnTable (named tuple of vectors)
 # vs. vanilla NamedTuple, or reshape and use normal broadcasting
-modelcols(t::InteractionTerm, d::NamedTuple) =
-    kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
+modelcols(t::InteractionTerm, @nospecialize(d::NamedTuple)) =
+    kron_insideout(*, _modelcols_each(t.terms, d)...)
 
-function modelcols(t::InteractionTerm, d::ColumnTable)
-    row_kron_insideout(*, (modelcols(term, d) for term in t.terms)...)
-end
+modelcols(t::InteractionTerm, @nospecialize(d::ColumnTable)) =
+    row_kron_insideout(*, _modelcols_each(t.terms, d)...)
 
-modelcols(t::InterceptTerm{true}, d::NamedTuple) = ones(size(first(d)))
-modelcols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1), 0)
+modelcols(t::InterceptTerm{true}, @nospecialize(d::NamedTuple)) = ones(size(first(d)))
+modelcols(t::InterceptTerm{false}, @nospecialize(d)) = Matrix{Float64}(undef, size(first(d),1), 0)
 
-modelcols(t::FormulaTerm, d::NamedTuple) = (modelcols(t.lhs,d), modelcols(t.rhs, d))
+modelcols(t::FormulaTerm, @nospecialize(d::NamedTuple)) = (modelcols(t.lhs,d), modelcols(t.rhs, d))
 
-function modelcols(t::MatrixTerm, d::ColumnTable)
-    mat = reduce(hcat, [modelcols(tt, d) for tt in t.terms])
+function modelcols(t::MatrixTerm, @nospecialize(d::ColumnTable))
+    mat = reduce(hcat, _modelcols_each(t.terms, d))
     reshape(mat, size(mat, 1), :)
 end
 
-modelcols(t::MatrixTerm, d::NamedTuple) =
-    reduce(vcat, [modelcols(tt, d) for tt in t.terms])
+modelcols(t::MatrixTerm, @nospecialize(d::NamedTuple)) =
+    reduce(vcat, _modelcols_each(t.terms, d))
 
 vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x

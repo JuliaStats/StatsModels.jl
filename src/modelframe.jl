@@ -53,24 +53,40 @@ end
 _missing_omit(x::AbstractVector{T}) where T = copyto!(similar(x, nonmissingtype(T)), x)
 _missing_omit(x::AbstractVector, rows) = _missing_omit(view(x, rows))
 
-function missing_omit(d::T) where T<:ColumnTable
+# loops instead of `map` over the `NamedTuple` so nothing is specialized on
+# the table type (see `_modelcols_each` in terms.jl)
+function missing_omit(@nospecialize(d::ColumnTable))
     nonmissings = trues(length(first(d)))
-    for col in d
+    for col in values(d)
         _nonmissing!(nonmissings, col)
     end
-    d_nonmissing = if all(nonmissings)
-        map(_missing_omit, d)
+    cols = Vector{Any}(undef, length(d))
+    if all(nonmissings)
+        for (i, col) in enumerate(values(d))
+            cols[i] = _missing_omit(col)
+        end
     else
         rows = findall(nonmissings)
-        map(Base.Fix2(_missing_omit, rows), d)
+        for (i, col) in enumerate(values(d))
+            cols[i] = _missing_omit(col, rows)
+        end
     end
+    d_nonmissing = NamedTuple{keys(d)}(Tuple(cols))
     d_nonmissing, nonmissings
 end
 
-missing_omit(data::T, formula::AbstractTerm) where T<:ColumnTable =
-    missing_omit(NamedTuple{tuple(termvars(formula)...)}(data))
+function missing_omit(@nospecialize(data::ColumnTable), formula::AbstractTerm)
+    vars = termvars(formula)
+    # equivalent to NamedTuple{Tuple(vars)}(data), without Base's generator over
+    # the table type
+    cols = Vector{Any}(undef, length(vars))
+    for (i, v) in enumerate(vars)
+        cols[i] = getfield(data, v)
+    end
+    missing_omit(NamedTuple{Tuple(vars)}(Tuple(cols)))
+end
 
-function ModelFrame(f::FormulaTerm, data::ColumnTable;
+function ModelFrame(f::FormulaTerm, @nospecialize(data::ColumnTable);
                     model::Type{M}=StatisticalModel, contrasts=Dict{Symbol,Any}()) where M
 
     msg = checknamesexist( f, data )
@@ -89,7 +105,7 @@ end
 ModelFrame(f::FormulaTerm, data; model=StatisticalModel, contrasts=Dict{Symbol,Any}()) =
     ModelFrame(f, columntable(data); model=model, contrasts=contrasts)
 
-StatsAPI.modelmatrix(f::FormulaTerm, data; kwargs...) = modelmatrix(f.rhs, data; kwargs...)
+StatsAPI.modelmatrix(f::FormulaTerm, @nospecialize(data); kwargs...) = modelmatrix(f.rhs, data; kwargs...)
 
 """
     modelmatrix(t::AbstractTerm, data; hints=Dict(), mod=StatisticalModel)
@@ -113,7 +129,7 @@ keyword arguments are passed to [`apply_schema`](@ref).
     [`modelcols`](@ref) pipeline directly
 
 """
-function StatsAPI.modelmatrix(t::Union{AbstractTerm, TupleTerm}, data;
+function StatsAPI.modelmatrix(t::Union{AbstractTerm, TupleTerm}, @nospecialize(data);
                                hints=Dict{Symbol,Any}(), mod::Type{M}=StatisticalModel) where M
     Tables.istable(data) ||
         throw(ArgumentError("expected data in a Table, got $(typeof(data))"))
@@ -141,7 +157,7 @@ keyword arguments are passed to [`apply_schema`](@ref).
     [`modelcols`](@ref) pipeline directly
 
 """
-function StatsAPI.response(f::FormulaTerm, data;
+function StatsAPI.response(f::FormulaTerm, @nospecialize(data);
                             hints=Dict{Symbol,Any}(),
                             mod::Type{M}=StatisticalModel) where M
     Tables.istable(data) ||
