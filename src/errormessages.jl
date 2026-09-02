@@ -16,7 +16,7 @@ end
 """
 Return a nice-ish error message if the Symbol `name` isn't a column name in `table`, otherwise a zero-length string.
 """
-function checkcol(table, name::Symbol)
+function checkcol(@nospecialize(table), name::Symbol)
     i = Tables.columnindex(table, name)
     if i == 0 # if no such column
         names = Tables.columnnames(table)
@@ -36,7 +36,7 @@ end
 Check that each name in the given model `f` exists in the data source `t` and return a message if not. Return a zero string otherwise.
 `t` is something that implements the `Tables` interface.
 """
-function checknamesexist(f::FormulaTerm, t)
+function checknamesexist(f::FormulaTerm, @nospecialize(t))
     if ! Tables.istable(t)
         throw(ArgumentError( "$(typeof(t)) isn't a valid Table type" ))
     end
