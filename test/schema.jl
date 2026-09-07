@@ -9,10 +9,10 @@
         @test f == apply_schema(f, schema(f, df))
     end
 
-    @testset "lonely term in a tuple" begin
+    @testset "lonely term in a vector" begin
         d = (a = [1,1],)
-        @test apply_schema(ConstantTerm(1), schema(d)) == apply_schema((ConstantTerm(1),), schema(d))
-        @test apply_schema(Term(:a), schema(d)) == apply_schema((Term(:a),), schema(d))
+        @test [apply_schema(ConstantTerm(1), schema(d))] == apply_schema([ConstantTerm(1)], schema(d))
+        @test [apply_schema(Term(:a), schema(d))] == apply_schema([Term(:a)], schema(d))
     end
 
     @testset "hints" begin

@@ -16,7 +16,7 @@
     end
 
     @testset "unprotect" begin
-        using StatsModels: TupleTerm, FullRank
+        using StatsModels: FullRank
         # unprotect reverts to treating calls to +, &, and * as term union,
         # interaction, and combined
 
@@ -26,9 +26,9 @@
         sch = schema(d)
         a, b, c = apply_schema.(term.((:a, :b, :c)), Ref(sch))
 
-        ops_types = ((+) => TupleTerm,
+        ops_types = ((+) => Vector{AbstractTerm},
                      (&) => InteractionTerm,
-                     (*) => TupleTerm,
+                     (*) => Vector{AbstractTerm},
                      (~) => FormulaTerm)
 
         for (op, typ) in ops_types, sch in (sch, FullRank(sch))
@@ -45,7 +45,7 @@
 
         # stops once it hits an non-special call still
         f = ft(+, a, ft(log, ft(+, term(1), b)))
-        @test apply_schema(f, sch) == (a, f.args[2])
+        @test apply_schema(f, sch) == [a, f.args[2]]
 
         # testing behavior of modelcols
         f = @formula(0 ~ 1 - unprotect(a&b))
@@ -54,21 +54,21 @@
 
         # ideally you'd also be able to do these but it's hard to make it work...
         # this fails because - doesn't auto-broadcast, and the broadcasting that
-        # happens during FunctionTerm evaluation gets used up by the (a,b) tuple.
+        # happens during FunctionTerm evaluation gets used up by the [a,b] vector.
         f = @formula(0 ~ 1 - unprotect(a+b))
-        @test f.rhs.args[end] isa FunctionTerm{typeof(unprotect)}
+        @test only(f.rhs).args[end] isa FunctionTerm{typeof(unprotect)}
         ff = apply_schema(f, schema(d))
-        @test ff.rhs.terms[1].args[end] isa StatsModels.TupleTerm
+        @test ff.rhs.terms[1].args[end] isa Vector{AbstractTerm}
         @test_broken modelcols(ff.rhs, d) == 1 .- [d.a d.b]
 
         # and even if we define a broadcasting version, still fails because it
-        # gives a tuple of arrays instead of a matrix
+        # gives a vector of arrays instead of a matrix
         my_sub = (x,y) -> x .- y
         ff = apply_schema(@formula(0 ~ my_sub(1, unprotect(a+b))), schema(d))
         @test_broken modelcols(ff.rhs, d) == 1 .- [d.a d.b]
         
         # both of these could be fixed by always returning a matrix when you call
-        # modelcols on a tuple of terms but that would break other things
+        # modelcols on a vector of terms but that would break other things
     end
 
 end
