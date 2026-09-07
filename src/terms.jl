@@ -128,6 +128,7 @@ end
 width(::FunctionTerm) = 1
 
 Base.:(==)(a::FunctionTerm, b::FunctionTerm) = a.f == b.f && a.args == b.args && a.exorig == b.exorig
+Base.hash(t::FunctionTerm, h::UInt) = hash(t.exorig, hash(t.args, hash(t.f, h)))
 
 """
     InteractionTerm <: AbstractTerm
@@ -178,7 +179,11 @@ julia> modelcols(t.terms, d)
 """
 struct InteractionTerm <: AbstractTerm
     terms::Vector{AbstractTerm}
-    InteractionTerm(terms) = new(collect(AbstractTerm, terms))
+    function InteractionTerm(terms)
+        ts = collect(AbstractTerm, terms)
+        isempty(ts) && throw(ArgumentError("an InteractionTerm needs at least one term"))
+        return new(ts)
+    end
 end
 width(ts::InteractionTerm) = prod(width(t) for t in ts.terms)
 Base.:(==)(a::InteractionTerm, b::InteractionTerm) = a.terms == b.terms
@@ -263,7 +268,7 @@ struct MatrixTerm <: AbstractTerm
 end
 # wrap single terms in a vector
 MatrixTerm(t::AbstractTerm) = MatrixTerm(AbstractTerm[t])
-width(t::MatrixTerm) = sum(width(tt) for tt in t.terms)
+width(t::MatrixTerm) = sum(width(tt) for tt in t.terms; init=0)
 Base.:(==)(a::MatrixTerm, b::MatrixTerm) = a.terms == b.terms
 Base.hash(t::MatrixTerm, h::UInt) = hash(t.terms, hash(:MatrixTerm, h))
 
@@ -590,12 +595,14 @@ modelcols(t::InterceptTerm{false}, d) = Matrix{Float64}(undef, size(first(d),1),
 modelcols(t::FormulaTerm, d::NamedTuple) = (modelcols(t.lhs,d), modelcols(t.rhs, d))
 
 function modelcols(t::MatrixTerm, d::ColumnTable)
+    # an empty MatrixTerm (e.g. from an empty rhs) has no columns, like InterceptTerm{false}
+    isempty(t.terms) && return Matrix{Float64}(undef, size(first(d), 1), 0)
     mat = reduce(hcat, [modelcols(tt, d) for tt in t.terms])
     reshape(mat, size(mat, 1), :)
 end
 
 modelcols(t::MatrixTerm, d::NamedTuple) =
-    reduce(vcat, [modelcols(tt, d) for tt in t.terms])
+    isempty(t.terms) ? Float64[] : reduce(vcat, [modelcols(tt, d) for tt in t.terms])
 
 vectorize(x::Tuple) = collect(x)
 vectorize(x::AbstractVector) = x
@@ -615,7 +622,7 @@ StatsAPI.coefnames(t::ContinuousTerm) = string(t.sym)
 StatsAPI.coefnames(t::CategoricalTerm) =
     ["$(t.sym): $name" for name in t.contrasts.coefnames]
 StatsAPI.coefnames(t::FunctionTerm) = string(t.exorig)
-StatsAPI.coefnames(ts::AbstractVector{<:AbstractTerm}) = reduce(vcat, [coefnames(t) for t in ts])
+StatsAPI.coefnames(ts::AbstractVector{<:AbstractTerm}) = mapreduce(coefnames, vcat, ts; init=String[])
 StatsAPI.coefnames(t::MatrixTerm) = mapreduce(coefnames, vcat, t.terms; init = String[])
 StatsAPI.coefnames(t::InteractionTerm) =
     kron_insideout((args...) -> join(args, " & "), vectorize.(coefnames.(t.terms))...)

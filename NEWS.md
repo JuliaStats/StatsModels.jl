@@ -1,3 +1,61 @@
+# v0.8.0
+
+- Term collections are now `Vector{AbstractTerm}` instead of tuples (#354).
+  This is a breaking change for package developers; user-facing `@formula`
+  syntax and `modelcols`/`modelmatrix` are unchanged.  The motivation is
+  compile latency: with tuples, every distinct number and order of terms in a
+  formula triggered a fresh specialization of the whole `apply_schema`,
+  `modelcols`, `coefnames`, etc. pipeline, so fitting a model with a
+  never-seen formula cost ~0.1-0.8s of compilation.  With vectors, this drops
+  to milliseconds.
+
+  - `+` on terms returns a `Vector{AbstractTerm}`, and `&` distributes over
+    vectors of terms instead of tuples.
+
+  - `InteractionTerm` and `MatrixTerm` are no longer parametric: both store
+    their terms in a `terms::Vector{AbstractTerm}` field.  The constructors
+    still accept any iterable of terms (including tuples), so
+    `InteractionTerm((a, b))` keeps working.  Code that dispatched on the
+    element types, e.g. `InteractionTerm{<:NTuple{N,CategoricalTerm}}`, must
+    switch to a run-time check such as
+    `all(t -> t isa CategoricalTerm, it.terms)`.
+
+  - `TupleTerm` is removed.  Methods that took a `TupleTerm` should take an
+    `AbstractVector{<:AbstractTerm}` instead.  `TermOrTerms` is now
+    `Union{AbstractTerm, AbstractVector{<:AbstractTerm}}`.
+
+  - `collect_matrix_terms` returns a `Vector{AbstractTerm}` (with the
+    `MatrixTerm` first) in the mixed matrix/non-matrix case, and `modelcols`
+    on a vector of terms returns a vector of the per-term columns.
+
+  - `apply_schema` on a vector of terms applies the schema term by term, from
+    left to right, and combines the results with `+`, so duplicates are
+    dropped and terms that expand to several terms are flattened.
+
+  - An empty vector of terms is valid everywhere a vector of terms is: it
+    yields an empty `MatrixTerm` of width 0 whose `modelcols` is a matrix with
+    no columns, like `InterceptTerm{false}`.  Constructing an
+    `InteractionTerm` with no terms throws an `ArgumentError`.
+
+  - `FormulaTerm`, `InteractionTerm`, and `MatrixTerm` now have content-based
+    `==` and `hash`, since the default field-identity comparison no longer
+    holds with vector fields, and `FunctionTerm` gains a `hash` consistent
+    with its existing `==`.  As a consequence, formulas compare equal after
+    `apply_schema` when their terms do, and hash-based deduplication
+    (`unique`, `Set`) works for formulas containing function calls.
+
+- The right-hand side of a formula built with `~` or `@formula` is always a
+  `Vector{AbstractTerm}`, even when it contains a single term (#354).
+  Previously `@formula(y ~ x).rhs` was the bare term `x`; it is now `[x]`.
+  This removes the lone-term special case, so code that handled both a term
+  and a tuple on the right-hand side can handle a vector only.  The left-hand
+  side is still a bare term, and after `apply_schema` the right-hand side is
+  still collected into a single `MatrixTerm` when every term is a matrix
+  term, so the `(y, X)` returned by `modelcols(f, data)` is unchanged.  The
+  same applies to `+` (`a + a` is now `[a]` rather than `a`) and to
+  `apply_schema` on a vector of terms, which returns a vector even when only
+  one term remains.
+
 # v0.7.0
 
 - `FunctionTerm` rework (#183)
