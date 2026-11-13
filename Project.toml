@@ -33,7 +33,7 @@ StatsFuns = "0.9, 1.0, 2"
 Tables = "0.2, 1"
 Test = "1"
 TestSetExtensions = "3"
-WeakRefStrings = "1"
+WeakRefStrings = "1.4, 2"
 julia = "1.6"
 
 [extras]
