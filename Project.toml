@@ -47,3 +47,6 @@ WeakRefStrings = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
 
 [targets]
 test = ["Aqua", "CategoricalArrays", "DataFrames", "Statistics", "Test", "TestSetExtensions", "WeakRefStrings"]
+
+[workspace]
+projects = ["docs"]
