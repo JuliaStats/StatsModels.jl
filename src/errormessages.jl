@@ -1,3 +1,22 @@
+# Levenshtein distance
+# Copied from the REPL stdlib in JuliaLang/julia (license is MIT: https://julialang.org/license)
+function levenshtein(s1, s2)
+    a, b = collect(s1), collect(s2)
+    m = length(a)
+    n = length(b)
+    d = Matrix{Int}(undef, m+1, n+1)
+
+    d[1:m+1, 1] = 0:m
+    d[1, 1:n+1] = 0:n
+
+    for i = 1:m, j = 1:n
+        d[i+1,j+1] = min(d[i  , j+1] + 1,
+                         d[i+1, j  ] + 1,
+                         d[i  , j  ] + (a[i] != b[j]))
+    end
+
+    return d[m+1, n+1]
+end
 
 """
 This is borrowed from [DataFrames.jl](). 
