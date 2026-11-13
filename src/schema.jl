@@ -11,9 +11,9 @@
 terms(t::FormulaTerm) = union(terms(t.lhs), terms(t.rhs))
 terms(t::InteractionTerm) = terms(t.terms)
 terms(t::FunctionTerm) = mapreduce(terms, union, t.args)
-terms(t::AbstractTerm) = [t]
+terms(t::AbstractTerm) = AbstractTerm[t]
 terms(t::MatrixTerm) = terms(t.terms)
-terms(t::TupleTerm) = mapreduce(terms, union, t)
+terms(ts::AbstractVector{<:AbstractTerm}) = mapreduce(terms, union, ts, init=AbstractTerm[])
 
 needs_schema(::AbstractTerm) = true
 needs_schema(::ConstantTerm) = false
@@ -82,13 +82,13 @@ julia> ts = [Term(:x), Term(:y)];
 
 julia> schema(ts, d)
 StatsModels.Schema with 2 entries:
-  x => x
   y => y
+  x => x
 
 julia> schema(ts, d, Dict(:x => HelmertCoding()))
 StatsModels.Schema with 2 entries:
-  x => x
   y => y
+  x => x
 
 julia> schema(term(:y), d, Dict(:y => CategoricalTerm))
 StatsModels.Schema with 1 entry:
@@ -101,8 +101,8 @@ same in a container, but when printed alone are different:
 ```jldoctest 1
 julia> sch = schema(ts, d)
 StatsModels.Schema with 2 entries:
-  x => x
   y => y
+  x => x
 
 julia> term(:x)
 x(unknown)
@@ -117,16 +117,13 @@ y(continuous)
 schema(data, hints=Dict{Symbol,Any}()) = schema(columntable(data), hints)
 schema(dt::D, hints=Dict{Symbol,Any}()) where {D<:ColumnTable} =
     schema(Term.(collect(fieldnames(D))), dt, hints)
-schema(ts::AbstractVector{<:AbstractTerm}, data, hints::Dict{Symbol}) =
-    schema(ts, columntable(data), hints)
-
-# handle hints:
-schema(ts::AbstractVector{<:AbstractTerm}, dt::ColumnTable,
-       hints::Dict{Symbol}=Dict{Symbol,Any}()) =
-    sch = Schema(t=>concrete_term(t, dt, hints) for t in ts)
 
 schema(f::TermOrTerms, data, hints::Dict{Symbol}) =
-    schema(filter(needs_schema, terms(f)), data, hints)
+    schema(f, columntable(data), hints)
+
+# handle hints:
+schema(f::TermOrTerms, dt::ColumnTable, hints::Dict{Symbol}=Dict{Symbol,Any}()) =
+    Schema(t => concrete_term(t, dt, hints) for t in filter(needs_schema, terms(f)))
 
 schema(f::TermOrTerms, data) = schema(f, data, Dict{Symbol,Any}())
 
@@ -237,7 +234,16 @@ in _most_ cases, but cause method ambiguity in some.
 """
 apply_schema(t, schema) = apply_schema(t, schema, Nothing)
 apply_schema(t, schema, Mod::Type) = t
-apply_schema(terms::TupleTerm, schema, Mod::Type) = reduce(+, apply_schema.(terms, Ref(schema), Mod))
+# sequential (left-to-right) application over a vector of terms, combined with
+# `+` so that duplicates are dropped and nested vectors are flattened; always
+# returns a Vector{AbstractTerm}
+function apply_schema(terms::AbstractVector{<:AbstractTerm}, schema, Mod::Type)
+    out = AbstractTerm[]
+    for t in terms
+        out = out + apply_schema(t, schema, Mod)
+    end
+    return out
+end
 
 apply_schema(t::Term, schema::Schema, Mod::Type) = schema[t]
 apply_schema(ft::FormulaTerm, schema::Schema, Mod::Type) =
@@ -250,7 +256,7 @@ apply_schema(it::InteractionTerm, schema::Schema, Mod::Type) =
 apply_schema(t::Union{ContinuousTerm, CategoricalTerm}, schema::Schema, Mod::Type) =
     get(schema, term(t.sym), t)
 apply_schema(t::MatrixTerm, sch::Schema, Mod::Type) =
-    MatrixTerm(apply_schema.(t.terms, Ref(sch), Mod))
+    MatrixTerm(apply_schema(t.terms, sch, Mod))
 
 # TODO: special case this for <:RegressionModel ?
 function apply_schema(t::ConstantTerm, schema::Schema, Mod::Type)
@@ -390,7 +396,7 @@ has_schema(t::ConstantTerm) = false
 has_schema(t::Term) = false
 has_schema(t::Union{ContinuousTerm,CategoricalTerm}) = true
 has_schema(t::InteractionTerm) = all(has_schema(tt) for tt in t.terms)
-has_schema(t::TupleTerm) = all(has_schema(tt) for tt in t)
+has_schema(t::AbstractVector{<:AbstractTerm}) = all(has_schema(tt) for tt in t)
 has_schema(t::MatrixTerm) = has_schema(t.terms)
 has_schema(t::FormulaTerm) = has_schema(t.lhs) && has_schema(t.rhs)
 # FunctionTerms may always be transformed by apply_schema
@@ -503,8 +509,8 @@ end
 drop_term(from, to) = symequal(from, to) ? ConstantTerm(1) : from
 drop_term(from::FormulaTerm, to) = FormulaTerm(from.lhs, drop_term(from.rhs, to))
 drop_term(from::MatrixTerm, to) = MatrixTerm(drop_term(from.terms, to))
-drop_term(from::TupleTerm, to) =
-    tuple((t for t = from if !symequal(t, to))...)
+drop_term(from::AbstractVector{<:AbstractTerm}, to) =
+    AbstractTerm[t for t in from if !symequal(t, to)]
 function drop_term(from::InteractionTerm, t)
     terms = drop_term(from.terms, t)
     length(terms) > 1 ? InteractionTerm(terms) : terms[1]
@@ -537,7 +543,7 @@ The data variables that this term refers to.
 termvars(::AbstractTerm) = Symbol[]
 termvars(t::Union{Term, CategoricalTerm, ContinuousTerm}) = [t.sym]
 termvars(t::InteractionTerm) = mapreduce(termvars, union, t.terms)
-termvars(t::TupleTerm) = mapreduce(termvars, union, t, init=Symbol[])
+termvars(ts::AbstractVector{<:AbstractTerm}) = mapreduce(termvars, union, ts, init=Symbol[])
 termvars(t::MatrixTerm) = termvars(t.terms)
 termvars(t::FormulaTerm) = union(termvars(t.lhs), termvars(t.rhs))
 termvars(t::FunctionTerm) = mapreduce(termvars, union, t.args, init=Symbol[])

@@ -26,7 +26,7 @@ struct LeadLagTerm{T<:AbstractTerm, F<:Union{typeof(lead), typeof(lag)}} <: Abst
     nsteps::Int
 end
 
-terms(t::LeadLagTerm) = (t.term, )
+terms(t::LeadLagTerm) = AbstractTerm[t.term]
 
 function apply_schema(t::FunctionTerm{F}, sch::Schema, ctx::Type) where F<:Union{typeof(lead), typeof(lag)}
     opname = string(nameof(F.instance))

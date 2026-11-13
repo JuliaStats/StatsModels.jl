@@ -393,7 +393,9 @@
     @testset "#136" begin
         t = (x = rand(100), y = randn(100));
         f = @formula(y ~ x)
-        @test modelcols(f, t) === (t.y, t.x)
+        y, x = modelcols(f, t)
+        @test y === t.y
+        @test only(x) === t.x
     end
 
     @testset "#185 - interactions of scalar terms for row tables" begin

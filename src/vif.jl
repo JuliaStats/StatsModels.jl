@@ -17,8 +17,8 @@ _find_intercept(form::FormulaTerm) = _find_intercept(form.rhs)
 _find_intercept(::AbstractTerm) = nothing
 _find_intercept(::InterceptTerm{true}) = 1
 _find_intercept(m::MatrixTerm) = _find_intercept(m.terms)
-function _find_intercept(t::TupleTerm) 
-    return findfirst(!isnothing ∘ _find_intercept, t)
+function _find_intercept(ts::AbstractVector{<:AbstractTerm})
+    return findfirst(!isnothing ∘ _find_intercept, ts)
 end
 
 # borrowed from Effects.jl
@@ -97,7 +97,7 @@ function StatsAPI.gvif(model::RegressionModel; scale=false)
     tn = last(termnames(model))
     tn = view(tn, axes(tn, 1) .!= intercept)
     trms = get_matrix_term(form.rhs).terms
-    # MatrixTerms.terms is a tuple or vector so always 1-based indexing
+    # MatrixTerm.terms is a vector so always 1-based indexing
     trms = trms[1:length(trms) .!= intercept]
 
     df = width.(trms)
