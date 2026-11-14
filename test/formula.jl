@@ -138,4 +138,51 @@
     f = @formula(foo ~ bar)
     @test f == deepcopy(f)
 
+    # Keyword arguments in function calls
+    @testset "function call kwargs" begin
+        myf(args...; kwargs...) = sum(args)
+
+        # Semicolon kwargs syntax
+        f = @formula(y ~ myf(x; k=10, bs=:cr))
+        ft = f.rhs
+        @test ft isa FunctionTerm
+        @test has_kwargs(ft)
+        kws = kwarg_exprs(ft)
+        @test length(kws) == 2
+        @test kws[1].args[1] == :k
+        @test kws[1].args[2] == 10
+        @test kws[2].args[1] == :bs
+
+        # Comma kwargs syntax
+        f2 = @formula(y ~ myf(x, k=10, bs=:cr))
+        @test has_kwargs(f2.rhs)
+        @test length(kwarg_exprs(f2.rhs)) == 2
+
+        # No kwargs — backward compat
+        f3 = @formula(y ~ myf(x, 10))
+        @test !has_kwargs(f3.rhs)
+        @test isempty(kwarg_exprs(f3.rhs))
+
+        # Mixed positional + kwargs
+        f4 = @formula(y ~ myf(x, 10; bs=:cr))
+        @test has_kwargs(f4.rhs)
+        kws4 = kwarg_exprs(f4.rhs)
+        @test length(kws4) == 1
+        @test kws4[1].args[1] == :bs
+
+        # Multiple terms, some with kwargs
+        f5 = @formula(y ~ myf(x; k=10) + log(z) + w)
+        for t in f5.rhs
+            if t isa FunctionTerm && t.f === myf
+                @test has_kwargs(t)
+            elseif t isa FunctionTerm && t.f === log
+                @test !has_kwargs(t)
+            end
+        end
+
+        # Standard formulas still work
+        f6 = @formula(y ~ 1 + x * z)
+        @test f6 isa FormulaTerm
+    end
+
 end
